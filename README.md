@@ -4,7 +4,7 @@
 
 ## Status
 
-Phase 1 (MVP, milestones M0-M9) is substantially implemented. The backend, frontend, and end-to-end test suite are in place and green. A few M9 hardening tasks remain open (validator-coverage audit, load test, accessibility pass, responsive verification, staging dry run); the live checklist is in [doc/ImplementationPlan.md](doc/ImplementationPlan.md).
+Phase 1 (MVP, milestones M0-M9) is substantially built but not yet fully done. Core backend and frontend flows (auth, sites, libraries, folders, documents, versioning, check-out/in, permissions, recycle bin, search) work end-to-end and the test suite is green, but several backend endpoints (document move/copy, admin settings update) and a number of frontend panels/dialogs/admin pages (document details/versions/permissions tabs, share dialog, recycle bin UI, admin settings/audit-log/storage pages) are still open, along with the M9 hardening tasks (validator-coverage audit, load test, accessibility pass, responsive verification, staging dry run). The live checklist — Phase 1 close-out followed by Phase 2 — is in [doc/ImplementationPlan V1.1.md](doc/ImplementationPlan%20V1.1.md). [doc/ImplementationPlan V1.0.md](doc/ImplementationPlan%20V1.0.md) is the archived original Phase 1 plan.
 
 ## Tech stack
 
@@ -20,7 +20,7 @@ Phase 1 (MVP, milestones M0-M9) is substantially implemented. The backend, front
 
 | Path | What it is |
 |---|---|
-| `doc/` | [Functional spec](doc/functional-spec.md), [technical design spec](doc/technical-design-spec.md), [implementation plan](doc/ImplementationPlan.md) |
+| `doc/` | [Functional spec](doc/functional-spec.md), [technical design spec](doc/technical-design-spec.md), [implementation plan](doc/ImplementationPlan%20V1.1.md) |
 | `prototype(html)/` | Clickable vanilla HTML/CSS/JS prototype (reference only) |
 | `Prototype(React)/` | Clickable React prototype using the real stack |
 | `server/` | .NET solution (Domain, Application, Infrastructure, Api, tests) |
@@ -90,7 +90,7 @@ The Playwright suite resets a dedicated `edms_e2e` database, seeds a System Admi
 
 - [Functional spec](doc/functional-spec.md) - requirements, data model, API surface, roadmap
 - [Technical design spec](doc/technical-design-spec.md) - architecture, schema DDL, class design, deployment
-- [Implementation plan](doc/ImplementationPlan.md) - sequenced tasks with live status
+- [Implementation plan](doc/ImplementationPlan%20V1.1.md) - sequenced tasks with live status ([V1.0](doc/ImplementationPlan%20V1.0.md) archived)
 - [AGENTS.md](AGENTS.md) - guidance for coding agents working in this repository
 
 ## Out of scope

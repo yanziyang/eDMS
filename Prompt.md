@@ -80,7 +80,38 @@ Implementation Plan
 -------------------------------------------------------
 Prompt:
 
-The implementation will be done by other AI Coding Agent such as OpenCode + DeepSeek. Create detailed Implementation Plan and save as 'doc\ImplementationPlan.md'".
+The implementation will be done by other AI Coding Agent such as OpenCode + DeepSeek. Create detailed Implementation Plan and save as 'doc\ImplementationPlan.md'.
 
+-------------------------------------------------------
+Prompt:
 
+The coding agent has basically finished the implementation plan, refer to the updated document. Rename existing Implementation Plan as 'doc\ImplementationPlan V1.0.md'
 
+Netx, plan the next phase Implementation Plan and save as 'doc\ImplementationPlan V1.1.md'. Please note that the implementation will be done by other AI Coding Agent such as OpenCode + DeepSeek.
+
+=======================================================
+-------------------------------------------------------
+Implementation 
+-------------------------------------------------------
+Prompt:
+
+I want to build an enterprise document management system for internal uses. Functionality and UI shall be similar to SharePoint Online, but only need key functions.
+
+Tech stack:
+- Frontend: React, Vite, strict TypeScript, React Router
+- Design system: shadcn
+- Styling: Tailwind CSS 4
+- Backend: .NET 10, Entity Framework
+- Authentication: Database authentication first, support SAML2 and OIDC in future
+- Database is PostgreSQL
+
+Function Spec and Technical Design Spec are in 'doc' folder.
+
+Follow the Implementation Plan in 'doc' to start the implementation. 
+
+PostgreSQL Login credential is in DEV-Credentials.md.
+
+-------------------------------------------------------
+Prompt:
+
+I will go away for several hours. You just proceed to finish all milestones, Commit and git push each milestone before proceed.

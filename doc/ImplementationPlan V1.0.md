@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Version** | 1.0 |
-| **Status** | Active — update in place as work lands |
+| **Status** | **Archived — superseded by [`ImplementationPlan V1.1.md`](ImplementationPlan%20V1.1.md) as of 2026-08-16.** Kept as a historical snapshot of Phase 1 (M0–M9) planning and status; do not update in place. Any Phase 1 tasks left open here were carried forward into V1.1's M10/M11 close-out milestones — check there for current status, not here. |
 | **Date** | 2026-08-15 |
 | **Audience** | AI coding agents (OpenCode, DeepSeek-backed or otherwise, Claude Code, or any other tool) implementing eDMS |
 | **Companion documents** | `functional-spec.md` (what/why), `technical-design-spec.md` (how), `AGENTS.md` (repo rules & navigation) |
@@ -233,3 +233,4 @@ Distinct from TDS §14.1's technical risks — these are about the *order and ha
 | Version | Date | Change |
 |---|---|---|
 | 1.0 | 2026-08-15 | Initial implementation plan, Phase 1 (M0–M9) fully detailed; Phase 2/3 left as an expansion placeholder. |
+| 1.0 (archived) | 2026-08-16 | File renamed from `ImplementationPlan.md` to `ImplementationPlan V1.0.md` and frozen as a historical record. At archival time, M0/M1/M7 were fully `Done`; M2/M3/M4/M5/M6/M8/M9 each had one or more open tasks (real permission CTE, move/copy endpoints, several detail-panel/dialog/admin UIs, hardening tasks) — none of the statuses above were "corrected to Done" retroactively. All open items were carried forward into [`ImplementationPlan V1.1.md`](ImplementationPlan%20V1.1.md)'s M10/M11 close-out milestones. See that document for current status. |
