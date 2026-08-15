@@ -1,4 +1,6 @@
+using eDMS.Infrastructure.Options;
 using eDMS.Infrastructure.Persistence;
+using eDMS.Infrastructure.Persistence.Seeding;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -17,6 +19,9 @@ public static class DependencyInjection
             options
                 .UseNpgsql(connectionString)
                 .UseSnakeCaseNamingConvention());
+
+        services.Configure<SeedOptions>(configuration.GetSection(SeedOptions.SectionName));
+        services.AddScoped<AdminSeeder>();
 
         return services;
     }

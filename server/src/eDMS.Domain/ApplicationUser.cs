@@ -22,6 +22,13 @@ public sealed class ApplicationUser : IdentityUser<Guid>
 
     public bool IsSystemAdmin { get; set; }
 
+    /// <summary>
+    /// When true, the user must change their password at the next login. Set on the
+    /// first-run seed administrator so the configured temporary password is not left
+    /// in place (TDS §6.5).
+    /// </summary>
+    public bool MustChangePassword { get; set; }
+
     public DateTimeOffset CreatedAt { get; set; }
 
     public DateTimeOffset? LastLoginAt { get; set; }

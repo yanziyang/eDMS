@@ -22,6 +22,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\eDMS.Api\eDMS.Api.csproj" />
+    <ProjectReference Include="..\..\src\eDMS.Infrastructure\eDMS.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>

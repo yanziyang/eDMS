@@ -19,6 +19,7 @@ public sealed class ApplicationUserConfiguration : IEntityTypeConfiguration<Appl
 
         builder.Property(user => user.IsActive).HasDefaultValue(true);
         builder.Property(user => user.IsSystemAdmin).HasDefaultValue(false);
+        builder.Property(user => user.MustChangePassword).HasDefaultValue(false);
         builder.Property(user => user.AuthProvider).HasDefaultValue(AuthProvider.Local);
         builder.Property(user => user.CreatedAt).HasDefaultValueSql("now()");
     }

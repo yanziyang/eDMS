@@ -12,6 +12,7 @@ public sealed class ApplicationUserTests
 
         Assert.True(user.IsActive);
         Assert.False(user.IsSystemAdmin);
+        Assert.False(user.MustChangePassword);
         Assert.Equal(AuthProvider.Local, user.AuthProvider);
     }
 
