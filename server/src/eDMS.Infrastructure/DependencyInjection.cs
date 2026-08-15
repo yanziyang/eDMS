@@ -1,6 +1,8 @@
+using eDMS.Application.Common.Interfaces;
 using eDMS.Infrastructure.Options;
 using eDMS.Infrastructure.Persistence;
 using eDMS.Infrastructure.Persistence.Seeding;
+using eDMS.Infrastructure.Security;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -22,6 +24,10 @@ public static class DependencyInjection
 
         services.Configure<SeedOptions>(configuration.GetSection(SeedOptions.SectionName));
         services.AddScoped<AdminSeeder>();
+
+        services.Configure<JwtOptions>(configuration.GetSection(JwtOptions.SectionName));
+        services.AddSingleton(TimeProvider.System);
+        services.AddScoped<ITokenService, JwtTokenService>();
 
         return services;
     }
