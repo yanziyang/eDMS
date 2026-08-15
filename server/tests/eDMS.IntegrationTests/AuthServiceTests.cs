@@ -5,6 +5,7 @@ using eDMS.Infrastructure.Auth;
 using eDMS.Infrastructure.Auditing;
 using eDMS.Infrastructure.Options;
 using eDMS.Infrastructure.Persistence;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -25,6 +26,7 @@ public sealed class AuthServiceTests : IDisposable
         services.AddLogging();
         services.AddHttpContextAccessor();
         services.AddAuthentication(options => options.DefaultScheme = IdentityConstants.ApplicationScheme);
+        services.AddDataProtection().UseEphemeralDataProtectionProvider();
         services.AddDbContext<AppDbContext>(options =>
             options.UseInMemoryDatabase(Guid.NewGuid().ToString()));
         services
@@ -36,6 +38,7 @@ public sealed class AuthServiceTests : IDisposable
                 options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
             })
             .AddSignInManager()
+            .AddDefaultTokenProviders()
             .AddEntityFrameworkStores<AppDbContext>();
 
         _provider = services.BuildServiceProvider();
@@ -53,6 +56,8 @@ public sealed class AuthServiceTests : IDisposable
             new FakeTokenService(),
             new AuditLogger(_provider.GetRequiredService<AppDbContext>(), new FakeCurrentUser()),
             new FakeCurrentUser(),
+            new FakeEmailSender(),
+            Options.Create(new ClientOptions { BaseUrl = "http://localhost:5173" }),
             jwtOptions);
     }
 
@@ -133,6 +138,40 @@ public sealed class AuthServiceTests : IDisposable
         Assert.Null(lockedOut);
     }
 
+    [Fact]
+    public async Task Password_reset_flow_works_with_a_generated_token()
+    {
+        await CreateUserAsync("admin@edms.local", "Password1!");
+
+        await _sut.RequestPasswordResetAsync("admin@edms.local", default);
+
+        var user = await _userManager.FindByEmailAsync("admin@edms.local");
+        var token = await _userManager.GeneratePasswordResetTokenAsync(user!);
+
+        var success = await _sut.ResetPasswordAsync("admin@edms.local", token, "NewPassword1!", default);
+
+        Assert.True(success);
+        var check = await _signInManagerForCheck(user!, "NewPassword1!");
+        Assert.True(check);
+    }
+
+    [Fact]
+    public async Task Password_reset_with_wrong_token_fails()
+    {
+        await CreateUserAsync("admin@edms.local", "Password1!");
+
+        var success = await _sut.ResetPasswordAsync("admin@edms.local", "bogus-token", "NewPassword1!", default);
+
+        Assert.False(success);
+    }
+
+    private async Task<bool> _signInManagerForCheck(ApplicationUser user, string password)
+    {
+        var manager = _provider.GetRequiredService<SignInManager<ApplicationUser>>();
+        var result = await manager.CheckPasswordSignInAsync(user, password, lockoutOnFailure: false);
+        return result.Succeeded;
+    }
+
     private async Task<ApplicationUser> CreateUserAsync(
         string email,
         string password,
@@ -183,5 +222,15 @@ public sealed class AuthServiceTests : IDisposable
         public string? Email => null;
 
         public string? IpAddress => null;
+    }
+
+    private sealed class FakeEmailSender : IEmailSender
+    {
+        public Task SendAsync(
+            string to,
+            string subject,
+            string htmlBody,
+            CancellationToken cancellationToken = default) =>
+            Task.CompletedTask;
     }
 }

@@ -2,6 +2,7 @@ using eDMS.Application.Auth;
 using eDMS.Application.Common.Interfaces;
 using eDMS.Infrastructure.Auth;
 using eDMS.Infrastructure.Auditing;
+using eDMS.Infrastructure.Email;
 using eDMS.Infrastructure.Options;
 using eDMS.Infrastructure.Persistence;
 using eDMS.Infrastructure.Persistence.Seeding;
@@ -29,11 +30,14 @@ public static class DependencyInjection
         services.AddScoped<AdminSeeder>();
 
         services.Configure<JwtOptions>(configuration.GetSection(JwtOptions.SectionName));
+        services.Configure<SmtpOptions>(configuration.GetSection(SmtpOptions.SectionName));
+        services.Configure<ClientOptions>(configuration.GetSection(ClientOptions.SectionName));
         services.AddSingleton(TimeProvider.System);
         services.AddScoped<ITokenService, JwtTokenService>();
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IAuditLogger, AuditLogger>();
         services.AddScoped<IPermissionResolver, PermissionResolver>();
+        services.AddScoped<IEmailSender, EmailSender>();
 
         return services;
     }

@@ -18,3 +18,7 @@ public sealed record CurrentUserDto(
 public sealed record LoginResponse(string AccessToken, int ExpiresInSeconds, CurrentUserDto User);
 
 public sealed record RefreshResponse(string AccessToken, int ExpiresInSeconds);
+
+public sealed record ForgotPasswordRequest(string Email);
+
+public sealed record ResetPasswordRequest(string Email, string Token, string NewPassword);

@@ -14,7 +14,9 @@ public sealed class AuthService : IAuthService
     private readonly ITokenService _tokenService;
     private readonly IAuditLogger _auditLogger;
     private readonly ICurrentUser _currentUser;
+    private readonly IEmailSender _emailSender;
     private readonly JwtOptions _jwtOptions;
+    private readonly ClientOptions _clientOptions;
 
     public AuthService(
         UserManager<ApplicationUser> userManager,
@@ -22,6 +24,8 @@ public sealed class AuthService : IAuthService
         ITokenService tokenService,
         IAuditLogger auditLogger,
         ICurrentUser currentUser,
+        IEmailSender emailSender,
+        IOptions<ClientOptions> clientOptions,
         IOptions<JwtOptions> jwtOptions)
     {
         _userManager = userManager;
@@ -29,7 +33,9 @@ public sealed class AuthService : IAuthService
         _tokenService = tokenService;
         _auditLogger = auditLogger;
         _currentUser = currentUser;
+        _emailSender = emailSender;
         _jwtOptions = jwtOptions.Value;
+        _clientOptions = clientOptions.Value;
     }
 
     public async Task<AuthResult?> LoginAsync(
@@ -90,6 +96,50 @@ public sealed class AuthService : IAuthService
     {
         var user = await _userManager.FindByIdAsync(userId.ToString());
         return user is null || !user.IsActive ? null : ToCurrentUser(user);
+    }
+
+    public async Task RequestPasswordResetAsync(string email, CancellationToken cancellationToken)
+    {
+        var user = await _userManager.FindByEmailAsync(email);
+        if (user is null || !user.IsActive)
+        {
+            return;
+        }
+
+        var token = await _userManager.GeneratePasswordResetTokenAsync(user);
+        var link = $"{_clientOptions.BaseUrl.TrimEnd('/')}/reset-password"
+            + $"?email={Uri.EscapeDataString(user.Email ?? string.Empty)}"
+            + $"&token={Uri.EscapeDataString(token)}";
+
+        var body = $"""
+            <p>A password reset was requested for your eDMS account.</p>
+            <p><a href="{link}">Reset your password</a></p>
+            <p>This link expires in one hour and can only be used once.</p>
+            """;
+
+        await _emailSender.SendAsync(user.Email!, "Reset your eDMS password", body, cancellationToken);
+    }
+
+    public async Task<bool> ResetPasswordAsync(
+        string email,
+        string token,
+        string newPassword,
+        CancellationToken cancellationToken)
+    {
+        var user = await _userManager.FindByEmailAsync(email);
+        if (user is null || !user.IsActive)
+        {
+            return false;
+        }
+
+        var result = await _userManager.ResetPasswordAsync(user, token, newPassword);
+        if (result.Succeeded)
+        {
+            user.MustChangePassword = false;
+            await _userManager.UpdateAsync(user);
+        }
+
+        return result.Succeeded;
     }
 
     private static CurrentUserDto ToCurrentUser(ApplicationUser user) =>

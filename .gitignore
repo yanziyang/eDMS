@@ -64,3 +64,6 @@ node_modules/
 dist/
 *.tsbuildinfo
 coverage/
+
+# ASP.NET Core Data Protection key ring (local dev)
+dataprotection-keys/

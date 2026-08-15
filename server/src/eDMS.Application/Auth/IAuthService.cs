@@ -25,4 +25,16 @@ public interface IAuthService
     Task RevokeRefreshTokenAsync(string refreshToken, CancellationToken cancellationToken);
 
     Task<CurrentUserDto?> GetCurrentUserAsync(Guid userId, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Generates a single-use reset token and emails a link. Returns without error for
+    /// unknown/inactive accounts to avoid revealing account existence (FR-AUTH-04).
+    /// </summary>
+    Task RequestPasswordResetAsync(string email, CancellationToken cancellationToken);
+
+    Task<bool> ResetPasswordAsync(
+        string email,
+        string token,
+        string newPassword,
+        CancellationToken cancellationToken);
 }

@@ -9,7 +9,10 @@ using eDMS.Infrastructure.Persistence;
 using eDMS.Infrastructure.Persistence.Seeding;
 using eDMS.Infrastructure.Security;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.RateLimiting;
+using System.Threading.RateLimiting;
 using Microsoft.IdentityModel.Tokens;
 using Serilog;
 
@@ -35,6 +38,22 @@ public class Program
         builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
         builder.Services.AddProblemDetails();
 
+        builder.Services.AddDataProtection()
+            .PersistKeysToFileSystem(new DirectoryInfo(
+                Path.Combine(builder.Environment.ContentRootPath, "dataprotection-keys")))
+            .SetApplicationName("eDMS");
+
+        builder.Services.AddRateLimiter(options =>
+        {
+            options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+            options.AddFixedWindowLimiter("auth", limiter =>
+            {
+                limiter.PermitLimit = 10;
+                limiter.Window = TimeSpan.FromMinutes(1);
+                limiter.QueueLimit = 0;
+            });
+        });
+
         builder.Services.AddApplication();
         builder.Services.AddInfrastructure(builder.Configuration);
 
@@ -52,6 +71,7 @@ public class Program
                 options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
             })
             .AddSignInManager()
+            .AddDefaultTokenProviders()
             .AddEntityFrameworkStores<AppDbContext>();
 
         builder.Services
@@ -83,6 +103,7 @@ public class Program
         app.UseSerilogRequestLogging();
         app.UseExceptionHandler();
         app.UseHttpsRedirection();
+        app.UseRateLimiter();
         app.UseAuthentication();
         app.UseAuthorization();
 
