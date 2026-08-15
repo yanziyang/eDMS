@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>My Profile &amp; Preferences — eDMS</title>
+<script>(function(){try{document.documentElement.setAttribute('data-theme', localStorage.getItem('edms-theme')||'default');}catch(e){}})();</script>
+<link rel="stylesheet" href="assets/styles.css">
+</head>
+<body data-page="profile">
+<div class="app-shell">
+  <aside class="app-sidebar" id="appSidebar"><div id="sidebarRoot"></div></aside>
+  <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+  <div class="app-content">
+    <div id="topbarRoot"></div>
+    <main class="app-main narrow" id="appMain">
+
+      <div class="page-header">
+        <div>
+          <div class="page-title">My Profile &amp; Preferences</div>
+          <div class="page-subtitle">Manage your personal information, notifications, and how eDMS looks for you.</div>
+        </div>
+      </div>
+
+      <div class="card mb-6">
+        <div class="card-header"><div><div class="card-title">Profile</div><div class="card-description">Visible to other people in your organization</div></div></div>
+        <form id="profileForm">
+          <div class="card-content">
+            <div class="flex items-center gap-4 mb-5">
+              <div class="avatar avatar-xl" id="profileAvatarInitials">JR</div>
+              <div>
+                <button type="button" class="btn btn-outline btn-sm">Change photo</button>
+                <div class="text-xs text-muted mt-2">Role: <span class="badge badge-default" id="profileRoleBadge">System Administrator</span></div>
+              </div>
+            </div>
+            <div class="grid responsive-2col" style="grid-template-columns:1fr 1fr;gap:1rem;">
+              <div class="field"><label class="label">Full name</label><input class="input" id="profileName"></div>
+              <div class="field"><label class="label">Job title</label><input class="input" id="profileTitle"></div>
+            </div>
+            <div class="field"><label class="label">Email address</label><input class="input" type="email" id="profileEmail" disabled></div>
+            <div class="field"><label class="label">Department</label>
+              <select class="select">
+                <option>IT Operations</option><option>Finance</option><option>Human Resources</option><option>Project Phoenix</option><option>Marketing</option>
+              </select>
+            </div>
+          </div>
+          <div class="card-footer"><button type="submit" class="btn btn-primary">Save changes</button></div>
+        </form>
+      </div>
+
+      <div class="card mb-6" id="preferences">
+        <div class="card-header"><div><div class="card-title">Appearance</div><div class="card-description">Choose how eDMS looks on this device. Your choice is saved to your profile.</div></div></div>
+        <div class="card-content">
+          <div class="theme-grid" id="themeGrid"></div>
+        </div>
+      </div>
+
+      <div class="card mb-6">
+        <div class="card-header"><div><div class="card-title">Notifications</div><div class="card-description">Choose what you want to be notified about</div></div></div>
+        <form id="notifForm">
+          <div class="card-content flex flex-col gap-4">
+            <div class="flex items-center justify-between">
+              <div><div class="text-sm font-medium">Shared with me</div><div class="text-xs text-muted">Email when someone shares a file or folder with you</div></div>
+              <label class="switch"><input type="checkbox" checked><span class="slider"></span></label>
+            </div>
+            <div class="flex items-center justify-between">
+              <div><div class="text-sm font-medium">Followed document activity</div><div class="text-xs text-muted">New versions, deletes, or permission changes on files you follow</div></div>
+              <label class="switch"><input type="checkbox" checked><span class="slider"></span></label>
+            </div>
+            <div class="flex items-center justify-between">
+              <div><div class="text-sm font-medium">Weekly digest</div><div class="text-xs text-muted">A summary email every Monday morning</div></div>
+              <label class="switch"><input type="checkbox"><span class="slider"></span></label>
+            </div>
+            <div class="flex items-center justify-between">
+              <div><div class="text-sm font-medium">Storage quota warnings</div><div class="text-xs text-muted">Only shown to Site Owners and Admins</div></div>
+              <label class="switch"><input type="checkbox" checked><span class="slider"></span></label>
+            </div>
+          </div>
+          <div class="card-footer"><button type="submit" class="btn btn-primary">Save preferences</button></div>
+        </form>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><div><div class="card-title">Security</div><div class="card-description">Change your password. SSO users manage their password with their identity provider.</div></div></div>
+        <form id="passwordForm">
+          <div class="card-content">
+            <div class="field"><label class="label">Current password</label><input class="input" type="password" required></div>
+            <div class="grid responsive-2col" style="grid-template-columns:1fr 1fr;gap:1rem;">
+              <div class="field"><label class="label">New password</label><input class="input" type="password" required></div>
+              <div class="field"><label class="label">Confirm new password</label><input class="input" type="password" required></div>
+            </div>
+            <div class="help-text">Minimum 12 characters, including a number and a symbol.</div>
+          </div>
+          <div class="card-footer"><button type="submit" class="btn btn-primary">Update password</button></div>
+        </form>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<script src="assets/data.js"></script>
+<script src="assets/app.js"></script>
+</body>
+</html>

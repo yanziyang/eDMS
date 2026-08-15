@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin · Storage Report — eDMS</title>
+<script>(function(){try{document.documentElement.setAttribute('data-theme', localStorage.getItem('edms-theme')||'default');}catch(e){}})();</script>
+<link rel="stylesheet" href="assets/styles.css">
+</head>
+<body data-page="admin-storage">
+<div class="app-shell">
+  <aside class="app-sidebar" id="appSidebar"><div id="sidebarRoot"></div></aside>
+  <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+  <div class="app-content">
+    <div id="topbarRoot"></div>
+    <main class="app-main" id="appMain">
+
+      <div class="breadcrumb mb-3"><a href="admin-users.html">Admin Center</a><svg class="icon icon-sm sep" data-icon="chevronRight"></svg><span class="current">Storage Report</span></div>
+      <div class="page-header">
+        <div><div class="page-title">Storage report</div><div class="page-subtitle">Usage across every site, updated in real time as documents are added or removed.</div></div>
+        <div class="page-actions"><button class="btn btn-outline" onclick="showToast({title:'Report exported', desc:'edms-storage-report.pdf'})"><svg class="icon icon-sm" data-icon="download"></svg>Export PDF</button></div>
+      </div>
+
+      <div class="pill-tabs mb-4">
+        <a class="pill-tab" href="admin-users.html">Users</a>
+        <a class="pill-tab" href="admin-groups.html">Groups</a>
+        <a class="pill-tab" href="admin-sites.html">Sites</a>
+        <a class="pill-tab active" href="admin-storage.html">Storage report</a>
+        <a class="pill-tab" href="admin-audit-log.html">Audit log</a>
+        <a class="pill-tab" href="admin-settings.html">Settings</a>
+      </div>
+
+      <div class="stat-grid mb-6">
+        <div class="card stat-card">
+          <div class="stat-label">Total storage used<div class="stat-icon"><svg class="icon icon-sm" data-icon="database"></svg></div></div>
+          <div class="stat-value" id="reportTotalStorage">—</div>
+          <div class="stat-delta text-muted" id="reportTotalQuota">—</div>
+        </div>
+        <div class="card stat-card">
+          <div class="stat-label">Total documents<div class="stat-icon"><svg class="icon icon-sm" data-icon="fileText"></svg></div></div>
+          <div class="stat-value" id="reportTotalDocs">—</div>
+          <div class="stat-delta up"><svg class="icon icon-sm" data-icon="trendingUp"></svg>Across all libraries</div>
+        </div>
+        <div class="card stat-card">
+          <div class="stat-label">Active sites<div class="stat-icon"><svg class="icon icon-sm" data-icon="building2"></svg></div></div>
+          <div class="stat-value" id="reportTotalSites">—</div>
+          <div class="stat-delta text-muted">Workspaces provisioned</div>
+        </div>
+        <div class="card stat-card">
+          <div class="stat-label">Active users<div class="stat-icon"><svg class="icon icon-sm" data-icon="users"></svg></div></div>
+          <div class="stat-value" id="reportTotalUsers">—</div>
+          <div class="stat-delta text-muted">Of 19 total accounts</div>
+        </div>
+      </div>
+
+      <div class="grid responsive-2col mb-6" style="grid-template-columns:1.5fr 1fr;gap:1.25rem;align-items:start;">
+        <div class="card chart-card">
+          <div class="card-header"><div><div class="card-title">Storage by site</div><div class="card-description">Used vs. provisioned quota, in GB</div></div></div>
+          <div class="card-content">
+            <div id="siteStorageChart"></div>
+            <div class="chart-legend">
+              <div class="legend-item"><span class="legend-dot" style="background:hsl(var(--muted-foreground));opacity:.4;"></span>Quota</div>
+              <div class="legend-item"><span class="legend-dot" style="background:hsl(var(--primary));"></span>Used (colored per site)</div>
+            </div>
+          </div>
+        </div>
+        <div class="card chart-card">
+          <div class="card-header"><div class="card-title">Storage by file type</div></div>
+          <div class="card-content" style="display:flex;flex-direction:column;align-items:center;">
+            <div id="fileTypeDonut"></div>
+            <div class="chart-legend" id="fileTypeLegend" style="justify-content:center;"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card mb-6 chart-card">
+        <div class="card-header"><div><div class="card-title">Storage growth</div><div class="card-description">Total organization-wide usage, last 7 months</div></div></div>
+        <div class="card-content"><div id="storageTrendChart"></div></div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><div class="card-title">Sites by storage usage</div></div>
+        <div class="card-content tight">
+          <div class="table-wrap" style="border:none;border-radius:0;">
+            <table class="data-table">
+              <thead><tr><th>Site</th><th>Libraries</th><th>Usage</th></tr></thead>
+              <tbody id="topLibrariesBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<script src="assets/data.js"></script>
+<script src="assets/app.js"></script>
+</body>
+</html>

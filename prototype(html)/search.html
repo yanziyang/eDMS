@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Search — eDMS</title>
+<script>(function(){try{document.documentElement.setAttribute('data-theme', localStorage.getItem('edms-theme')||'default');}catch(e){}})();</script>
+<link rel="stylesheet" href="assets/styles.css">
+</head>
+<body data-page="search">
+<div class="app-shell">
+  <aside class="app-sidebar" id="appSidebar"><div id="sidebarRoot"></div></aside>
+  <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+  <div class="app-content">
+    <div id="topbarRoot"></div>
+    <main class="app-main" id="appMain">
+
+      <div class="page-header">
+        <div>
+          <div class="page-title">Search</div>
+          <div class="page-subtitle">Results are scoped to sites and libraries you have at least Read access to.</div>
+        </div>
+      </div>
+
+      <div class="flex gap-2 mb-6" style="max-width:640px;">
+        <div class="input-icon-wrap flex-1">
+          <svg class="icon icon-sm" data-icon="search"></svg>
+          <input class="input" id="searchInput" placeholder="Search by file name or tag…">
+        </div>
+        <button class="btn btn-primary" id="searchGoBtn">Search</button>
+      </div>
+
+      <div class="grid responsive-2col" style="grid-template-columns:220px 1fr;gap:1.5rem;align-items:start;">
+        <div class="card">
+          <div class="card-header no-border"><div class="card-title text-sm">Filters</div></div>
+          <div class="card-content">
+            <div class="text-xs font-semibold text-muted mb-2" style="text-transform:uppercase;letter-spacing:.04em;">Site</div>
+            <div class="flex flex-col gap-2 mb-4" id="siteFilterList"></div>
+            <div class="separator"></div>
+            <div class="text-xs font-semibold text-muted mb-2" style="text-transform:uppercase;letter-spacing:.04em;">File type</div>
+            <div class="flex flex-col gap-2">
+              <div class="checkbox-row"><input type="checkbox" class="search-filter" data-filter-type="type" value="pdf" id="ftpdf"><label for="ftpdf">PDF</label></div>
+              <div class="checkbox-row"><input type="checkbox" class="search-filter" data-filter-type="type" value="docx" id="ftdocx"><label for="ftdocx">Word</label></div>
+              <div class="checkbox-row"><input type="checkbox" class="search-filter" data-filter-type="type" value="xlsx" id="ftxlsx"><label for="ftxlsx">Excel</label></div>
+              <div class="checkbox-row"><input type="checkbox" class="search-filter" data-filter-type="type" value="pptx" id="ftpptx"><label for="ftpptx">PowerPoint</label></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="min-w-0">
+          <div class="text-muted text-sm mb-3"><span id="searchResultCount">0</span> results for <span id="searchQueryLabel">all documents</span></div>
+          <div id="searchResultsList"></div>
+          <div class="card hidden" id="searchEmptyState">
+            <div class="empty-state">
+              <div class="empty-icon"><svg class="icon icon-lg" data-icon="fileSearch"></svg></div>
+              <h3>No matching documents</h3>
+              <p>Try a different search term or clear filters.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<script src="assets/data.js"></script>
+<script src="assets/app.js"></script>
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    qs("#siteFilterList").innerHTML = SITES.map(s => `
+      <div class="checkbox-row"><input type="checkbox" class="search-filter" data-filter-type="site" value="${s.slug}" id="sf-${s.slug}"><label for="sf-${s.slug}"><span class="sidebar-site-dot" style="background:${s.color};display:inline-block;margin-right:5px;"></span>${esc(s.name)}</label></div>
+    `).join("");
+    qsa(".search-filter").forEach(cb => cb.addEventListener("change", renderSearchResults));
+  });
+</script>
+</body>
+</html>

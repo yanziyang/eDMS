@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin · Settings — eDMS</title>
+<script>(function(){try{document.documentElement.setAttribute('data-theme', localStorage.getItem('edms-theme')||'default');}catch(e){}})();</script>
+<link rel="stylesheet" href="assets/styles.css">
+</head>
+<body data-page="admin-settings">
+<div class="app-shell">
+  <aside class="app-sidebar" id="appSidebar"><div id="sidebarRoot"></div></aside>
+  <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+  <div class="app-content">
+    <div id="topbarRoot"></div>
+    <main class="app-main" id="appMain">
+
+      <div class="breadcrumb mb-3"><a href="admin-users.html">Admin Center</a><svg class="icon icon-sm sep" data-icon="chevronRight"></svg><span class="current">Settings</span></div>
+      <div class="page-header">
+        <div><div class="page-title">System settings</div><div class="page-subtitle">Organization-wide configuration for eDMS.</div></div>
+      </div>
+
+      <div class="pill-tabs mb-4">
+        <a class="pill-tab" href="admin-users.html">Users</a>
+        <a class="pill-tab" href="admin-groups.html">Groups</a>
+        <a class="pill-tab" href="admin-sites.html">Sites</a>
+        <a class="pill-tab" href="admin-storage.html">Storage report</a>
+        <a class="pill-tab" href="admin-audit-log.html">Audit log</a>
+        <a class="pill-tab active" href="admin-settings.html">Settings</a>
+      </div>
+
+      <div class="card mb-6">
+        <div class="card-header"><div><div class="card-title">General</div><div class="card-description">Branding shown across the application</div></div></div>
+        <form class="settings-form">
+          <div class="card-content">
+            <div class="grid responsive-2col" style="grid-template-columns:1fr 1fr;gap:1rem;">
+              <div class="field"><label class="label">Application name</label><input class="input" value="eDMS"></div>
+              <div class="field"><label class="label">Support email</label><input class="input" value="it-support@edms-demo.local"></div>
+            </div>
+          </div>
+          <div class="card-footer"><button type="submit" class="btn btn-primary">Save</button></div>
+        </form>
+      </div>
+
+      <div class="card mb-6">
+        <div class="card-header"><div><div class="card-title">Uploads &amp; storage</div><div class="card-description">Controls enforced server-side on every upload</div></div></div>
+        <form class="settings-form">
+          <div class="card-content">
+            <div class="grid responsive-2col" style="grid-template-columns:1fr 1fr;gap:1rem;">
+              <div class="field"><label class="label">Max file size (MB)</label><input class="input" type="number" value="250"></div>
+              <div class="field"><label class="label">Recycle Bin retention (days)</label><input class="input" type="number" value="90"></div>
+            </div>
+            <div class="field"><label class="label">Blocked file extensions</label><input class="input" value=".exe, .bat, .cmd, .msi, .scr"></div>
+            <div class="flex items-center justify-between mt-2">
+              <div><div class="text-sm font-medium">Require check-out before editing</div><div class="text-xs text-muted">Default for newly created libraries</div></div>
+              <label class="switch"><input type="checkbox"><span class="slider"></span></label>
+            </div>
+          </div>
+          <div class="card-footer"><button type="submit" class="btn btn-primary">Save</button></div>
+        </form>
+      </div>
+
+      <div class="card mb-6">
+        <div class="card-header"><div><div class="card-title">Session &amp; security</div><div class="card-description">Applies to local database authentication</div></div></div>
+        <form class="settings-form">
+          <div class="card-content">
+            <div class="grid responsive-2col" style="grid-template-columns:1fr 1fr;gap:1rem;">
+              <div class="field"><label class="label">Access token lifetime (minutes)</label><input class="input" type="number" value="15"></div>
+              <div class="field"><label class="label">Refresh token lifetime (days)</label><input class="input" type="number" value="7"></div>
+              <div class="field"><label class="label">Failed login lockout threshold</label><input class="input" type="number" value="5"></div>
+              <div class="field"><label class="label">Lockout duration (minutes)</label><input class="input" type="number" value="15"></div>
+            </div>
+          </div>
+          <div class="card-footer"><button type="submit" class="btn btn-primary">Save</button></div>
+        </form>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><div><div class="card-title">Authentication providers</div><div class="card-description">Database authentication is enabled by default. SSO federation is on the roadmap.</div></div></div>
+        <div class="card-content flex flex-col gap-3">
+          <div class="flex items-center justify-between p-3 border rounded">
+            <div class="flex items-center gap-3"><svg class="icon" data-icon="key"></svg><div><div class="text-sm font-medium">Database authentication</div><div class="text-xs text-muted">Email + password, managed in eDMS</div></div></div>
+            <span class="badge badge-success">Enabled</span>
+          </div>
+          <div class="flex items-center justify-between p-3 border rounded" style="opacity:.6;">
+            <div class="flex items-center gap-3"><svg class="icon" data-icon="shieldCheck"></svg><div><div class="text-sm font-medium">SAML 2.0</div><div class="text-xs text-muted">Federate with your identity provider</div></div></div>
+            <span class="badge badge-outline">Planned</span>
+          </div>
+          <div class="flex items-center justify-between p-3 border rounded" style="opacity:.6;">
+            <div class="flex items-center gap-3"><svg class="icon" data-icon="globe"></svg><div><div class="text-sm font-medium">OpenID Connect (OIDC)</div><div class="text-xs text-muted">Sign in with Azure AD, Okta, or Google Workspace</div></div></div>
+            <span class="badge badge-outline">Planned</span>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<script src="assets/data.js"></script>
+<script src="assets/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Recycle Bin — eDMS</title>
+<script>(function(){try{document.documentElement.setAttribute('data-theme', localStorage.getItem('edms-theme')||'default');}catch(e){}})();</script>
+<link rel="stylesheet" href="assets/styles.css">
+</head>
+<body data-page="recycle-bin">
+<div class="app-shell">
+  <aside class="app-sidebar" id="appSidebar"><div id="sidebarRoot"></div></aside>
+  <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+  <div class="app-content">
+    <div id="topbarRoot"></div>
+    <main class="app-main" id="appMain">
+
+      <div class="page-header">
+        <div>
+          <div class="page-title">Recycle Bin</div>
+          <div class="page-subtitle"><span id="recycleCount">0</span> items &middot; deleted items are kept for 90 days before being permanently purged</div>
+        </div>
+        <div class="page-actions">
+          <button class="btn btn-outline" id="recycleEmptyAllBtn"><svg class="icon icon-sm" data-icon="trash2"></svg>Empty recycle bin</button>
+        </div>
+      </div>
+
+      <div class="alert alert-info mb-4">
+        <svg class="icon" data-icon="info"></svg>
+        <div>As a Site Owner / System Administrator, you can see items deleted by everyone across every site. Regular members only see their own deleted items here.</div>
+      </div>
+
+      <div class="table-wrap" id="recycleTableWrap">
+        <table class="data-table">
+          <thead><tr>
+            <th class="checkbox-col"></th>
+            <th>Name</th><th>Site</th><th>Original location</th><th>Deleted by</th><th>Deleted</th><th class="actions-col"></th>
+          </tr></thead>
+          <tbody id="recycleTableBody"></tbody>
+        </table>
+      </div>
+
+      <div class="card hidden" id="recycleEmptyState">
+        <div class="empty-state">
+          <div class="empty-icon"><svg class="icon icon-lg" data-icon="trash2"></svg></div>
+          <h3>Recycle Bin is empty</h3>
+          <p>Items you delete from any library will appear here for 90 days.</p>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<script src="assets/data.js"></script>
+<script src="assets/app.js"></script>
+</body>
+</html>

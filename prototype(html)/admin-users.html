@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin · Users — eDMS</title>
+<script>(function(){try{document.documentElement.setAttribute('data-theme', localStorage.getItem('edms-theme')||'default');}catch(e){}})();</script>
+<link rel="stylesheet" href="assets/styles.css">
+</head>
+<body data-page="admin-users">
+<div class="app-shell">
+  <aside class="app-sidebar" id="appSidebar"><div id="sidebarRoot"></div></aside>
+  <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+  <div class="app-content">
+    <div id="topbarRoot"></div>
+    <main class="app-main" id="appMain">
+
+      <div class="breadcrumb mb-3"><a href="admin-users.html">Admin Center</a><svg class="icon icon-sm sep" data-icon="chevronRight"></svg><span class="current">Users</span></div>
+      <div class="page-header">
+        <div><div class="page-title">Users</div><div class="page-subtitle">Manage accounts, roles, and access across the organization.</div></div>
+        <div class="page-actions"><button class="btn btn-primary" data-dialog-trigger="addUserDialog"><svg class="icon icon-sm" data-icon="userPlus"></svg>Add user</button></div>
+      </div>
+
+      <div class="pill-tabs mb-4">
+        <a class="pill-tab active" href="admin-users.html">Users</a>
+        <a class="pill-tab" href="admin-groups.html">Groups</a>
+        <a class="pill-tab" href="admin-sites.html">Sites</a>
+        <a class="pill-tab" href="admin-storage.html">Storage report</a>
+        <a class="pill-tab" href="admin-audit-log.html">Audit log</a>
+        <a class="pill-tab" href="admin-settings.html">Settings</a>
+      </div>
+
+      <div class="card">
+        <div class="card-header no-border">
+          <div class="input-icon-wrap" style="max-width:280px;"><svg class="icon icon-sm" data-icon="search"></svg><input class="input" id="userSearchInput" placeholder="Search users…"></div>
+          <span class="text-muted text-xs" id="userCountLabel">0 users</span>
+        </div>
+        <div class="card-content tight">
+          <div class="table-wrap" style="border:none;border-radius:0;border-top:1px solid hsl(var(--border));">
+            <table class="data-table">
+              <thead><tr><th>Name</th><th>Title</th><th>Department</th><th>Role</th><th>Last active</th><th>Active</th></tr></thead>
+              <tbody id="adminUsersBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<div class="overlay" id="addUserDialog">
+  <div class="dialog">
+    <div class="dialog-header"><div class="dialog-title">Add user<button class="dialog-close btn btn-icon btn-ghost btn-sm" data-dialog-close><svg class="icon" data-icon="x"></svg></button></div><div class="dialog-description">An invitation email is sent with a link to set a password.</div></div>
+    <form id="addUserForm">
+      <div class="dialog-body">
+        <div class="field"><label class="label">Full name <span class="req">*</span></label><input class="input" id="newUserName" required></div>
+        <div class="field"><label class="label">Email address <span class="req">*</span></label><input class="input" type="email" id="newUserEmail" required></div>
+        <div class="field"><label class="label">Job title</label><input class="input" id="newUserTitle"></div>
+        <div class="field"><label class="label">Department</label>
+          <select class="select" id="newUserDept">
+            <option>Finance</option><option>Human Resources</option><option>Project Phoenix</option><option>IT Operations</option><option>Marketing</option>
+          </select>
+        </div>
+      </div>
+      <div class="dialog-footer"><button type="button" class="btn btn-secondary" data-dialog-close>Cancel</button><button type="submit" class="btn btn-primary">Send invitation</button></div>
+    </form>
+  </div>
+</div>
+
+<script src="assets/data.js"></script>
+<script src="assets/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin · Audit Log — eDMS</title>
+<script>(function(){try{document.documentElement.setAttribute('data-theme', localStorage.getItem('edms-theme')||'default');}catch(e){}})();</script>
+<link rel="stylesheet" href="assets/styles.css">
+</head>
+<body data-page="admin-audit-log">
+<div class="app-shell">
+  <aside class="app-sidebar" id="appSidebar"><div id="sidebarRoot"></div></aside>
+  <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+  <div class="app-content">
+    <div id="topbarRoot"></div>
+    <main class="app-main" id="appMain">
+
+      <div class="breadcrumb mb-3"><a href="admin-users.html">Admin Center</a><svg class="icon icon-sm sep" data-icon="chevronRight"></svg><span class="current">Audit Log</span></div>
+      <div class="page-header">
+        <div><div class="page-title">Audit log</div><div class="page-subtitle">Every upload, download, permission change, and sign-in is recorded and immutable.</div></div>
+        <div class="page-actions"><button class="btn btn-outline" id="auditExportBtn"><svg class="icon icon-sm" data-icon="download"></svg>Export CSV</button></div>
+      </div>
+
+      <div class="pill-tabs mb-4">
+        <a class="pill-tab" href="admin-users.html">Users</a>
+        <a class="pill-tab" href="admin-groups.html">Groups</a>
+        <a class="pill-tab" href="admin-sites.html">Sites</a>
+        <a class="pill-tab" href="admin-storage.html">Storage report</a>
+        <a class="pill-tab active" href="admin-audit-log.html">Audit log</a>
+        <a class="pill-tab" href="admin-settings.html">Settings</a>
+      </div>
+
+      <div class="card">
+        <div class="card-header no-border" style="flex-wrap:wrap;gap:.75rem;">
+          <div class="flex gap-2 flex-wrap">
+            <select class="select" id="auditActionFilter" style="width:180px;"></select>
+            <div class="input-icon-wrap" style="width:240px;"><svg class="icon icon-sm" data-icon="search"></svg><input class="input" id="auditSearchInput" placeholder="Search user, object, site…"></div>
+          </div>
+          <span class="text-muted text-xs" id="auditCountLabel">0 events</span>
+        </div>
+        <div class="card-content tight">
+          <div class="table-wrap" style="border:none;border-radius:0;border-top:1px solid hsl(var(--border));">
+            <table class="data-table">
+              <thead><tr><th>Time</th><th>User</th><th>Action</th><th>Object</th><th>Site</th><th>IP address</th></tr></thead>
+              <tbody id="auditTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<script src="assets/data.js"></script>
+<script src="assets/app.js"></script>
+</body>
+</html>

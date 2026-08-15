@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Library — eDMS</title>
+<script>(function(){try{document.documentElement.setAttribute('data-theme', localStorage.getItem('edms-theme')||'default');}catch(e){}})();</script>
+<link rel="stylesheet" href="assets/styles.css">
+</head>
+<body data-page="library">
+<div class="app-shell">
+  <aside class="app-sidebar" id="appSidebar"><div id="sidebarRoot"></div></aside>
+  <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+  <div class="app-content">
+    <div id="topbarRoot"></div>
+    <main class="app-main" id="appMain">
+
+      <div class="breadcrumb mb-3">
+        <a href="home.html">Home</a><svg class="icon icon-sm sep" data-icon="chevronRight"></svg>
+        <a href="site-home.html" id="libSiteHref"><span id="libSiteName">Site</span></a><svg class="icon icon-sm sep" data-icon="chevronRight"></svg>
+        <a href="library.html" id="libLibraryHref"><span id="libLibraryName">Library</span></a>
+        <span id="libBreadcrumbExtra"></span>
+      </div>
+
+      <div class="page-header">
+        <div>
+          <div class="page-title" id="libPageTitle">Documents</div>
+          <div class="page-subtitle">Upload, organize, and manage documents with version history and permissions.</div>
+        </div>
+        <div class="page-actions">
+          <button class="btn btn-outline" id="newFolderBtn"><svg class="icon icon-sm" data-icon="folderPlus"></svg>New folder</button>
+          <button class="btn btn-primary" data-dialog-trigger="uploadDialog"><svg class="icon icon-sm" data-icon="uploadCloud"></svg>Upload</button>
+        </div>
+      </div>
+
+      <div class="selection-bar" id="selectionBar">
+        <svg class="icon icon-sm" data-icon="checkCircle2"></svg>
+        <span id="selectionCount">0 selected</span>
+        <div class="spacer"></div>
+        <button class="btn btn-ghost btn-sm" id="bulkDownloadBtn"><svg class="icon icon-sm" data-icon="download"></svg>Download</button>
+        <button class="btn btn-ghost btn-sm" id="bulkDeleteBtn"><svg class="icon icon-sm" data-icon="trash2"></svg>Delete</button>
+        <button class="btn btn-ghost btn-sm" id="clearSelectionBtn"><svg class="icon icon-sm" data-icon="x"></svg>Clear</button>
+      </div>
+
+      <div class="toolbar">
+        <div class="toolbar-left">
+          <span class="text-muted text-xs desktop-only">Drag and drop files anywhere on this page to upload</span>
+        </div>
+        <div class="toolbar-right">
+          <div class="btn-group">
+            <button class="btn btn-ghost btn-sm active" id="viewListBtn" data-tooltip="List view"><svg class="icon icon-sm" data-icon="list"></svg></button>
+            <button class="btn btn-ghost btn-sm" id="viewGridBtn" data-tooltip="Grid view"><svg class="icon icon-sm" data-icon="grid3x3"></svg></button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Empty state -->
+      <div class="card hidden" id="libEmptyState">
+        <div class="empty-state">
+          <div class="empty-icon"><svg class="icon icon-lg" data-icon="folder"></svg></div>
+          <h3>This folder is empty</h3>
+          <p>Upload files or create a subfolder to get started.</p>
+          <div class="flex gap-2">
+            <button class="btn btn-outline btn-sm" onclick="qs('#newFolderBtn').click()"><svg class="icon icon-sm" data-icon="folderPlus"></svg>New folder</button>
+            <button class="btn btn-primary btn-sm" data-dialog-trigger="uploadDialog"><svg class="icon icon-sm" data-icon="uploadCloud"></svg>Upload</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- List view: desktop table + mobile cards, same data -->
+      <div id="libListWrap">
+        <div class="table-wrap">
+          <table class="data-table lib-table-el">
+            <thead>
+              <tr>
+                <th class="checkbox-col"><input type="checkbox" id="selectAllCheckbox"></th>
+                <th class="sortable" data-sort-key="name">Name<span class="sort-arrow"></span></th>
+                <th class="sortable" data-sort-key="modifiedBy">Modified by<span class="sort-arrow"></span></th>
+                <th class="sortable" data-sort-key="modified">Modified<span class="sort-arrow"></span></th>
+                <th class="sortable" data-sort-key="size">Size<span class="sort-arrow"></span></th>
+                <th class="actions-col"></th>
+              </tr>
+            </thead>
+            <tbody id="libTableBody"></tbody>
+          </table>
+        </div>
+        <div class="lib-cards card" id="libCardsBody"></div>
+      </div>
+
+      <!-- Grid view -->
+      <div id="libGridWrap" class="hidden">
+        <div class="file-grid" id="libGridBody"></div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<!-- Upload dialog -->
+<div class="overlay" id="uploadDialog">
+  <div class="dialog">
+    <div class="dialog-header">
+      <div class="dialog-title">Upload files<button class="dialog-close btn btn-icon btn-ghost btn-sm" data-dialog-close><svg class="icon" data-icon="x"></svg></button></div>
+      <div class="dialog-description">Files are versioned automatically if a document with the same name already exists here.</div>
+    </div>
+    <div class="dialog-body">
+      <label class="dropzone" id="dropzone">
+        <svg class="icon icon-xl" data-icon="uploadCloud"></svg>
+        <div><span style="font-weight:600;color:hsl(var(--primary));">Click to browse</span> or drag files here</div>
+        <div class="help-text">Up to 250 MB per file &middot; blocked types configured in Admin &rarr; Settings</div>
+        <input type="file" id="fileInput" multiple style="display:none">
+      </label>
+      <div id="uploadList" class="mt-4 flex flex-col gap-3"></div>
+    </div>
+    <div class="dialog-footer">
+      <button class="btn btn-secondary" data-dialog-close>Cancel</button>
+      <button class="btn btn-primary" id="uploadDoneBtn" disabled>Done</button>
+    </div>
+  </div>
+</div>
+
+<!-- Quick input dialog (rename / new folder) -->
+<div class="overlay" id="quickInputDialog">
+  <div class="dialog dialog-sm">
+    <div class="dialog-header"><div class="dialog-title" id="quickInputTitle">Rename<button class="dialog-close btn btn-icon btn-ghost btn-sm" data-dialog-close><svg class="icon" data-icon="x"></svg></button></div></div>
+    <div class="dialog-body">
+      <div class="field"><label class="label" id="quickInputLabel">Name</label><input class="input" id="quickInputField"></div>
+    </div>
+    <div class="dialog-footer"><button class="btn btn-secondary" data-dialog-close>Cancel</button><button class="btn btn-primary" id="quickInputConfirmBtn">Save</button></div>
+  </div>
+</div>
+
+<!-- Move / Copy dialog -->
+<div class="overlay" id="moveCopyDialog">
+  <div class="dialog dialog-sm">
+    <div class="dialog-header"><div class="dialog-title" id="moveCopyTitle">Move to<button class="dialog-close btn btn-icon btn-ghost btn-sm" data-dialog-close><svg class="icon" data-icon="x"></svg></button></div></div>
+    <div class="dialog-body">
+      <div class="field"><label class="label">Destination</label><select class="select" id="moveCopyDestination"></select></div>
+    </div>
+    <div class="dialog-footer"><button class="btn btn-secondary" data-dialog-close>Cancel</button><button class="btn btn-primary" id="moveCopyConfirmBtn">Move here</button></div>
+  </div>
+</div>
+
+<!-- Share dialog -->
+<div class="overlay" id="shareDialog">
+  <div class="dialog">
+    <div class="dialog-header"><div class="dialog-title">Share<button class="dialog-close btn btn-icon btn-ghost btn-sm" data-dialog-close><svg class="icon" data-icon="x"></svg></button></div>
+      <div class="flex items-center gap-2 mt-2" id="shareIcoWrap-row"><span id="shareIcoWrap"></span><span class="font-medium text-sm truncate" id="shareItemName">File name</span></div>
+    </div>
+    <div class="dialog-body">
+      <div class="field">
+        <label class="label">Invite people or groups</label>
+        <div class="input-icon-wrap"><svg class="icon icon-sm" data-icon="userPlus"></svg><input class="input" id="sharePeopleInput" placeholder="Search internal people or groups…"></div>
+        <div class="flex gap-1 flex-wrap mt-2">
+          <span class="badge badge-secondary">Sarah Chen <svg class="icon icon-sm" data-icon="x" style="margin-left:2px;"></svg></span>
+          <span class="badge badge-secondary">Finance Members <svg class="icon icon-sm" data-icon="x" style="margin-left:2px;"></svg></span>
+        </div>
+      </div>
+      <div class="field">
+        <label class="label">Permission level</label>
+        <select class="select"><option>Can view</option><option>Can edit</option></select>
+      </div>
+      <div class="field">
+        <label class="label">Message (optional)</label>
+        <textarea class="textarea" rows="2" placeholder="Add a note…"></textarea>
+      </div>
+      <div class="checkbox-row"><input type="checkbox" id="shareNotify" checked><label for="shareNotify">Send an email notification</label></div>
+    </div>
+    <div class="dialog-footer"><button class="btn btn-secondary" data-dialog-close>Cancel</button><button class="btn btn-primary" id="shareSendBtn"><svg class="icon icon-sm" data-icon="share2"></svg>Share</button></div>
+  </div>
+</div>
+
+<!-- Preview dialog -->
+<div class="overlay" id="previewDialog">
+  <div class="dialog dialog-lg">
+    <div class="dialog-header"><div class="dialog-title"><span id="previewName">File name</span><button class="dialog-close btn btn-icon btn-ghost btn-sm" data-dialog-close><svg class="icon" data-icon="x"></svg></button></div></div>
+    <div class="dialog-body">
+      <div style="background:hsl(var(--muted));border-radius:var(--radius);padding:2.5rem 1.5rem;display:flex;flex-direction:column;align-items:center;gap:1rem;">
+        <span id="previewIcoWrap"></span>
+        <div class="text-center">
+          <div class="font-medium text-sm">Preview not available in this prototype</div>
+          <div class="text-muted text-xs mt-1" style="max-width:34ch;">In the production app, PDF and image files preview inline; Office files render via a server-side conversion service.</div>
+        </div>
+      </div>
+    </div>
+    <div class="dialog-footer"><button class="btn btn-secondary" data-dialog-close>Close</button><button class="btn btn-primary"><svg class="icon icon-sm" data-icon="download"></svg>Download</button></div>
+  </div>
+</div>
+
+<script src="assets/data.js"></script>
+<script src="assets/app.js"></script>
+</body>
+</html>

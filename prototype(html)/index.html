@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sign in — eDMS</title>
+<script>(function(){try{document.documentElement.setAttribute('data-theme', localStorage.getItem('edms-theme')||'default');}catch(e){}})();</script>
+<link rel="stylesheet" href="assets/styles.css">
+</head>
+<body data-page="login">
+<div class="auth-shell">
+  <div class="auth-panel-form">
+    <div class="auth-form-inner">
+      <div class="flex items-center gap-2 mb-8">
+        <div class="mark" style="width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary) / .65));display:flex;align-items:center;justify-content:center;color:hsl(var(--primary-foreground));font-weight:700;">DM</div>
+        <div>
+          <div class="font-bold text-lg" style="line-height:1.1;">eDMS</div>
+          <div class="text-muted text-xs">Enterprise Document Management</div>
+        </div>
+      </div>
+
+      <h1 class="text-2xl font-bold mb-1">Welcome back</h1>
+      <p class="text-muted text-sm mb-6">Sign in with your organization account to continue.</p>
+
+      <form id="loginForm" novalidate>
+        <div class="field">
+          <label class="label" for="email">Email address</label>
+          <div class="input-icon-wrap">
+            <svg class="icon icon-sm" data-icon="mail"></svg>
+            <input class="input" type="email" id="email" placeholder="you@company.com" value="jordan.reyes@edms-demo.local" autocomplete="username">
+          </div>
+          <div class="error-text hidden" id="emailError"><svg class="icon icon-sm" data-icon="alertTriangle"></svg>Enter your email address</div>
+        </div>
+        <div class="field">
+          <div class="flex items-center justify-between">
+            <label class="label" for="password">Password</label>
+            <a class="text-xs text-primary font-medium" href="forgot-password.html">Forgot password?</a>
+          </div>
+          <div class="input-icon-wrap">
+            <svg class="icon icon-sm" data-icon="lock"></svg>
+            <input class="input" type="password" id="password" placeholder="Enter your password" value="demo-password" autocomplete="current-password" style="padding-right:2.4rem;">
+            <button type="button" class="btn btn-ghost btn-icon btn-sm" id="togglePwBtn" style="position:absolute;right:.3rem;top:50%;transform:translateY(-50%);" aria-label="Show password"><svg class="icon icon-sm" data-icon="eye"></svg></button>
+          </div>
+          <div class="error-text hidden" id="passwordError"><svg class="icon icon-sm" data-icon="alertTriangle"></svg>Enter your password</div>
+        </div>
+        <div class="checkbox-row mb-4">
+          <input type="checkbox" id="rememberMe" checked>
+          <label for="rememberMe">Keep me signed in</label>
+        </div>
+        <button type="submit" class="btn btn-primary btn-block btn-lg" id="signInBtn">Sign in</button>
+      </form>
+
+      <div class="flex items-center gap-3 my-5" style="color:hsl(var(--muted-foreground));font-size:12px;">
+        <div class="separator" style="margin:0;flex:1;"></div>OR<div class="separator" style="margin:0;flex:1;"></div>
+      </div>
+      <button class="btn btn-outline btn-block" disabled data-tooltip="Configured by your administrator in a future release"><svg class="icon icon-sm" data-icon="shieldCheck"></svg>Sign in with company SSO (SAML2 / OIDC)</button>
+
+      <div class="demo-creds mt-6">
+        <strong>Prototype note:</strong> this is a visual walkthrough with no real backend. Any email / password combination signs you in as <code>Jordan Reyes</code>, System Administrator.
+      </div>
+    </div>
+  </div>
+  <div class="auth-panel-brand">
+    <div class="content">
+      <div class="auth-logo"><div class="mark"><svg class="icon" data-icon="database" style="color:#fff;"></svg></div>eDMS</div>
+    </div>
+    <div class="content">
+      <div class="auth-quote">"Every contract, policy, and report — organized, versioned, and exactly where your team expects it."</div>
+      <div class="flex flex-col gap-3 mt-8" style="font-size:13.5px;">
+        <div class="flex items-center gap-2"><svg class="icon icon-sm" data-icon="checkCircle2"></svg>Version history &amp; check-in / check-out</div>
+        <div class="flex items-center gap-2"><svg class="icon icon-sm" data-icon="checkCircle2"></svg>Granular, inheritable permissions</div>
+        <div class="flex items-center gap-2"><svg class="icon icon-sm" data-icon="checkCircle2"></svg>Organization-wide instant search</div>
+        <div class="flex items-center gap-2"><svg class="icon icon-sm" data-icon="checkCircle2"></svg>Full audit trail on every action</div>
+      </div>
+    </div>
+    <div class="content text-xs" style="opacity:.75;">&copy; 2026 eDMS — Internal enterprise prototype</div>
+  </div>
+</div>
+
+<script src="assets/data.js"></script>
+<script src="assets/app.js"></script>
+<script>
+  hydrateIcons();
+  qs("#togglePwBtn").addEventListener("click", () => {
+    const pw = qs("#password");
+    const showing = pw.type === "text";
+    pw.type = showing ? "password" : "text";
+    const icon = qs("#togglePwBtn svg");
+    icon.dataset.hydrated = "";
+    icon.setAttribute("data-icon", showing ? "eye" : "xCircle");
+    hydrateIcons();
+  });
+  qs("#loginForm").addEventListener("submit", function (e) {
+    e.preventDefault();
+    const email = qs("#email").value.trim();
+    const pw = qs("#password").value.trim();
+    qs("#emailError").classList.toggle("hidden", !!email);
+    qs("#passwordError").classList.toggle("hidden", !!pw);
+    qs("#email").classList.toggle("input-error", !email);
+    qs("#password").classList.toggle("input-error", !pw);
+    if (!email || !pw) return;
+    const btn = qs("#signInBtn");
+    btn.disabled = true;
+    btn.textContent = "Signing in…";
+    setTimeout(() => { location.href = "home.html"; }, 500);
+  });
+</script>
+</body>
+</html>

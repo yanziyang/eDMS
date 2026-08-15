@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin · Sites — eDMS</title>
+<script>(function(){try{document.documentElement.setAttribute('data-theme', localStorage.getItem('edms-theme')||'default');}catch(e){}})();</script>
+<link rel="stylesheet" href="assets/styles.css">
+</head>
+<body data-page="admin-sites">
+<div class="app-shell">
+  <aside class="app-sidebar" id="appSidebar"><div id="sidebarRoot"></div></aside>
+  <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+  <div class="app-content">
+    <div id="topbarRoot"></div>
+    <main class="app-main" id="appMain">
+
+      <div class="breadcrumb mb-3"><a href="admin-users.html">Admin Center</a><svg class="icon icon-sm sep" data-icon="chevronRight"></svg><span class="current">Sites</span></div>
+      <div class="page-header">
+        <div><div class="page-title">Sites</div><div class="page-subtitle">Every workspace provisioned in this organization.</div></div>
+        <div class="page-actions"><button class="btn btn-primary" data-dialog-trigger="createSiteDialog"><svg class="icon icon-sm" data-icon="building2"></svg>New site</button></div>
+      </div>
+
+      <div class="pill-tabs mb-4">
+        <a class="pill-tab" href="admin-users.html">Users</a>
+        <a class="pill-tab" href="admin-groups.html">Groups</a>
+        <a class="pill-tab active" href="admin-sites.html">Sites</a>
+        <a class="pill-tab" href="admin-storage.html">Storage report</a>
+        <a class="pill-tab" href="admin-audit-log.html">Audit log</a>
+        <a class="pill-tab" href="admin-settings.html">Settings</a>
+      </div>
+
+      <div class="card">
+        <div class="card-content tight">
+          <div class="table-wrap" style="border:none;border-radius:0;">
+            <table class="data-table">
+              <thead><tr><th>Site</th><th>Libraries</th><th>Members</th><th>Storage</th><th>Status</th><th class="actions-col"></th></tr></thead>
+              <tbody id="adminSitesBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<div class="overlay" id="createSiteDialog">
+  <div class="dialog">
+    <div class="dialog-header"><div class="dialog-title">Create a new site<button class="dialog-close btn btn-icon btn-ghost btn-sm" data-dialog-close><svg class="icon" data-icon="x"></svg></button></div><div class="dialog-description">A default "Documents" library and Owners/Members/Visitors groups are created automatically.</div></div>
+    <form id="createSiteForm">
+      <div class="dialog-body">
+        <div class="field"><label class="label">Site name <span class="req">*</span></label><input class="input" id="newSiteName" placeholder="e.g. Customer Success" required></div>
+        <div class="field"><label class="label">URL slug</label><input class="input" placeholder="customer-success"></div>
+        <div class="field"><label class="label">Description</label><textarea class="textarea" rows="2"></textarea></div>
+        <div class="field"><label class="label">Storage quota (GB)</label><input class="input" type="number" value="50"></div>
+        <div class="field"><label class="label">Initial owner</label><input class="input" value="Jordan Reyes" disabled></div>
+      </div>
+      <div class="dialog-footer"><button type="button" class="btn btn-secondary" data-dialog-close>Cancel</button><button type="submit" class="btn btn-primary">Create site</button></div>
+    </form>
+  </div>
+</div>
+
+<script src="assets/data.js"></script>
+<script src="assets/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Home — eDMS</title>
+<script>(function(){try{document.documentElement.setAttribute('data-theme', localStorage.getItem('edms-theme')||'default');}catch(e){}})();</script>
+<link rel="stylesheet" href="assets/styles.css">
+</head>
+<body data-page="home">
+<div class="app-shell">
+  <aside class="app-sidebar" id="appSidebar"><div id="sidebarRoot"></div></aside>
+  <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+  <div class="app-content">
+    <div id="topbarRoot"></div>
+    <main class="app-main" id="appMain">
+
+      <div class="page-header">
+        <div>
+          <div class="page-title">Welcome back, <span id="greetingName">there</span></div>
+          <div class="page-subtitle">Here's what's happening across your organization today.</div>
+        </div>
+        <div class="page-actions">
+          <button class="btn btn-outline" data-dialog-trigger="createSiteQuickDialog"><svg class="icon icon-sm" data-icon="building2"></svg>New site</button>
+          <a class="btn btn-primary" href="library.html?site=finance&amp;lib=documents&amp;folder=root&amp;action=upload"><svg class="icon icon-sm" data-icon="uploadCloud"></svg>Upload</a>
+        </div>
+      </div>
+
+      <div class="stat-grid mb-6">
+        <div class="card stat-card">
+          <div class="stat-label">Sites you access<div class="stat-icon"><svg class="icon icon-sm" data-icon="building2"></svg></div></div>
+          <div class="stat-value" id="statTotalSites">—</div>
+          <div class="stat-delta up"><svg class="icon icon-sm" data-icon="trendingUp"></svg>Across 5 departments</div>
+        </div>
+        <div class="card stat-card">
+          <div class="stat-label">Storage used<div class="stat-icon"><svg class="icon icon-sm" data-icon="database"></svg></div></div>
+          <div class="stat-value" id="statStorage">—</div>
+          <div class="stat-delta text-muted">of 300 GB provisioned</div>
+        </div>
+        <div class="card stat-card">
+          <div class="stat-label">Documents<div class="stat-icon"><svg class="icon icon-sm" data-icon="fileText"></svg></div></div>
+          <div class="stat-value" id="statDocs">—</div>
+          <div class="stat-delta up"><svg class="icon icon-sm" data-icon="trendingUp"></svg>12 uploaded this week</div>
+        </div>
+        <div class="card stat-card">
+          <div class="stat-label">Notifications<div class="stat-icon"><svg class="icon icon-sm" data-icon="bell"></svg></div></div>
+          <div class="stat-value" id="statNotifs">—</div>
+          <div class="stat-delta text-muted">Unread items</div>
+        </div>
+      </div>
+
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="text-lg font-semibold">Your sites</h2>
+        <span class="text-muted text-xs">Sorted by recent activity</span>
+      </div>
+      <div class="site-grid mb-8" id="siteGrid"></div>
+
+      <div class="grid responsive-2col" style="grid-template-columns:1.4fr 1fr;gap:1.25rem;align-items:start;">
+        <div class="card">
+          <div class="card-header"><div><div class="card-title">Recent activity</div><div class="card-description">Latest actions across every site you can access</div></div><a class="btn btn-ghost btn-sm" href="admin-audit-log.html">View log</a></div>
+          <div class="card-content" id="recentActivityList"></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><div><div class="card-title">Quick access</div><div class="card-description">Files you open often</div></div></div>
+          <div class="card-content" id="quickAccessList" style="padding-top:.4rem;padding-bottom:.4rem;"></div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<div class="overlay" id="createSiteQuickDialog">
+  <div class="dialog">
+    <div class="dialog-header"><div class="dialog-title">Create a new site<button class="dialog-close btn btn-icon btn-ghost btn-sm" data-dialog-close><svg class="icon" data-icon="x"></svg></button></div><div class="dialog-description">Sites are top-level workspaces for a team, department, or project.</div></div>
+    <form id="quickSiteForm">
+      <div class="dialog-body">
+        <div class="field"><label class="label">Site name <span class="req">*</span></label><input class="input" placeholder="e.g. Customer Success" required></div>
+        <div class="field"><label class="label">Description</label><textarea class="textarea" rows="3" placeholder="What is this site for?"></textarea></div>
+      </div>
+      <div class="dialog-footer"><button type="button" class="btn btn-secondary" data-dialog-close>Cancel</button><button type="submit" class="btn btn-primary">Create site</button></div>
+    </form>
+  </div>
+</div>
+
+<script src="assets/data.js"></script>
+<script src="assets/app.js"></script>
+<script>
+  qs("#quickSiteForm").addEventListener("submit", function (e) {
+    e.preventDefault();
+    closeDialog(qs("#createSiteQuickDialog"));
+    showToast({ title: "Site created", desc: "New sites start with a default Documents library." });
+    e.target.reset();
+  });
+</script>
+</body>
+</html>

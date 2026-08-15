@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Site — eDMS</title>
+<script>(function(){try{document.documentElement.setAttribute('data-theme', localStorage.getItem('edms-theme')||'default');}catch(e){}})();</script>
+<link rel="stylesheet" href="assets/styles.css">
+</head>
+<body data-page="site-home">
+<div class="app-shell">
+  <aside class="app-sidebar" id="appSidebar"><div id="sidebarRoot"></div></aside>
+  <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+  <div class="app-content">
+    <div id="topbarRoot"></div>
+    <main class="app-main" id="appMain">
+
+      <div class="breadcrumb mb-3">
+        <a href="home.html">Home</a><svg class="icon icon-sm sep" data-icon="chevronRight"></svg>
+        <span class="current" id="siteBreadcrumbName">Site</span>
+      </div>
+
+      <div class="card mb-6">
+        <div class="card-content" style="display:flex;gap:1.1rem;align-items:flex-start;flex-wrap:wrap;">
+          <div class="site-icon" id="siteHeaderIcon" style="width:56px;height:56px;flex-shrink:0;"></div>
+          <div class="flex-1" style="min-width:220px;">
+            <div class="flex items-center gap-2 flex-wrap">
+              <h1 class="text-xl font-bold" id="siteHeaderName">Site</h1>
+              <span class="badge badge-secondary" id="siteHeaderMembers">— members</span>
+            </div>
+            <p class="text-muted text-sm mt-1" id="siteHeaderDesc">—</p>
+            <div class="flex items-center justify-between text-xs text-muted mt-3" style="max-width:320px;">
+              <span id="siteHeaderStorage">—</span>
+            </div>
+            <div class="progress mt-1" style="max-width:320px;"><div class="progress-bar" id="siteStorageBar" style="width:0%"></div></div>
+          </div>
+          <div class="flex gap-2 flex-none">
+            <button class="btn btn-outline btn-sm" data-dialog-trigger="sitePermissionsDialog"><svg class="icon icon-sm" data-icon="shieldCheck"></svg>Manage access</button>
+            <button class="btn btn-outline btn-sm" data-dialog-trigger="siteSettingsDialog"><svg class="icon icon-sm" data-icon="settings"></svg>Site settings</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="text-lg font-semibold">Document libraries</h2>
+      </div>
+      <div class="grid responsive-2col mb-8" id="siteLibraryGrid" style="grid-template-columns:repeat(2,1fr);gap:1rem;"></div>
+
+      <div class="grid responsive-2col" style="grid-template-columns:1.4fr 1fr;gap:1.25rem;align-items:start;">
+        <div class="card">
+          <div class="card-header"><div><div class="card-title">Site activity</div><div class="card-description">Recent actions within this site</div></div></div>
+          <div class="card-content" id="siteActivityList"></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><div class="card-title">Permission groups</div></div>
+          <div class="card-content" id="siteMembersBody" style="padding-top:.4rem;"></div>
+          <div class="card-footer"><button class="btn btn-outline btn-sm btn-block" data-dialog-trigger="sitePermissionsDialog"><svg class="icon icon-sm" data-icon="userPlus"></svg>Manage members</button></div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<div class="overlay" id="sitePermissionsDialog">
+  <div class="dialog dialog-lg">
+    <div class="dialog-header"><div class="dialog-title">Manage access<button class="dialog-close btn btn-icon btn-ghost btn-sm" data-dialog-close><svg class="icon" data-icon="x"></svg></button></div><div class="dialog-description">Default groups control access to every library in this site unless a folder or document breaks inheritance.</div></div>
+    <div class="dialog-body">
+      <div class="flex flex-col gap-2">
+        <div class="flex items-center gap-3 p-3 border rounded">
+          <div class="avatar avatar-sm"><svg class="icon icon-sm" data-icon="users"></svg></div>
+          <div class="flex-1"><div class="text-sm font-medium">Site Owners</div><div class="text-xs text-muted">Full Control — manage site, libraries, and permissions</div></div>
+          <span class="badge badge-warning">2 members</span>
+        </div>
+        <div class="flex items-center gap-3 p-3 border rounded">
+          <div class="avatar avatar-sm"><svg class="icon icon-sm" data-icon="users"></svg></div>
+          <div class="flex-1"><div class="text-sm font-medium">Site Members</div><div class="text-xs text-muted">Contribute — upload, edit, and delete content</div></div>
+          <span class="badge badge-secondary">8 members</span>
+        </div>
+        <div class="flex items-center gap-3 p-3 border rounded">
+          <div class="avatar avatar-sm"><svg class="icon icon-sm" data-icon="users"></svg></div>
+          <div class="flex-1"><div class="text-sm font-medium">Site Visitors</div><div class="text-xs text-muted">Read — view and download only</div></div>
+          <span class="badge badge-secondary">6 members</span>
+        </div>
+      </div>
+      <div class="field mt-4">
+        <label class="label">Add people or groups</label>
+        <div class="input-icon-wrap"><svg class="icon icon-sm" data-icon="userPlus"></svg><input class="input" placeholder="Search by name or email…"></div>
+      </div>
+    </div>
+    <div class="dialog-footer"><button class="btn btn-secondary" data-dialog-close>Close</button><button class="btn btn-primary" id="sitePermSaveBtn">Save changes</button></div>
+  </div>
+</div>
+
+<div class="overlay" id="siteSettingsDialog">
+  <div class="dialog">
+    <div class="dialog-header"><div class="dialog-title">Site settings<button class="dialog-close btn btn-icon btn-ghost btn-sm" data-dialog-close><svg class="icon" data-icon="x"></svg></button></div></div>
+    <form id="siteSettingsForm">
+      <div class="dialog-body">
+        <div class="field"><label class="label">Site name</label><input class="input" id="siteSettingsName"></div>
+        <div class="field"><label class="label">Description</label><textarea class="textarea" rows="3" id="siteSettingsDesc"></textarea></div>
+        <div class="field"><label class="label">Storage quota (GB)</label><input class="input" type="number" id="siteSettingsQuota"></div>
+      </div>
+      <div class="dialog-footer"><button type="button" class="btn btn-secondary" data-dialog-close>Cancel</button><button type="submit" class="btn btn-primary">Save</button></div>
+    </form>
+  </div>
+</div>
+
+<script src="assets/data.js"></script>
+<script src="assets/app.js"></script>
+<script>
+  qs("#sitePermSaveBtn").addEventListener("click", function () { closeDialog(qs("#sitePermissionsDialog")); showToast({ title: "Site permissions updated" }); });
+  qs("#siteSettingsForm").addEventListener("submit", function (e) { e.preventDefault(); closeDialog(qs("#siteSettingsDialog")); showToast({ title: "Site settings saved" }); });
+  document.addEventListener("DOMContentLoaded", function () {
+    const site = findSite(getParam("site", "finance"));
+    qs("#siteSettingsName").value = site.name;
+    qs("#siteSettingsDesc").value = site.description;
+    qs("#siteSettingsQuota").value = site.storageQuotaGB;
+  });
+</script>
+</body>
+</html>
