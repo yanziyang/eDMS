@@ -59,15 +59,15 @@ Once M3 is `Done`, M4, M6, and M7 have no dependency on each other and may be wo
 | Milestone | Goal | Demo-able outcome | Status |
 |---|---|---|---|
 | [M0](#m0--bootstrap) | Repo, solution, CI, local stack exist | `docker compose up` runs a Postgres-backed API and a Vite dev server; CI is green on an empty-but-structured repo | Done |
-| [M1](#m1--identity-auth-audit--permission-skeleton) | Real login, tokens, audit trail, admin bypass | Can log in through the real UI, session survives an access-token expiry via silent refresh, a Login row appears in `audit_log_entries` | Not Started |
-| [M2](#m2--sites-groups--real-permission-resolver) | Sites/Groups exist; permission resolution is real | Can create a Site, see its default groups, and have the hierarchy-walk permission check actually gate a request | Not Started |
-| [M3](#m3--libraries-folders-documents) | Core document lifecycle (no versioning/ACLs/bin yet) | Can upload a file into a folder, see it listed, download it, rename/move/delete it | Not Started |
-| [M4](#m4--versioning--check-outcheck-in) | Version history, check-out/in | Re-uploading creates v2; checking out blocks a second user's check-in; a prior version can be restored | Not Started |
-| [M5](#m5--item-level-permissions--sharing) | Break-inheritance ACLs, sharing | Denying a user Read on one folder actually blocks them, while the rest of the library stays accessible | Not Started |
-| [M6](#m6--recycle-bin) | Soft-delete lifecycle | Delete → appears in bin → restore works → purge job removes items past retention | Not Started |
-| [M7](#m7--search) | Full-text, permission-filtered search | Searching returns only documents the current user can Read, ranked by relevance | Not Started |
-| [M8](#m8--admin-center-completion-audit-log-storage-report) | Admin settings, full audit coverage, storage report | Every FR-AUDIT-01 action type has appeared in the audit log at least once in testing; storage report renders real per-site usage | Not Started |
-| [M9](#m9--hardening--phase-1-sign-off) | NFRs, E2E coverage, sign-off | FS §15 Phase 1 checklist fully satisfied; CI green; ready for a staging deploy per TDS §11 | Not Started |
+| [M1](#m1--identity-auth-audit--permission-skeleton) | Real login, tokens, audit trail, admin bypass | Can log in through the real UI, session survives an access-token expiry via silent refresh, a Login row appears in `audit_log_entries` | Done |
+| [M2](#m2--sites-groups--real-permission-resolver) | Sites/Groups exist; permission resolution is real | Can create a Site, see its default groups, and have the hierarchy-walk permission check actually gate a request | In Progress |
+| [M3](#m3--libraries-folders-documents) | Core document lifecycle (no versioning/ACLs/bin yet) | Can upload a file into a folder, see it listed, download it, rename/move/delete it | In Progress |
+| [M4](#m4--versioning--check-outcheck-in) | Version history, check-out/in | Re-uploading creates v2; checking out blocks a second user's check-in; a prior version can be restored | In Progress |
+| [M5](#m5--item-level-permissions--sharing) | Break-inheritance ACLs, sharing | Denying a user Read on one folder actually blocks them, while the rest of the library stays accessible | In Progress |
+| [M6](#m6--recycle-bin) | Soft-delete lifecycle | Delete → appears in bin → restore works → purge job removes items past retention | In Progress |
+| [M7](#m7--search) | Full-text, permission-filtered search | Searching returns only documents the current user can Read, ranked by relevance | Done |
+| [M8](#m8--admin-center-completion-audit-log-storage-report) | Admin settings, full audit coverage, storage report | Every FR-AUDIT-01 action type has appeared in the audit log at least once in testing; storage report renders real per-site usage | In Progress |
+| [M9](#m9--hardening--phase-1-sign-off) | NFRs, E2E coverage, sign-off | FS §15 Phase 1 checklist fully satisfied; CI green; ready for a staging deploy per TDS §11 | In Progress |
 
 ## 5. Detailed Milestones
 
@@ -112,12 +112,12 @@ Columns: **Track** — `BE` backend, `FE` frontend, `INF` infra/tooling, `DOC` d
 | Done | M2.2 | BE | Site create/edit/soft-delete/list; creation auto-provisions a default "Documents" library + Owners/Members/Visitors groups | M2.1 | M | FR-SITE-01..04 |
 | Done | M2.3 | BE | Site permission management (add/remove members of the 3 default groups) | M2.2 | S | FR-SITE-06 |
 | Done | M2.4 | BE | Group CRUD — custom org-wide groups and site-scoped groups | M2.1 | S | FR-ADMIN-02 |
-| Done | M2.5 | BE | **Real** `IPermissionResolver`: Site/Library-level walk + `IMemoryCache` (30s TTL) + invalidation on permission mutations (Folder→Library→Site CTE lands with M3/M5 when Folder/ItemPermission exist) | M1.7, M2.2 | L | TDS §5.3, §6.3 — see callout below |
+| In Progress | M2.5 | BE | **Real** `IPermissionResolver`: Site/Library/Folder/Document walk + `IMemoryCache` (30s TTL) + invalidation on permission mutations. Implemented as a C# ancestor walk, not yet the SQL recursive CTE; the Testcontainers CTE test from the callout is still missing. | M1.7, M2.2 | L | TDS §5.3, §6.3 — see callout below |
 | Done | M2.6 | BE | `GET /sites` (permission-filtered), `GET/PUT /sites/{id}`, `DELETE /sites/{id}` | M2.5 | S | FR-SITE-05 |
 | Done | M2.7 | BE | Admin: `GET/POST /users`, `PUT /users/{id}`, deactivate/reactivate (deactivation immediately revokes all outstanding refresh tokens) | M1.1, M1.3 | M | FR-ADMIN-01, FR-AUTH-07 |
 | Done | M2.8 | FE | Home page ("My Sites" grid, stat tiles) wired to real API | M1.11, M2.6 | M | mirror `prototype(html)/home.html` |
-| Done | M2.9 | FE | Site Home page (library list, permission groups panel, manage-access dialog) | M2.8 | M | mirror `prototype(html)/site-home.html` |
-| Done | M2.10 | FE | Admin → Users, Groups, Sites pages wired to real API | M2.7, M2.4, M2.6 | M | mirror `prototype(html)/admin-users.html`, `admin-groups.html`, `admin-sites.html` |
+| In Progress | M2.9 | FE | Site Home page (library list + permission groups panel done; manage-access dialog missing) | M2.8 | M | mirror `prototype(html)/site-home.html` |
+| In Progress | M2.10 | FE | Admin → Users/Sites wired to real API (create/list/deactivate/delete); Groups page is read-only, no create/edit/manage-members UI yet | M2.7, M2.4, M2.6 | M | mirror `prototype(html)/admin-users.html`, `admin-groups.html`, `admin-sites.html` |
 
 > **M2.5 is the highest-risk task in the whole plan up to this point.** It backs every authorization decision the system will ever make. Do not mark it `Done` without: a unit test per level of the hierarchy (unique ACL at the target object, at a parent, at the Site only), a test proving group-membership grants are additive across multiple group memberships, and an integration test hitting the real recursive CTE against Testcontainers Postgres (TDS §12.1, §12.3).
 
@@ -129,13 +129,13 @@ Columns: **Track** — `BE` backend, `FE` frontend, `INF` infra/tooling, `DOC` d
 | Done | M3.2 | BE | `Folder` entity/migration (materialized path); create/rename/move/soft-delete (recursive) | M3.1 | M | FR-FLD-01..06 |
 | Done | M3.3 | BE | `Document` + `DocumentVersion` entities/migration; `IFileStorageProvider` + `LocalDiskFileStorageProvider` | M3.1 | M | TDS §5.4 |
 | Done | M3.4 | BE | Upload endpoint: stream to temp file, SHA-256 checksum, magic-byte content-type sniffing, size/extension enforcement, commit-then-move ordering | M3.3 | L | FR-DOC-01/02/03, TDS §5.4, §10.2 |
-| Done | M3.5 | BE | Download, rename, move, copy, soft-delete endpoints | M3.4 | M | FR-DOC-04/05/06/07 |
+| In Progress | M3.5 | BE | Download, rename, soft-delete endpoints done; move and copy endpoints not yet implemented | M3.4 | M | FR-DOC-04/05/06/07 |
 | Done | M3.6 | BE | Document metadata (title/description) + `Tag`/`DocumentTag` | M3.3 | S | FR-DOC-08, FR-META-01/02 |
 | Done | M3.7 | BE | Inline preview endpoint for PDF/image types | M3.4 | S | FR-DOC-09 |
 | Done | M3.8 | BE | `OrphanedUploadSweepService` background job (hourly temp-file cleanup) | M3.4 | S | TDS §5.8 |
 | Done | M3.9 | FE | Library browser: table view, breadcrumbs, new-folder dialog, upload | M2.9, M3.5 | L | mirror `prototype(html)/library.html` |
-| Done | M3.10 | FE | Document details Sheet — Properties tab only (metadata shown inline; full Sheet panel polished with M4/M5) | M3.9, M3.6 | M | mirror `prototype(html)` doc-sheet Properties tab |
-| Done | M3.11 | FE | Column sort/multi-select basic support (grid toggle and bulk download deferred to M4/M5) | M3.9 | M | FR-UI-02, FR-DOC-11 |
+| Not Started | M3.10 | FE | Document details Sheet — Properties tab (no Sheet component yet; metadata API exists but no details panel UI) | M3.9, M3.6 | M | mirror `prototype(html)` doc-sheet Properties tab |
+| Not Started | M3.11 | FE | Grid/list toggle, column sort, multi-select + bulk delete/download | M3.9 | M | FR-UI-02, FR-DOC-11 |
 
 ### M4 — Versioning & Check-out/Check-in
 
@@ -144,7 +144,7 @@ Columns: **Track** — `BE` backend, `FE` frontend, `INF` infra/tooling, `DOC` d
 | Done | M4.1 | BE | Re-upload-to-same-name creates a new `DocumentVersion` (major) instead of a duplicate `Document` | M3.4 | M | FR-VER-01/02 |
 | Done | M4.2 | BE | `GET /documents/{id}/versions`, restore-prior-version-as-new-version | M4.1 | S | FR-VER-03/04 |
 | Done | M4.3 | BE | Check-out / check-in / discard-checkout; `RequireCheckout` library setting enforcement | M4.1 | M | FR-VER-05..08 |
-| Done | M4.4 | FE | Versions tab: history table, restore button, check-out/in controls (API wired; full Sheet panel deferred to M5.4) | M3.10, M4.3 | M | mirror `prototype(html)` doc-sheet Versions tab |
+| Not Started | M4.4 | FE | Versions tab: history table, restore button, check-out/in controls (API endpoints exist; no UI yet) | M3.10, M4.3 | M | mirror `prototype(html)` doc-sheet Versions tab |
 | Done | M4.5 | FE | Checked-out-by indicator on library listing rows | M4.4 | S | matches prototype's checkout badge |
 
 ### M5 — Item-level Permissions & Sharing
@@ -156,8 +156,8 @@ Columns: **Track** — `BE` backend, `FE` frontend, `INF` infra/tooling, `DOC` d
 | Done | M5.1 | BE | `ItemPermission` entity/migration (Library/Folder/Document) | M2.5, M3.5 | S | FS §8.2 |
 | Done | M5.2 | BE | Break-inheritance / reset-to-inherited / grant / revoke commands + `GET .../permissions` query (unique + inherited, `Direct`/`Inherited` source); resolver walks item ACLs first | M5.1 | L | FR-PERM-01..05, TDS §5.3, §5.6, §8.2 |
 | Done | M5.3 | BE | Share endpoint (grant access + notify via `IEmailSender`) | M5.2 | S | FR-PERM-06 |
-| Done | M5.4 | FE | Permissions tab (API wired; full inherited-view/grant/revoke panel deferred to admin polish) | M4.4, M5.2 | M | mirror `prototype(html)` `permissionsTabHtml` pattern |
-| Done | M5.5 | FE | Share dialog (API wired) | M5.3 | S | mirror `prototype(html)/library.html` share dialog |
+| Not Started | M5.4 | FE | Permissions tab: inherited-view, break-inheritance flow, grant/revoke UI (API endpoints exist; no UI yet) | M4.4, M5.2 | M | mirror `prototype(html)` `permissionsTabHtml` pattern |
+| Not Started | M5.5 | FE | Share dialog (API endpoint exists; no dialog UI yet) | M5.3 | S | mirror `prototype(html)/library.html` share dialog |
 
 ### M6 — Recycle Bin
 
@@ -165,7 +165,7 @@ Columns: **Track** — `BE` backend, `FE` frontend, `INF` infra/tooling, `DOC` d
 |---|---|---|---|---|---|---|
 | Done | M6.1 | BE | `GET /sites/{id}/recycle-bin`, restore, permanent-delete endpoints | M3.5 | S | FR-BIN-01/02/03/05 |
 | Done | M6.2 | BE | `RecycleBinPurgeService` background job, configurable retention (default 90 days) | M6.1 | S | FR-BIN-04, TDS §5.8 |
-| Done | M6.3 | FE | Recycle Bin page (basic list wired to API) | M6.1 | S | mirror `prototype(html)/recycle-bin.html` |
+| Not Started | M6.3 | FE | Recycle Bin page (only a placeholder heading; not wired to the API) | M6.1 | S | mirror `prototype(html)/recycle-bin.html` |
 
 ### M7 — Search
 
@@ -179,12 +179,12 @@ Columns: **Track** — `BE` backend, `FE` frontend, `INF` infra/tooling, `DOC` d
 
 | Status | ID | Track | Task | Depends on | Size | Refs |
 |---|---|---|---|---|---|---|
-| Done | M8.1 | BE | Admin settings endpoint (upload size/retention/session lifetimes/branding) | M2.7 | S | FR-ADMIN-04 |
-| Done | M8.2 | BE | Close audit-coverage gaps — every `FR-AUDIT-01` action type logged; parameterized test over the action enum | M1.6, M4.3, M5.2, M6.1 | M | FR-AUDIT-01, TDS §12.3 |
+| In Progress | M8.1 | BE | Admin settings endpoint: read-only `GET /admin/settings` done; `PUT` (actual setting changes) not implemented | M2.7 | S | FR-ADMIN-04 |
+| In Progress | M8.2 | BE | Audit-coverage: parameterized test over the action enum exists, but `Move`/`Copy` have no logging callsite (their endpoints don't exist yet) | M1.6, M4.3, M5.2, M6.1 | M | FR-AUDIT-01, TDS §12.3 |
 | Done | M8.3 | BE | `GET /sites/{id}/audit-log` (filtered) + `GET /admin/storage` | M8.2 | S | FR-AUDIT-03, FR-ADMIN-06 |
-| Done | M8.4 | FE | Admin Settings page (basic) | M8.1 | S | mirror `prototype(html)/admin-settings.html` |
-| Done | M8.5 | FE | Audit Log page (basic) | M8.3 | M | mirror `prototype(html)/admin-audit-log.html` |
-| Done | M8.6 | FE | Storage Report page (basic) | M8.3 | M | FR-ADMIN-06, mirror `prototype(html)/admin-storage.html` |
+| Not Started | M8.4 | FE | Admin Settings page | M8.1 | S | mirror `prototype(html)/admin-settings.html` |
+| Not Started | M8.5 | FE | Audit Log page (filters, CSV export) | M8.3 | M | mirror `prototype(html)/admin-audit-log.html` |
+| Not Started | M8.6 | FE | Storage Report page | M8.3 | M | FR-ADMIN-06, mirror `prototype(html)/admin-storage.html` |
 
 ### M9 — Hardening & Phase 1 Sign-off
 
