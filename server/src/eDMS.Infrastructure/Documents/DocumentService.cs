@@ -263,6 +263,8 @@ public sealed class DocumentService(
         var version = await db.DocumentVersions
             .SingleAsync(item => item.Id == document.CurrentVersionId, cancellationToken);
 
+        await audit.LogAsync(AuditAction.View, ObjectType.Document, document.Id, document.Name, null, cancellationToken);
+
         return new DocumentDto(
             document.Id,
             document.LibraryId,
@@ -306,6 +308,7 @@ public sealed class DocumentService(
         document.ModifiedBy = userId;
         document.ModifiedAt = DateTimeOffset.UtcNow;
         await db.SaveChangesAsync(cancellationToken);
+        await audit.LogAsync(AuditAction.EditMetadata, ObjectType.Document, document.Id, document.Name, null, cancellationToken);
         await audit.LogAsync(AuditAction.Rename, ObjectType.Document, document.Id, document.Name, null, cancellationToken);
     }
 
@@ -327,6 +330,7 @@ public sealed class DocumentService(
         document.ModifiedBy = userId;
         document.ModifiedAt = DateTimeOffset.UtcNow;
         await db.SaveChangesAsync(cancellationToken);
+        await audit.LogAsync(AuditAction.Restore, ObjectType.Document, document.Id, document.Name, null, cancellationToken);
     }
 
     public async Task<IReadOnlyList<DocumentVersionDto>> ListVersionsAsync(

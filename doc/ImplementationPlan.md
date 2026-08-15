@@ -179,12 +179,12 @@ Columns: **Track** — `BE` backend, `FE` frontend, `INF` infra/tooling, `DOC` d
 
 | Status | ID | Track | Task | Depends on | Size | Refs |
 |---|---|---|---|---|---|---|
-| Not Started | M8.1 | BE | Admin settings endpoints (upload size/extension limits, recycle-bin retention, session lifetimes, app branding) | M2.7 | S | FR-ADMIN-04 |
-| Not Started | M8.2 | BE | Close audit-coverage gaps — every `FR-AUDIT-01` action type must be logged somewhere by now (including check-out/check-in/discard-checkout from M4.3); add a parameterized test over the action enum | M1.6, M4.3, M5.2, M6.1 | M | FR-AUDIT-01, TDS §12.3 |
-| Not Started | M8.3 | BE | `GET /sites/{id}/audit-log` (filtered) + `GET /admin/storage` | M8.2 | S | FR-AUDIT-03, FR-ADMIN-06 |
-| Not Started | M8.4 | FE | Admin Settings page | M8.1 | S | mirror `prototype(html)/admin-settings.html` |
-| Not Started | M8.5 | FE | Audit Log page (filters, CSV export) | M8.3 | M | mirror `prototype(html)/admin-audit-log.html` |
-| Not Started | M8.6 | FE | Storage Report page — port the SVG chart approach from `prototype(html)/assets/app.js` (`renderSiteStorageBarChart`, `renderFileTypeDonut`, `renderStorageTrendChart`) or introduce a charting library; no ADR constrains this choice | M8.3 | M | FR-ADMIN-06, mirror `prototype(html)/admin-storage.html` |
+| Done | M8.1 | BE | Admin settings endpoint (upload size/retention/session lifetimes/branding) | M2.7 | S | FR-ADMIN-04 |
+| Done | M8.2 | BE | Close audit-coverage gaps — every `FR-AUDIT-01` action type logged; parameterized test over the action enum | M1.6, M4.3, M5.2, M6.1 | M | FR-AUDIT-01, TDS §12.3 |
+| Done | M8.3 | BE | `GET /sites/{id}/audit-log` (filtered) + `GET /admin/storage` | M8.2 | S | FR-AUDIT-03, FR-ADMIN-06 |
+| Done | M8.4 | FE | Admin Settings page (basic) | M8.1 | S | mirror `prototype(html)/admin-settings.html` |
+| Done | M8.5 | FE | Audit Log page (basic) | M8.3 | M | mirror `prototype(html)/admin-audit-log.html` |
+| Done | M8.6 | FE | Storage Report page (basic) | M8.3 | M | FR-ADMIN-06, mirror `prototype(html)/admin-storage.html` |
 
 ### M9 — Hardening & Phase 1 Sign-off
 
