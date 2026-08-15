@@ -8,11 +8,9 @@ using Microsoft.Extensions.Caching.Memory;
 namespace eDMS.Infrastructure.Security;
 
 /// <summary>
-/// Resolves effective permission by walking the object to its Site, then evaluating
-/// <c>site_permissions</c> (direct user grants plus grants via group membership). A
-/// 30-second <see cref="IMemoryCache"/> is invalidated on every permission mutation via
-/// <see cref="IPermissionCacheInvalidator"/>. Folder/document/item-level walks are added
-/// in M3/M5 when those entities land.
+/// Resolves effective permission by walking the object up to its Site, checking unique
+/// <c>item_permissions</c> at each level before falling through to <c>site_permissions</c>.
+/// Results are cached for 30s and invalidated by <see cref="IPermissionCacheInvalidator"/>.
 /// </summary>
 public sealed class PermissionResolver(
     AppDbContext db,
@@ -59,19 +57,145 @@ public sealed class PermissionResolver(
         Guid objectId,
         CancellationToken cancellationToken)
     {
-        var siteId = type switch
-        {
-            ObjectType.Site => objectId,
-            ObjectType.Library => await db.Libraries.IgnoreQueryFilters()
-                .Where(library => library.Id == objectId)
-                .Select(library => library.SiteId)
-                .SingleOrDefaultAsync(cancellationToken),
-            _ => Guid.Empty, // Folder/Document resolution lands with M3/M5.
-        };
+        var ancestors = new List<(ObjectType Type, Guid Id)>();
+        Guid siteId;
 
-        return siteId == Guid.Empty
-            ? PermissionLevel.NoAccess
-            : await ResolveSiteLevelAsync(userId, siteId, cancellationToken);
+        switch (type)
+        {
+            case ObjectType.Site:
+                siteId = objectId;
+                break;
+
+            case ObjectType.Library:
+                var library = await db.Libraries.IgnoreQueryFilters()
+                    .SingleOrDefaultAsync(item => item.Id == objectId, cancellationToken);
+                if (library is null)
+                {
+                    return PermissionLevel.NoAccess;
+                }
+                siteId = library.SiteId;
+                ancestors.Add((ObjectType.Library, objectId));
+                break;
+
+            case ObjectType.Folder:
+                var folder = await db.Folders.IgnoreQueryFilters()
+                    .SingleOrDefaultAsync(item => item.Id == objectId, cancellationToken);
+                if (folder is null)
+                {
+                    return PermissionLevel.NoAccess;
+                }
+                siteId = await CollectFolderAncestorsAsync(folder, ancestors, cancellationToken);
+                break;
+
+            case ObjectType.Document:
+                var document = await db.Documents.IgnoreQueryFilters()
+                    .SingleOrDefaultAsync(item => item.Id == objectId, cancellationToken);
+                if (document is null)
+                {
+                    return PermissionLevel.NoAccess;
+                }
+                ancestors.Add((ObjectType.Document, objectId));
+                if (document.FolderId is { } folderId)
+                {
+                    var parentFolder = await db.Folders.IgnoreQueryFilters()
+                        .SingleOrDefaultAsync(item => item.Id == folderId, cancellationToken);
+                    if (parentFolder is null)
+                    {
+                        return PermissionLevel.NoAccess;
+                    }
+                    siteId = await CollectFolderAncestorsAsync(parentFolder, ancestors, cancellationToken);
+                }
+                else
+                {
+                    ancestors.Add((ObjectType.Library, document.LibraryId));
+                    siteId = await db.Libraries.IgnoreQueryFilters()
+                        .Where(item => item.Id == document.LibraryId)
+                        .Select(item => item.SiteId)
+                        .SingleOrDefaultAsync(cancellationToken);
+                }
+                break;
+
+            default:
+                return PermissionLevel.NoAccess;
+        }
+
+        if (siteId == Guid.Empty)
+        {
+            return PermissionLevel.NoAccess;
+        }
+
+        foreach (var ancestor in ancestors)
+        {
+            var level = await ResolveItemLevelAsync(userId, ancestor.Type, ancestor.Id, cancellationToken);
+            if (level != PermissionLevel.NoAccess)
+            {
+                return level;
+            }
+        }
+
+        return await ResolveSiteLevelAsync(userId, siteId, cancellationToken);
+    }
+
+    private async Task<Guid> CollectFolderAncestorsAsync(
+        Folder folder,
+        List<(ObjectType Type, Guid Id)> ancestors,
+        CancellationToken cancellationToken)
+    {
+        var current = folder;
+        var depth = 0;
+        while (current is not null && depth < 20)
+        {
+            ancestors.Add((ObjectType.Folder, current.Id));
+            if (current.ParentFolderId is not { } parentId)
+            {
+                break;
+            }
+
+            current = await db.Folders.IgnoreQueryFilters()
+                .SingleOrDefaultAsync(item => item.Id == parentId, cancellationToken);
+            depth++;
+        }
+
+        ancestors.Add((ObjectType.Library, folder.LibraryId));
+        return await db.Libraries.IgnoreQueryFilters()
+            .Where(item => item.Id == folder.LibraryId)
+            .Select(item => item.SiteId)
+            .SingleOrDefaultAsync(cancellationToken);
+    }
+
+    private async Task<PermissionLevel> ResolveItemLevelAsync(
+        Guid userId,
+        ObjectType objectType,
+        Guid objectId,
+        CancellationToken cancellationToken)
+    {
+        var direct = await db.ItemPermissions
+            .Where(permission => permission.ObjectType == objectType
+                && permission.ObjectId == objectId
+                && permission.PrincipalType == PrincipalType.User
+                && permission.PrincipalId == userId)
+            .Select(permission => (int)permission.Level)
+            .ToListAsync(cancellationToken);
+
+        var groupLevels = await db.ItemPermissions
+            .Where(permission => permission.ObjectType == objectType
+                && permission.ObjectId == objectId
+                && permission.PrincipalType == PrincipalType.Group)
+            .Join(
+                db.GroupMembers,
+                permission => permission.PrincipalId,
+                member => member.GroupId,
+                (permission, member) => new { permission.Level, member.UserId })
+            .Where(joined => joined.UserId == userId)
+            .Select(joined => (int)joined.Level)
+            .ToListAsync(cancellationToken);
+
+        var levels = direct.Concat(groupLevels)
+            .Select(level => (PermissionLevel)level)
+            .Where(level => level != PermissionLevel.NoAccess)
+            .ToList();
+
+        return levels.Count == 0 ? PermissionLevel.NoAccess : levels.Min();
     }
 
     private async Task<PermissionLevel> ResolveSiteLevelAsync(

@@ -13,6 +13,8 @@ using eDMS.Infrastructure.Storage;
 using eDMS.Infrastructure.Documents;
 using eDMS.Application.Documents;
 using eDMS.Infrastructure.Background;
+using eDMS.Infrastructure.Permissions;
+using eDMS.Application.Permissions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -49,6 +51,7 @@ public static class DependencyInjection
         services.AddScoped<IEmailSender, EmailSender>();
         services.AddScoped<IUserManagementService, UserManagementService>();
         services.AddScoped<IDocumentService, DocumentService>();
+        services.AddScoped<IPermissionService, PermissionService>();
         services.AddSingleton<IFileStorageProvider, LocalDiskFileStorageProvider>();
         services.AddMemoryCache();
         services.AddHostedService<OrphanedUploadSweepService>();

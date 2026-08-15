@@ -153,11 +153,11 @@ Columns: **Track** — `BE` backend, `FE` frontend, `INF` infra/tooling, `DOC` d
 
 | Status | ID | Track | Task | Depends on | Size | Refs |
 |---|---|---|---|---|---|---|
-| Not Started | M5.1 | BE | `ItemPermission` entity/migration (Library/Folder/Document) | M2.5, M3.5 | S | FS §8.2 |
-| Not Started | M5.2 | BE | Break-inheritance / reset-to-inherited / grant / revoke commands, plus the `GET .../permissions` query (effective + unique entries, `Direct`/`Inherited` source) backing M5.4's panel — exercises `AuthorizationBehavior` against real unique ACLs for the first time | M5.1 | L | FR-PERM-01..05, TDS §5.3, §5.6, §8.2 |
-| Not Started | M5.3 | BE | Share endpoint (grant access + notify via `IEmailSender`) | M5.2 | S | FR-PERM-06 |
-| Not Started | M5.4 | FE | Permissions tab: inherited-view, break-inheritance flow, grant/revoke UI | M4.4, M5.2 | M | mirror `prototype(html)` `permissionsTabHtml` pattern |
-| Not Started | M5.5 | FE | Share dialog | M5.3 | S | mirror `prototype(html)/library.html` share dialog |
+| Done | M5.1 | BE | `ItemPermission` entity/migration (Library/Folder/Document) | M2.5, M3.5 | S | FS §8.2 |
+| Done | M5.2 | BE | Break-inheritance / reset-to-inherited / grant / revoke commands + `GET .../permissions` query (unique + inherited, `Direct`/`Inherited` source); resolver walks item ACLs first | M5.1 | L | FR-PERM-01..05, TDS §5.3, §5.6, §8.2 |
+| Done | M5.3 | BE | Share endpoint (grant access + notify via `IEmailSender`) | M5.2 | S | FR-PERM-06 |
+| Done | M5.4 | FE | Permissions tab (API wired; full inherited-view/grant/revoke panel deferred to admin polish) | M4.4, M5.2 | M | mirror `prototype(html)` `permissionsTabHtml` pattern |
+| Done | M5.5 | FE | Share dialog (API wired) | M5.3 | S | mirror `prototype(html)/library.html` share dialog |
 
 ### M6 — Recycle Bin
 

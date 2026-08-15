@@ -38,6 +38,8 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options)
 
     public DbSet<DocumentTag> DocumentTags => Set<DocumentTag>();
 
+    public DbSet<ItemPermission> ItemPermissions => Set<ItemPermission>();
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
@@ -56,5 +58,6 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options)
         builder.ApplyConfiguration(new DocumentVersionConfiguration());
         builder.ApplyConfiguration(new TagConfiguration());
         builder.ApplyConfiguration(new DocumentTagConfiguration());
+        builder.ApplyConfiguration(new ItemPermissionConfiguration());
     }
 }

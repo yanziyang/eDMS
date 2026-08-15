@@ -33,5 +33,7 @@ public interface IAppDbContext
 
     DbSet<DocumentTag> DocumentTags { get; }
 
+    DbSet<ItemPermission> ItemPermissions { get; }
+
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

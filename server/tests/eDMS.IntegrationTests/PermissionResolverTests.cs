@@ -75,6 +75,38 @@ public sealed class PermissionResolverTests : IDisposable
         Assert.Equal(PermissionLevel.NoAccess, level);
     }
 
+    [Fact]
+    public async Task Unique_folder_acl_grants_access_without_site_membership()
+    {
+        var ownerId = Guid.NewGuid();
+        var readerId = Guid.NewGuid();
+        var site = await SeedSiteAsync(ownerId);
+
+        var library = new Library { SiteId = site.Id, Name = "Documents" };
+        library.SetCreator(ownerId);
+        var folder = new Folder { LibraryId = library.Id, Name = "Secret", Path = "/Secret/" };
+        folder.SetCreator(ownerId);
+        _db.Libraries.Add(library);
+        _db.Folders.Add(folder);
+        _db.ItemPermissions.Add(new ItemPermission
+        {
+            ObjectType = ObjectType.Folder,
+            ObjectId = folder.Id,
+            PrincipalType = PrincipalType.User,
+            PrincipalId = readerId,
+            Level = PermissionLevel.Read,
+            GrantedBy = ownerId,
+        });
+        await _db.SaveChangesAsync();
+        _invalidator.Invalidate();
+
+        var folderLevel = await _resolver.GetEffectiveLevelAsync(readerId, ObjectType.Folder, folder.Id);
+        var libraryLevel = await _resolver.GetEffectiveLevelAsync(readerId, ObjectType.Library, library.Id);
+
+        Assert.Equal(PermissionLevel.Read, folderLevel);
+        Assert.Equal(PermissionLevel.NoAccess, libraryLevel);
+    }
+
     private async Task<Site> SeedSiteAsync(Guid ownerId)
     {
         var site = new Site { Name = "Finance", UrlSlug = "finance" };
