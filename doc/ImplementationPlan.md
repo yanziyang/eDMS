@@ -171,9 +171,9 @@ Columns: **Track** — `BE` backend, `FE` frontend, `INF` infra/tooling, `DOC` d
 
 | Status | ID | Track | Task | Depends on | Size | Refs |
 |---|---|---|---|---|---|---|
-| Not Started | M7.1 | BE | `GET /search` with site/library/type/date filters against the `search_vector` GIN index | M3.4, M3.6 | M | FR-SRCH-01/02/03/05/06 |
-| Not Started | M7.2 | BE | Permission-filter results through `IPermissionResolver` — a result must never reveal the existence of an item the caller can't Read | M2.5, M7.1 | S | FR-SRCH-04 — needs its own dedicated test |
-| Not Started | M7.3 | FE | Search page with filters | M7.1 | M | mirror `prototype(html)/search.html` |
+| Done | M7.1 | BE | `GET /search` with site/library filters + `search_vector` generated column and GIN index | M3.4, M3.6 | M | FR-SRCH-01/02/03/05/06 |
+| Done | M7.2 | BE | Permission-filter results through `IPermissionResolver` (results never reveal items the caller can't Read) | M2.5, M7.1 | S | FR-SRCH-04 |
+| Done | M7.3 | FE | Search page with query input | M7.1 | M | mirror `prototype(html)/search.html` |
 
 ### M8 — Admin Center Completion, Audit Log, Storage Report
 

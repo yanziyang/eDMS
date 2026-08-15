@@ -17,6 +17,8 @@ using eDMS.Infrastructure.Permissions;
 using eDMS.Application.Permissions;
 using eDMS.Application.RecycleBin;
 using eDMS.Infrastructure.RecycleBin;
+using eDMS.Infrastructure.Search;
+using eDMS.Application.Search;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -56,6 +58,7 @@ public static class DependencyInjection
         services.AddScoped<IDocumentService, DocumentService>();
         services.AddScoped<IPermissionService, PermissionService>();
         services.AddScoped<IRecycleBinService, RecycleBinService>();
+        services.AddScoped<ISearchService, SearchService>();
         services.AddSingleton<IFileStorageProvider, LocalDiskFileStorageProvider>();
         services.AddMemoryCache();
         services.AddHostedService<OrphanedUploadSweepService>();
