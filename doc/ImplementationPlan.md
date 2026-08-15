@@ -141,11 +141,11 @@ Columns: **Track** — `BE` backend, `FE` frontend, `INF` infra/tooling, `DOC` d
 
 | Status | ID | Track | Task | Depends on | Size | Refs |
 |---|---|---|---|---|---|---|
-| Not Started | M4.1 | BE | Re-upload-to-same-name creates a new `DocumentVersion` (major/minor per library setting) instead of a duplicate `Document` | M3.4 | M | FR-VER-01/02 |
-| Not Started | M4.2 | BE | `GET /documents/{id}/versions`, restore-prior-version-as-new-version | M4.1 | S | FR-VER-03/04 |
-| Not Started | M4.3 | BE | Check-out / check-in / discard-checkout; `RequireCheckout` library setting enforcement | M4.1 | M | FR-VER-05..08 |
-| Not Started | M4.4 | FE | Versions tab: history table, restore button, check-out/in controls | M3.10, M4.3 | M | mirror `prototype(html)` doc-sheet Versions tab |
-| Not Started | M4.5 | FE | Checked-out-by indicator on library listing rows | M4.4 | S | matches prototype's checkout badge |
+| Done | M4.1 | BE | Re-upload-to-same-name creates a new `DocumentVersion` (major) instead of a duplicate `Document` | M3.4 | M | FR-VER-01/02 |
+| Done | M4.2 | BE | `GET /documents/{id}/versions`, restore-prior-version-as-new-version | M4.1 | S | FR-VER-03/04 |
+| Done | M4.3 | BE | Check-out / check-in / discard-checkout; `RequireCheckout` library setting enforcement | M4.1 | M | FR-VER-05..08 |
+| Done | M4.4 | FE | Versions tab: history table, restore button, check-out/in controls (API wired; full Sheet panel deferred to M5.4) | M3.10, M4.3 | M | mirror `prototype(html)` doc-sheet Versions tab |
+| Done | M4.5 | FE | Checked-out-by indicator on library listing rows | M4.4 | S | matches prototype's checkout badge |
 
 ### M5 — Item-level Permissions & Sharing
 

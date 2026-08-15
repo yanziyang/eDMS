@@ -71,6 +71,40 @@ public sealed class DocumentsController(IDocumentService documents) : Controller
         return NoContent();
     }
 
+    [HttpGet("documents/{id:guid}/versions")]
+    public async Task<IActionResult> Versions(Guid id, CancellationToken cancellationToken) =>
+        Ok(await documents.ListVersionsAsync(id, cancellationToken));
+
+    [HttpPost("documents/{id:guid}/versions/{versionId:guid}/restore")]
+    public async Task<IActionResult> Restore(Guid id, Guid versionId, CancellationToken cancellationToken)
+    {
+        await documents.RestoreVersionAsync(id, versionId, cancellationToken);
+        return NoContent();
+    }
+
+    [HttpPost("documents/{id:guid}/checkout")]
+    public async Task<IActionResult> Checkout(Guid id, CancellationToken cancellationToken)
+    {
+        await documents.CheckOutAsync(id, cancellationToken);
+        return NoContent();
+    }
+
+    [HttpPost("documents/{id:guid}/checkin")]
+    public async Task<IActionResult> Checkin(Guid id, [FromBody] CheckinRequest? request, CancellationToken cancellationToken)
+    {
+        await documents.CheckInAsync(id, request?.Comment, cancellationToken);
+        return NoContent();
+    }
+
+    [HttpPost("documents/{id:guid}/discard-checkout")]
+    public async Task<IActionResult> DiscardCheckout(Guid id, CancellationToken cancellationToken)
+    {
+        await documents.DiscardCheckoutAsync(id, cancellationToken);
+        return NoContent();
+    }
+
 }
 
 public sealed record UpdateDocumentRequest(string? Name, string? Title, string? Description);
+
+public sealed record CheckinRequest(string? Comment);

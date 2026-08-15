@@ -37,4 +37,16 @@ public interface IDocumentService
         string? title,
         string? description,
         CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<DocumentVersionDto>> ListVersionsAsync(
+        Guid documentId,
+        CancellationToken cancellationToken = default);
+
+    Task RestoreVersionAsync(Guid documentId, Guid versionId, CancellationToken cancellationToken = default);
+
+    Task CheckOutAsync(Guid documentId, CancellationToken cancellationToken = default);
+
+    Task CheckInAsync(Guid documentId, string? comment, CancellationToken cancellationToken = default);
+
+    Task DiscardCheckoutAsync(Guid documentId, CancellationToken cancellationToken = default);
 }

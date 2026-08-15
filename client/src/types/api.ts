@@ -78,6 +78,7 @@ export interface ItemDto {
   modifiedAt: string;
   folderId: string | null;
   documentId: string | null;
+  checkedOutBy: string | null;
 }
 
 export interface UploadResult {

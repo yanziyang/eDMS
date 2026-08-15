@@ -41,7 +41,8 @@ public sealed record ItemDto(
     long SizeBytes,
     DateTimeOffset ModifiedAt,
     Guid? FolderId,
-    Guid? DocumentId);
+    Guid? DocumentId,
+    Guid? CheckedOutBy);
 
 public sealed record UploadResult(
     Guid DocumentId,

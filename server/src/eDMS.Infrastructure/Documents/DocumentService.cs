@@ -51,6 +51,7 @@ public sealed class DocumentService(
             0,
             folder.ModifiedAt ?? folder.CreatedAt,
             folder.Id,
+            null,
             null)));
         items.AddRange(documents.Select(document => new ItemDto(
             "document",
@@ -59,7 +60,8 @@ public sealed class DocumentService(
             documentSizes.GetValueOrDefault(document.Id),
             document.ModifiedAt ?? document.CreatedAt,
             null,
-            document.Id)));
+            document.Id,
+            document.CheckedOutBy)));
 
         return items;
     }
@@ -325,5 +327,149 @@ public sealed class DocumentService(
         document.ModifiedBy = userId;
         document.ModifiedAt = DateTimeOffset.UtcNow;
         await db.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<DocumentVersionDto>> ListVersionsAsync(
+        Guid documentId,
+        CancellationToken cancellationToken = default)
+    {
+        var userId = currentUser.UserId ?? throw new ForbiddenException();
+        await permissions.RequireAsync(userId, ObjectType.Document, documentId, PermissionLevel.Read, cancellationToken);
+
+        var versions = await db.DocumentVersions.AsNoTracking()
+            .Where(version => version.DocumentId == documentId)
+            .OrderByDescending(version => version.VersionMajor)
+            .ThenByDescending(version => version.VersionMinor)
+            .ToListAsync(cancellationToken);
+
+        return versions.Select(version => new DocumentVersionDto(
+            version.Id,
+            version.VersionMajor,
+            version.VersionMinor,
+            version.SizeBytes,
+            version.Comment,
+            version.IsMajor,
+            version.CreatedBy,
+            version.CreatedAt)).ToList();
+    }
+
+    public async Task RestoreVersionAsync(
+        Guid documentId,
+        Guid versionId,
+        CancellationToken cancellationToken = default)
+    {
+        var userId = currentUser.UserId ?? throw new ForbiddenException();
+        await permissions.RequireAsync(userId, ObjectType.Document, documentId, PermissionLevel.Contribute, cancellationToken);
+
+        var document = await db.Documents.IgnoreQueryFilters()
+            .SingleOrDefaultAsync(item => item.Id == documentId, cancellationToken)
+            ?? throw new NotFoundException(nameof(Document), documentId);
+
+        var source = await db.DocumentVersions
+            .SingleOrDefaultAsync(version => version.Id == versionId, cancellationToken)
+            ?? throw new NotFoundException(nameof(DocumentVersion), versionId);
+
+        var library = await db.Libraries.IgnoreQueryFilters()
+            .SingleAsync(item => item.Id == document.LibraryId, cancellationToken);
+        var current = await db.DocumentVersions
+            .SingleAsync(version => version.Id == document.CurrentVersionId, cancellationToken);
+
+        var restored = new DocumentVersion
+        {
+            DocumentId = document.Id,
+            VersionMajor = current.VersionMajor + 1,
+            VersionMinor = 0,
+            SizeBytes = source.SizeBytes,
+            Checksum = source.Checksum,
+            Comment = $"Restored from v{source.VersionMajor}.{source.VersionMinor}",
+            IsMajor = true,
+        };
+        restored.SetCreator(userId);
+
+        var storageKey = $"{library.SiteId}/{document.LibraryId}/{document.Id}/{restored.Id}/{document.Name}";
+        restored.StorageKey = storageKey;
+
+        await using (var sourceStream = await storage.OpenReadAsync(source.StorageKey, cancellationToken))
+        {
+            await storage.SaveAsync(sourceStream, storageKey, cancellationToken);
+        }
+
+        db.DocumentVersions.Add(restored);
+        document.CurrentVersionId = restored.Id;
+        document.ModifiedBy = userId;
+        document.ModifiedAt = DateTimeOffset.UtcNow;
+        await db.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task CheckOutAsync(Guid documentId, CancellationToken cancellationToken = default)
+    {
+        var userId = currentUser.UserId ?? throw new ForbiddenException();
+        await permissions.RequireAsync(userId, ObjectType.Document, documentId, PermissionLevel.Contribute, cancellationToken);
+
+        var document = await db.Documents.IgnoreQueryFilters()
+            .SingleOrDefaultAsync(item => item.Id == documentId, cancellationToken)
+            ?? throw new NotFoundException(nameof(Document), documentId);
+
+        if (document.CheckedOutBy is { } checkedOutBy && checkedOutBy != userId)
+        {
+            throw new ConflictException("This document is already checked out by another user.");
+        }
+
+        document.CheckedOutBy = userId;
+        document.CheckedOutAt = DateTimeOffset.UtcNow;
+        await db.SaveChangesAsync(cancellationToken);
+        await audit.LogAsync(AuditAction.CheckOut, ObjectType.Document, document.Id, document.Name, null, cancellationToken);
+    }
+
+    public async Task CheckInAsync(Guid documentId, string? comment, CancellationToken cancellationToken = default)
+    {
+        var userId = currentUser.UserId ?? throw new ForbiddenException();
+        await permissions.RequireAsync(userId, ObjectType.Document, documentId, PermissionLevel.Contribute, cancellationToken);
+
+        var document = await db.Documents.IgnoreQueryFilters()
+            .SingleOrDefaultAsync(item => item.Id == documentId, cancellationToken)
+            ?? throw new NotFoundException(nameof(Document), documentId);
+
+        if (document.CheckedOutBy is not { } checkedOutBy)
+        {
+            throw new ConflictException("This document is not checked out.");
+        }
+
+        if (checkedOutBy != userId && !currentUser.IsSystemAdmin)
+        {
+            throw new ForbiddenException();
+        }
+
+        document.CheckedOutBy = null;
+        document.CheckedOutAt = null;
+        if (comment is not null)
+        {
+            var current = await db.DocumentVersions
+                .SingleAsync(version => version.Id == document.CurrentVersionId, cancellationToken);
+            current.Comment = comment;
+        }
+
+        await db.SaveChangesAsync(cancellationToken);
+        await audit.LogAsync(AuditAction.CheckIn, ObjectType.Document, document.Id, document.Name, null, cancellationToken);
+    }
+
+    public async Task DiscardCheckoutAsync(Guid documentId, CancellationToken cancellationToken = default)
+    {
+        var userId = currentUser.UserId ?? throw new ForbiddenException();
+        await permissions.RequireAsync(userId, ObjectType.Document, documentId, PermissionLevel.Contribute, cancellationToken);
+
+        var document = await db.Documents.IgnoreQueryFilters()
+            .SingleOrDefaultAsync(item => item.Id == documentId, cancellationToken)
+            ?? throw new NotFoundException(nameof(Document), documentId);
+
+        if (document.CheckedOutBy is { } checkedOutBy && checkedOutBy != userId && !currentUser.IsSystemAdmin)
+        {
+            throw new ForbiddenException();
+        }
+
+        document.CheckedOutBy = null;
+        document.CheckedOutAt = null;
+        await db.SaveChangesAsync(cancellationToken);
+        await audit.LogAsync(AuditAction.DiscardCheckout, ObjectType.Document, document.Id, document.Name, null, cancellationToken);
     }
 }

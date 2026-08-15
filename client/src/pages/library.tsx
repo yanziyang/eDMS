@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ChevronRight, Download, FileText, Folder, Trash2, Upload } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
@@ -118,10 +119,13 @@ export function LibraryBrowser() {
                       {item.name}
                     </button>
                   ) : (
-                    <span className="flex items-center gap-2">
+                    <div className="flex items-center gap-2">
                       <FileText className="size-4 text-blue-500" />
                       {item.name}
-                    </span>
+                      {item.checkedOutBy && (
+                        <Badge variant="outline" className="text-xs">Checked out</Badge>
+                      )}
+                    </div>
                   )}
                 </td>
                 <td className="px-4 py-2 text-muted-foreground">
