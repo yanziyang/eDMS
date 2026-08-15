@@ -6,7 +6,7 @@ Instructions for AI coding agents (OpenCode, Claude Code, Cursor, or any other a
 
 **eDMS** is an internal enterprise document management system — SharePoint Online's key functions (sites, libraries, folders, documents, versioning, check-out/check-in, permissions, search, recycle bin, audit trail), for internal use only, no anonymous/external sharing. Full context: [`doc/functional-spec.md`](doc/functional-spec.md) §1–§2.
 
-**Repository state — read before doing anything else:** this repo currently contains *specifications and a visual prototype only*. There is no `server/` or `client/` yet.
+**Repository state — read before doing anything else:** the production `server/` (.NET 10) and `client/` (React/Vite) now exist. Phase 1 (M0–M9) backend and frontend are implemented; pick up at the first remaining `Not Started`/`In Progress` task in `doc/ImplementationPlan.md`.
 
 | Path | What it is | Status |
 |---|---|---|
@@ -14,8 +14,8 @@ Instructions for AI coding agents (OpenCode, Claude Code, Cursor, or any other a
 | `doc/technical-design-spec.md` / `.html` | Architecture, schema DDL, class-level design, deployment | Source of truth — done |
 | `doc/ImplementationPlan.md` | Sequenced, dependency-ordered task list (M0–M9) with a live Status column | **Read this to find your next task** — done |
 | `prototype(html)/` | Clickable UX/IA reference (vanilla HTML/CSS/JS mimicking shadcn) | Reference only — **see §8, do not port its code** |
-| `server/` | .NET solution | **Does not exist yet** — see §5 |
-| `client/` | React/Vite app | **Does not exist yet** — see §5 |
+| `server/` | .NET solution (Domain/Application/Infrastructure/Api + tests) | Exists — EF Core migrations apply against local Postgres |
+| `client/` | React/Vite app | Exists — auth, sites, libraries, documents, search wired to the real API |
 
 **Your very next action, every session:** open `doc/ImplementationPlan.md`, find the first task whose Status isn't `Done` and whose dependencies are, and do that. If you are the first agent to touch this repo, that task will be M0.1 — scaffolding `server/` and `client/` per §5 below — not feature code.
 

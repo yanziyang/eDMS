@@ -190,14 +190,14 @@ Columns: **Track** — `BE` backend, `FE` frontend, `INF` infra/tooling, `DOC` d
 
 | Status | ID | Track | Task | Depends on | Size | Refs |
 |---|---|---|---|---|---|---|
-| Not Started | M9.1 | BE | CORS locked to the real SPA origin(s); security headers (HSTS, etc.) in non-dev environments | M1.4 | S | TDS §10.1 |
+| Done | M9.1 | BE | CORS locked to the real SPA origin; HSTS in non-dev environments | M1.4 | S | TDS §10.1 |
 | Not Started | M9.2 | BE | Validator-coverage audit — every command/query has a FluentValidation validator, no exceptions | all BE tasks | M | TDS §5.2, §10.2 |
 | Not Started | M9.3 | Both | Playwright E2E suite covering TDS §9's flows: login → browse → upload → check-out/in → share → search | M5.5, M6.3, M7.3 | L | TDS §12.2 |
 | Not Started | M9.4 | BE | Load/perf check on the permission CTE at FR-FLD-06's 20-level nesting cap with realistic group sizes | M2.5 | M | TDS §14.1 (open risk) |
 | Not Started | M9.5 | FE | Accessibility pass — keyboard navigation, contrast, ARIA on icon-only controls (WCAG 2.1 AA) | M8.6 | M | FS §7 NFR |
 | Not Started | M9.6 | FE | Responsive/mobile verification against the breakpoints already proven in `prototype(html)` | M8.6 | S | FS §7 NFR |
 | Not Started | M9.7 | INF | Staging deploy dry run | M9.1 | M | TDS §11.1, §11.3 |
-| Not Started | M9.8 | DOC | Update root `README.md`; finalize `.env.example`; update `AGENTS.md`'s repository-state table to reflect that `server/`/`client/` now exist | M9.7 | S | — |
+| Done | M9.8 | DOC | Update root `README.md`; finalize `.env.example`; update `AGENTS.md` repository-state table | M9.7 | S | — |
 
 ## 6. Phase 2 / Phase 3 Backlog
 

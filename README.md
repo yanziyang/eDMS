@@ -2,7 +2,7 @@
 
 **eDMS** is an internal enterprise document management system — the key functions of SharePoint Online (sites, libraries, folders, documents, versioning, check-out/check-in, permissions, search, recycle bin, audit trail), for internal use only. No anonymous or external sharing.
 
-**Status:** specifications and clickable prototypes are complete. The production `server/` (ASP.NET Core + PostgreSQL) and `client/` (React/Vite) are not built yet — see `doc/ImplementationPlan.md` for the sequenced task list.
+**Status:** Phase 1 (M0–M9) is implemented — ASP.NET Core + PostgreSQL backend, React/Vite frontend, JWT auth, sites/groups/permissions, documents/versioning/check-out, recycle bin, search, and audit logging. See `doc/ImplementationPlan.md` for the live task list.
 
 ## Repository layout
 
@@ -11,7 +11,7 @@
 | `doc/` | [Functional spec](doc/functional-spec.md), [technical design spec](doc/technical-design-spec.md) (HTML versions for humans), [implementation plan](doc/ImplementationPlan.md) |
 | `prototype(html)/` | Clickable vanilla HTML/CSS/JS prototype — open `prototype(html)/index.html` in a browser |
 | `Prototype(React)/` | Clickable React prototype using the real stack (Vite 6, React 19, TypeScript, shadcn/ui, Tailwind v4) |
-| `server/`, `client/` | Production implementation — not started yet |
+| `server/`, `client/` | Production implementation — Phase 1 complete |
 
 ## Running the React prototype
 

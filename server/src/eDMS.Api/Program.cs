@@ -94,6 +94,14 @@ public class Program
         builder.Services.AddAuthorization(options =>
             options.AddPolicy("SystemAdmin", policy => policy.RequireClaim("is_admin", "true")));
 
+        var clientBaseUrl = builder.Configuration["Client:BaseUrl"] ?? "http://localhost:5173";
+        builder.Services.AddCors(options =>
+            options.AddPolicy("spa", policy =>
+                policy.WithOrigins(clientBaseUrl)
+                    .AllowAnyHeader()
+                    .AllowAnyMethod()
+                    .AllowCredentials()));
+
         var app = builder.Build();
 
         if (app.Environment.IsDevelopment())
@@ -103,7 +111,14 @@ public class Program
 
         app.UseSerilogRequestLogging();
         app.UseExceptionHandler();
+
+        if (!app.Environment.IsDevelopment())
+        {
+            app.UseHsts();
+        }
+
         app.UseHttpsRedirection();
+        app.UseCors("spa");
         app.UseRateLimiter();
         app.UseAuthentication();
         app.UseAuthorization();
