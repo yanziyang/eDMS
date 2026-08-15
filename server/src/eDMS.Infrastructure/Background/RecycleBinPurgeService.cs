@@ -27,7 +27,14 @@ public sealed class RecycleBinPurgeService(
                 logger.LogError(exception, "Recycle bin purge failed.");
             }
 
-            await Task.Delay(TimeSpan.FromHours(24), stoppingToken);
+            try
+            {
+                await Task.Delay(TimeSpan.FromHours(24), stoppingToken);
+            }
+            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+            {
+                break;
+            }
         }
     }
 

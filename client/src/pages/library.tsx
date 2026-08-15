@@ -9,6 +9,7 @@ import {
   createFolder,
   deleteDocument,
   deleteFolder,
+  downloadDocument,
   listFolderItems,
   listItems,
   uploadToFolder,
@@ -137,15 +138,19 @@ export function LibraryBrowser() {
                 <td className="px-4 py-2">
                   <div className="flex items-center gap-1">
                     {item.kind === "document" && (
-                      <a href={`${import.meta.env.VITE_API_BASE_URL ?? "http://localhost:5080/api/v1"}/documents/${item.documentId}/download`} download>
-                        <Button variant="ghost" size="icon-sm">
-                          <Download className="size-4" />
-                        </Button>
-                      </a>
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        aria-label="Download"
+                        onClick={() => downloadDocument(item.documentId!, item.name)}
+                      >
+                        <Download className="size-4" />
+                      </Button>
                     )}
                     <Button
                       variant="ghost"
                       size="icon-sm"
+                      aria-label="Delete"
                       onClick={async () => {
                         if (item.kind === "document") await deleteDocument(item.documentId!);
                         else await deleteFolder(item.folderId!);

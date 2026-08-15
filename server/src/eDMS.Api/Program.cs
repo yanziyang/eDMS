@@ -14,6 +14,8 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.RateLimiting;
 using System.Threading.RateLimiting;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.EntityFrameworkCore;
+using System.Text.Json.Serialization;
 using Serilog;
 
 namespace eDMS.Api;
@@ -30,7 +32,10 @@ public class Program
             .Enrich.FromLogContext()
             .WriteTo.Console());
 
-        builder.Services.AddControllers();
+        builder.Services
+            .AddControllers()
+            .AddJsonOptions(options =>
+                options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
         builder.Services.AddOpenApi();
         builder.Services.AddHealthChecks();
         builder.Services.AddHttpContextAccessor();
@@ -125,6 +130,16 @@ public class Program
 
         app.MapControllers();
         app.MapHealthChecks("/health");
+
+        if (app.Environment.IsDevelopment() || app.Environment.IsEnvironment("Testing"))
+        {
+            using var migrationScope = app.Services.CreateScope();
+            var db = migrationScope.ServiceProvider.GetRequiredService<AppDbContext>();
+            if (db.Database.IsRelational())
+            {
+                await db.Database.MigrateAsync();
+            }
+        }
 
         await SeedAdministratorAsync(app);
 

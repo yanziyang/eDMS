@@ -34,9 +34,12 @@ public sealed class CreateSiteHandler(
         var library = new Library { SiteId = site.Id, Name = "Documents" };
         library.SetCreator(userId);
 
-        var owners = new Group { Name = $"{site.Name} Owners", IsSystem = true, SiteId = site.Id };
-        var members = new Group { Name = $"{site.Name} Members", IsSystem = true, SiteId = site.Id };
-        var visitors = new Group { Name = $"{site.Name} Visitors", IsSystem = true, SiteId = site.Id };
+        // Group names are globally unique, and the site name alone is not (two sites
+        // may share a display name). Suffix the unique slug so auto-provisioned groups
+        // never collide while staying human-readable.
+        var owners = new Group { Name = $"{site.Name} Owners ({site.UrlSlug})", IsSystem = true, SiteId = site.Id };
+        var members = new Group { Name = $"{site.Name} Members ({site.UrlSlug})", IsSystem = true, SiteId = site.Id };
+        var visitors = new Group { Name = $"{site.Name} Visitors ({site.UrlSlug})", IsSystem = true, SiteId = site.Id };
         owners.SetCreator(userId);
         members.SetCreator(userId);
         visitors.SetCreator(userId);

@@ -40,6 +40,20 @@ npm run smoke
 - `doc/ImplementationPlan.md` — sequenced, dependency-ordered implementation tasks (M0–M9)
 - `AGENTS.md` — guidance for AI coding agents working in this repository
 
+## End-to-end tests
+
+Playwright drives the real React app against a live API and PostgreSQL. Requires
+`dotnet-ef` and a local Postgres (see `DEV-Credentials.md`); uses system Edge.
+
+```bash
+cd client
+npx playwright test          # or: npm run test:e2e
+```
+
+The suite resets a dedicated `edms_e2e` database, seeds a System Administrator
+(`admin@e2e.local` / `E2eAdmin123!`), and covers login, browse, upload, download,
+check-out/in, share, and permission-filtered search.
+
 ## Tech stack (production)
 
 | Layer | Choice |

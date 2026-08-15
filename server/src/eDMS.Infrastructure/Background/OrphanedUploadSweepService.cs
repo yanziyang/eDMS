@@ -23,7 +23,14 @@ public sealed class OrphanedUploadSweepService(ILogger<OrphanedUploadSweepServic
                 logger.LogError(exception, "Orphaned upload sweep failed.");
             }
 
-            await Task.Delay(TimeSpan.FromHours(1), stoppingToken);
+            try
+            {
+                await Task.Delay(TimeSpan.FromHours(1), stoppingToken);
+            }
+            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+            {
+                break;
+            }
         }
     }
 

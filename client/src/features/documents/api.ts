@@ -1,4 +1,4 @@
-import { request } from "@/lib/api-client";
+import { request, requestBlob } from "@/lib/api-client";
 import type { ItemDto, LibraryDto, UploadResult } from "@/types/api";
 
 export function listLibraries(siteId: string): Promise<LibraryDto[]> {
@@ -38,4 +38,16 @@ export function deleteDocument(documentId: string): Promise<void> {
 
 export function deleteFolder(folderId: string): Promise<void> {
   return request<void>(`/folders/${folderId}`, { method: "DELETE" });
+}
+
+export async function downloadDocument(documentId: string, fileName: string): Promise<void> {
+  const blob = await requestBlob(`/documents/${documentId}/download`);
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = fileName;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(url);
 }

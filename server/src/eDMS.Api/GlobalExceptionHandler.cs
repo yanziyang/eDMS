@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace eDMS.Api;
 
-public sealed class GlobalExceptionHandler : IExceptionHandler
+public sealed class GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logger) : IExceptionHandler
 {
     public async ValueTask<bool> TryHandleAsync(
         HttpContext httpContext,
@@ -18,12 +18,18 @@ public sealed class GlobalExceptionHandler : IExceptionHandler
             NotFoundException => Problem(404, "urn:edms:not-found", "Not Found", exception.Message),
             ForbiddenException => Problem(403, "urn:edms:forbidden", "Forbidden", exception.Message),
             ConflictException => Problem(409, "urn:edms:conflict", "Conflict", exception.Message),
-            _ => Problem(500, "urn:edms:internal-error", "An error occurred.", "An unexpected error occurred."),
+            _ => InternalError(exception),
         };
 
         httpContext.Response.StatusCode = problem.Status ?? 500;
         await httpContext.Response.WriteAsJsonAsync(problem, cancellationToken);
         return true;
+    }
+
+    private ProblemDetails InternalError(Exception exception)
+    {
+        logger.LogError(exception, "Unhandled exception: {Message}", exception.Message);
+        return Problem(500, "urn:edms:internal-error", "An error occurred.", "An unexpected error occurred.");
     }
 
     private static ProblemDetails Problem(int status, string type, string title, string detail) =>

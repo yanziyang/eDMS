@@ -69,3 +69,6 @@ coverage/
 dataprotection-keys/
 server/storage/
 server/storage-*/
+server/src/eDMS.Api/e2e-storage/
+client/playwright-report/
+client/test-results/

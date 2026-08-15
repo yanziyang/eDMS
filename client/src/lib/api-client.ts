@@ -69,7 +69,11 @@ export async function request<T>(path: string, init: RequestInit = {}): Promise<
     },
   });
 
-  if (response.status === 401 && !path.startsWith("/auth/")) {
+  const skipRefresh = ["/auth/login", "/auth/refresh", "/auth/forgot-password", "/auth/reset-password"].some(
+    (prefix) => path.startsWith(prefix),
+  );
+
+  if (response.status === 401 && !skipRefresh) {
     const refreshed = await refreshAccessToken();
     if (refreshed) {
       return request<T>(path, init);
@@ -82,4 +86,27 @@ export async function request<T>(path: string, init: RequestInit = {}): Promise<
   }
 
   return response.status === 204 ? (undefined as T) : ((await response.json()) as T);
+}
+
+export async function requestBlob(path: string): Promise<Blob> {
+  let response = await fetch(`${API_BASE}${path}`, {
+    credentials: "include",
+    headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
+  });
+
+  if (response.status === 401) {
+    const refreshed = await refreshAccessToken();
+    if (refreshed) {
+      response = await fetch(`${API_BASE}${path}`, {
+        credentials: "include",
+        headers: { Authorization: `Bearer ${accessToken!}` },
+      });
+    }
+  }
+
+  if (!response.ok) {
+    throw await ApiError.fromResponse(response);
+  }
+
+  return response.blob();
 }
