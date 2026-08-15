@@ -27,7 +27,13 @@ public sealed class AuthServiceTests : IDisposable
         services.AddDbContext<AppDbContext>(options =>
             options.UseInMemoryDatabase(Guid.NewGuid().ToString()));
         services
-            .AddIdentityCore<ApplicationUser>(options => options.User.RequireUniqueEmail = true)
+            .AddIdentityCore<ApplicationUser>(options =>
+            {
+                options.User.RequireUniqueEmail = true;
+                options.Lockout.AllowedForNewUsers = true;
+                options.Lockout.MaxFailedAccessAttempts = 5;
+                options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
+            })
             .AddSignInManager()
             .AddEntityFrameworkStores<AppDbContext>();
 
@@ -102,6 +108,26 @@ public sealed class AuthServiceTests : IDisposable
         Assert.True(result!.IsSystemAdmin);
         Assert.Equal("admin@edms.local", result.Email);
         Assert.Empty(result.SiteMemberships);
+    }
+
+    [Fact]
+    public async Task Five_failed_logins_lock_the_account()
+    {
+        await CreateUserAsync("admin@edms.local", "Password1!");
+
+        for (var attempt = 0; attempt < 5; attempt++)
+        {
+            var failed = await _sut.LoginAsync(new LoginRequest("admin@edms.local", "wrong"), null, default);
+            Assert.Null(failed);
+        }
+
+        var user = await _userManager.FindByEmailAsync("admin@edms.local");
+        Assert.NotNull(user);
+        Assert.True(await _userManager.IsLockedOutAsync(user!));
+
+        // Even the correct password must be rejected while locked out.
+        var lockedOut = await _sut.LoginAsync(new LoginRequest("admin@edms.local", "Password1!"), null, default);
+        Assert.Null(lockedOut);
     }
 
     private async Task<ApplicationUser> CreateUserAsync(

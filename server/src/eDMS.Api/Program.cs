@@ -39,7 +39,13 @@ public class Program
         builder.Services.AddSingleton(keyMaterial);
 
         builder.Services
-            .AddIdentityCore<ApplicationUser>(options => options.User.RequireUniqueEmail = true)
+            .AddIdentityCore<ApplicationUser>(options =>
+            {
+                options.User.RequireUniqueEmail = true;
+                options.Lockout.AllowedForNewUsers = true;
+                options.Lockout.MaxFailedAccessAttempts = 5;
+                options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
+            })
             .AddSignInManager()
             .AddEntityFrameworkStores<AppDbContext>();
 
