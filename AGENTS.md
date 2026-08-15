@@ -12,11 +12,12 @@ Instructions for AI coding agents (OpenCode, Claude Code, Cursor, or any other a
 |---|---|---|
 | `doc/functional-spec.md` / `.html` | Requirements, data model, API surface, roadmap | Source of truth — done |
 | `doc/technical-design-spec.md` / `.html` | Architecture, schema DDL, class-level design, deployment | Source of truth — done |
+| `doc/ImplementationPlan.md` | Sequenced, dependency-ordered task list (M0–M9) with a live Status column | **Read this to find your next task** — done |
 | `prototype(html)/` | Clickable UX/IA reference (vanilla HTML/CSS/JS mimicking shadcn) | Reference only — **see §8, do not port its code** |
 | `server/` | .NET solution | **Does not exist yet** — see §5 |
 | `client/` | React/Vite app | **Does not exist yet** — see §5 |
 
-If you are the first agent to touch this repo, your first task is very likely scaffolding `server/` and `client/` per §5, not writing feature code.
+**Your very next action, every session:** open `doc/ImplementationPlan.md`, find the first task whose Status isn't `Done` and whose dependencies are, and do that. If you are the first agent to touch this repo, that task will be M0.1 — scaffolding `server/` and `client/` per §5 below — not feature code.
 
 ## 2. Progressive Disclosure — Where to Look
 
@@ -24,6 +25,7 @@ Don't load the full specs into context speculatively. Look up the row that match
 
 | Before you... | Read |
 |---|---|
+| Pick your next task | **`doc/ImplementationPlan.md`** — find the first `Not Started` task whose dependencies are `Done` |
 | Touch scope, add/remove a feature | FS §2 (Goals/Non-Goals), the relevant `FR-*` group in FS §6 |
 | Design or migrate the data model | FS §8 (logical model), **TDS §6** (physical DDL, indexes) |
 | Implement any authorization check | FS §9 (algorithm), **TDS §5.3, §5.6, §6.3** (implementation + the recursive CTE) |
