@@ -33,6 +33,7 @@ public static class DependencyInjection
         services.AddScoped<ITokenService, JwtTokenService>();
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IAuditLogger, AuditLogger>();
+        services.AddScoped<IPermissionResolver, PermissionResolver>();
 
         return services;
     }
