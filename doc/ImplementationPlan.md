@@ -100,9 +100,9 @@ Columns: **Track** — `BE` backend, `FE` frontend, `INF` infra/tooling, `DOC` d
 | Done | M1.6 | BE | `audit_log_entries` table/migration incl. `REVOKE UPDATE, DELETE` grant; `AuditLoggingBehavior` wired for Login/Logout actions | M0.5, M1.4 | M | FR-AUDIT-01 (partial), TDS §6.2, §5.2 |
 | Done | M1.7 | BE | `IPermissionResolver` interface + stub implementation (System Administrator bypass only — no hierarchy to walk yet); `AuthorizationBehavior` pipeline step wired | M0.5, M1.1 | M | TDS §5.3, §5.6 |
 | Done | M1.8 | BE | Rate limiting on `/auth/login`, `/auth/forgot-password`; `POST /auth/forgot-password` + `/auth/reset-password` (email via `IEmailSender` → Mailhog in dev) | M1.4 | S | FR-AUTH-04, TDS §10.3, §5.7 |
-| Not Started | M1.9 | FE | `lib/api-client.ts` with the 401 → refresh → retry flow; auth context/hook wrapping `GET /auth/me` | M0.2, M1.4 | M | TDS §7.3, §9.1 |
-| Not Started | M1.10 | FE | Login + Forgot Password pages wired to the real API — mirror `prototype(html)/index.html`, `forgot-password.html` | M1.9, M1.8 | M | FS §11.1 routes |
-| Not Started | M1.11 | FE | `AppShell` auth route guard; static topbar/sidebar shell (no live data yet) | M1.9 | M | FS §11.1, `prototype(html)/assets/app.js` shell functions |
+| Done | M1.9 | FE | `lib/api-client.ts` with the 401 → refresh → retry flow; auth context/hook wrapping `GET /auth/me` | M0.2, M1.4 | M | TDS §7.3, §9.1 |
+| Done | M1.10 | FE | Login + Forgot Password pages wired to the real API — mirror `prototype(html)/index.html`, `forgot-password.html` | M1.9, M1.8 | M | FS §11.1 routes |
+| Done | M1.11 | FE | `AppShell` auth route guard; static topbar/sidebar shell (no live data yet) | M1.9 | M | FS §11.1, `prototype(html)/assets/app.js` shell functions |
 
 ### M2 — Sites, Groups & Real Permission Resolver
 
