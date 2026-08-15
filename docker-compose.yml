@@ -1,0 +1,47 @@
+services:
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: edms
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: devonly
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  mailhog:
+    image: mailhog/mailhog
+    ports:
+      - "8025:8025"
+      - "1025:1025"
+
+  api:
+    build: ./server
+    environment:
+      ConnectionStrings__Default: "Host=postgres;Port=5432;Database=edms;Username=postgres;Password=devonly"
+      Jwt__PrivateKey: ""
+      Jwt__PublicKey: ""
+      Seed__AdminEmail: "admin@edms.local"
+      Seed__AdminTempPassword: "ChangeMe123!"
+      Smtp__Host: mailhog
+      Smtp__Port: "1025"
+    ports:
+      - "5080:8080"
+    depends_on:
+      - postgres
+      - mailhog
+
+  web:
+    build:
+      context: ./client
+      args:
+        VITE_API_BASE_URL: "http://localhost:5080/api/v1"
+        VITE_APP_NAME: eDMS
+    ports:
+      - "5173:80"
+    depends_on:
+      - api
+
+volumes:
+  pgdata:

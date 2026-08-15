@@ -58,7 +58,7 @@ Once M3 is `Done`, M4, M6, and M7 have no dependency on each other and may be wo
 
 | Milestone | Goal | Demo-able outcome | Status |
 |---|---|---|---|
-| [M0](#m0--bootstrap) | Repo, solution, CI, local stack exist | `docker compose up` runs a Postgres-backed API and a Vite dev server; CI is green on an empty-but-structured repo | Not Started |
+| [M0](#m0--bootstrap) | Repo, solution, CI, local stack exist | `docker compose up` runs a Postgres-backed API and a Vite dev server; CI is green on an empty-but-structured repo | Done |
 | [M1](#m1--identity-auth-audit--permission-skeleton) | Real login, tokens, audit trail, admin bypass | Can log in through the real UI, session survives an access-token expiry via silent refresh, a Login row appears in `audit_log_entries` | Not Started |
 | [M2](#m2--sites-groups--real-permission-resolver) | Sites/Groups exist; permission resolution is real | Can create a Site, see its default groups, and have the hierarchy-walk permission check actually gate a request | Not Started |
 | [M3](#m3--libraries-folders-documents) | Core document lifecycle (no versioning/ACLs/bin yet) | Can upload a file into a folder, see it listed, download it, rename/move/delete it | Not Started |
@@ -77,14 +77,14 @@ Columns: **Track** — `BE` backend, `FE` frontend, `INF` infra/tooling, `DOC` d
 
 | Status | ID | Track | Task | Depends on | Size | Refs |
 |---|---|---|---|---|---|---|
-| Not Started | M0.1 | INF | Scaffold `server/` solution: 4 projects + 3 test projects, wired per the reference-direction rule (Domain ← Application ← Infrastructure/Api) | — | M | `AGENTS.md` §5, TDS §2.3, §3.1 |
-| Not Started | M0.2 | INF | Scaffold `client/`: Vite + React + strict TS + React Router; install shadcn, Tailwind CSS 4, TanStack Query, Zustand, react-hook-form, zod | — | M | `AGENTS.md` §5, TDS §7.1 |
-| Not Started | M0.3 | INF | `docker-compose.yml`: Postgres 17, Mailhog, API + Web service definitions (build succeeds even with placeholder app code) | M0.1, M0.2 | S | TDS §11.2 |
-| Not Started | M0.4 | BE | Wire EF Core + Npgsql + `EFCore.NamingConventions`; empty `AppDbContext`; first migration applies cleanly against `docker-compose`'s Postgres | M0.1, M0.3 | S | TDS §6.1 |
-| Not Started | M0.5 | BE | Register MediatR + FluentValidation + Mapster in DI; `ValidationBehavior` pipeline step wired (no-op until commands exist) | M0.1 | S | TDS §5.2 |
-| Not Started | M0.6 | BE | Serilog structured logging; `GET /health` liveness endpoint | M0.1 | S | FS §7 (observability NFR) |
-| Not Started | M0.7 | INF | `.github/workflows/ci.yml`: restore/build/test for both projects (green even with zero tests) | M0.1, M0.2 | S | TDS §11.3 |
-| Not Started | M0.8 | INF | `.env.example` + `appsettings.json` structure documenting every required variable (connection string, JWT key pair, SMTP, seed admin) — no real values | M0.4 | S | TDS §11.4 |
+| Done | M0.1 | INF | Scaffold `server/` solution: 4 projects + 3 test projects, wired per the reference-direction rule (Domain ← Application ← Infrastructure/Api) | — | M | `AGENTS.md` §5, TDS §2.3, §3.1 |
+| Done | M0.2 | INF | Scaffold `client/`: Vite + React + strict TS + React Router; install shadcn, Tailwind CSS 4, TanStack Query, Zustand, react-hook-form, zod | — | M | `AGENTS.md` §5, TDS §7.1 |
+| Done | M0.3 | INF | `docker-compose.yml`: Postgres 17, Mailhog, API + Web service definitions (build succeeds even with placeholder app code) | M0.1, M0.2 | S | TDS §11.2 |
+| Done | M0.4 | BE | Wire EF Core + Npgsql + `EFCore.NamingConventions`; empty `AppDbContext`; first migration applies cleanly against `docker-compose`'s Postgres | M0.1, M0.3 | S | TDS §6.1 |
+| Done | M0.5 | BE | Register MediatR + FluentValidation + Mapster in DI; `ValidationBehavior` pipeline step wired (no-op until commands exist) | M0.1 | S | TDS §5.2 |
+| Done | M0.6 | BE | Serilog structured logging; `GET /health` liveness endpoint | M0.1 | S | FS §7 (observability NFR) |
+| Done | M0.7 | INF | `.github/workflows/ci.yml`: restore/build/test for both projects (green even with zero tests) | M0.1, M0.2 | S | TDS §11.3 |
+| Done | M0.8 | INF | `.env.example` + `appsettings.json` structure documenting every required variable (connection string, JWT key pair, SMTP, seed admin) — no real values | M0.4 | S | TDS §11.4 |
 
 ### M1 — Identity, Auth, Audit & Permission Skeleton
 

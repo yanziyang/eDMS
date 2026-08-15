@@ -58,3 +58,9 @@ nunit-*.xml
 
 # Local secrets / credentials — never commit
 DEV-Credentials.md
+
+# Node / Vite / frontend
+node_modules/
+dist/
+*.tsbuildinfo
+coverage/
