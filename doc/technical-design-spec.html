@@ -1,0 +1,1062 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>eDMS — Technical Design Specification</title>
+<style>
+  :root{
+    --bg:#ffffff;
+    --bg-subtle:#f8fafc;
+    --bg-muted:#f1f5f9;
+    --border:#e2e8f0;
+    --text:#0f172a;
+    --text-muted:#475569;
+    --text-faint:#94a3b8;
+    --accent:#4338ca;
+    --accent-fg:#ffffff;
+    --accent-soft:#eef2ff;
+    --code-bg:#f1f5f9;
+    --code-text:#334155;
+    --tag-bg:#ede9fe; --tag-fg:#5b21b6;
+    --shadow: 0 1px 2px rgba(15,23,42,.06), 0 1px 3px rgba(15,23,42,.08);
+    --diagram-box:#eef2ff;
+    --diagram-box-border:#c7d2fe;
+    --diagram-text:#312e81;
+    --diagram-line:#818cf8;
+    --diagram-alt:#fdf4ff;
+    --diagram-alt-border:#e9d5ff;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#0b1220; --bg-subtle:#0f1729; --bg-muted:#151f36; --border:#26314a;
+      --text:#e5e9f0; --text-muted:#a3adc2; --text-faint:#6b7690;
+      --accent:#a5b4fc; --accent-fg:#0b1220; --accent-soft:#1a2140;
+      --code-bg:#101729; --code-text:#c7d0e0;
+      --tag-bg:#241a3d; --tag-fg:#c4b5fd;
+      --shadow: 0 1px 2px rgba(0,0,0,.4), 0 2px 8px rgba(0,0,0,.3);
+      --diagram-box:#171f38; --diagram-box-border:#3730a5; --diagram-text:#c7d2fe; --diagram-line:#6366f1;
+      --diagram-alt:#201530; --diagram-alt-border:#4c1d6b;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#0b1220; --bg-subtle:#0f1729; --bg-muted:#151f36; --border:#26314a;
+    --text:#e5e9f0; --text-muted:#a3adc2; --text-faint:#6b7690;
+    --accent:#a5b4fc; --accent-fg:#0b1220; --accent-soft:#1a2140;
+    --code-bg:#101729; --code-text:#c7d0e0;
+    --tag-bg:#241a3d; --tag-fg:#c4b5fd;
+    --shadow: 0 1px 2px rgba(0,0,0,.4), 0 2px 8px rgba(0,0,0,.3);
+    --diagram-box:#171f38; --diagram-box-border:#3730a5; --diagram-text:#c7d2fe; --diagram-line:#6366f1;
+    --diagram-alt:#201530; --diagram-alt-border:#4c1d6b;
+  }
+
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font-family: ui-sans-serif, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    line-height:1.6; font-size:15.5px;
+  }
+  code, pre, .mono{ font-family: ui-monospace, "Cascadia Code", "SF Mono", Consolas, Menlo, monospace; }
+
+  .layout{ display:grid; grid-template-columns: 280px minmax(0,1fr); max-width:1400px; margin:0 auto; }
+  .sidebar{
+    position:sticky; top:0; align-self:start; height:100vh; overflow-y:auto;
+    border-right:1px solid var(--border); padding:1.25rem 1rem 3rem; background:var(--bg-subtle);
+  }
+  .sidebar-brand{ display:flex; align-items:center; gap:.6rem; padding:.25rem .5rem 1rem; border-bottom:1px solid var(--border); margin-bottom:.75rem; }
+  .sidebar-brand .mark{
+    width:30px;height:30px;border-radius:8px; background:linear-gradient(135deg, var(--accent), #818cf8);
+    display:flex;align-items:center;justify-content:center; color:#fff; font-weight:700; font-size:13px; flex:none;
+  }
+  .sidebar-brand .name{font-weight:700; font-size:15px;}
+  .sidebar-brand .sub{font-size:11px; color:var(--text-muted);}
+  nav.toc{font-size:13.2px;}
+  nav.toc a{ display:block; color:var(--text-muted); text-decoration:none; padding:.32rem .5rem; border-radius:6px; white-space:normal; }
+  nav.toc a:hover{background:var(--bg-muted); color:var(--text);}
+  nav.toc a.active{background:var(--accent-soft); color:var(--accent); font-weight:600;}
+  nav.toc .toc-h1{margin-top:.6rem; font-weight:700; color:var(--text); font-size:12.5px; text-transform:uppercase; letter-spacing:.04em; padding:.35rem .5rem 0;}
+  nav.toc .toc-h2{padding-left:1.15rem; font-size:12.6px;}
+
+  main{padding: 2.5rem clamp(1.25rem, 4vw, 3.5rem) 6rem; min-width:0;}
+  .cover{ padding-bottom:2rem; margin-bottom:2rem; border-bottom:1px solid var(--border); }
+  .cover h1{font-size:2.1rem; margin:.3rem 0 .4rem; letter-spacing:-.02em;}
+  .cover .tagline{color:var(--text-muted); font-size:1.05rem; margin-bottom:1.25rem;}
+  .doc-meta{ display:grid; grid-template-columns: repeat(auto-fit,minmax(150px,1fr)); gap:.75rem; margin-top:1rem; }
+  .doc-meta .item{ background:var(--bg-subtle); border:1px solid var(--border); border-radius:10px; padding:.6rem .8rem; }
+  .doc-meta .item .k{font-size:11px; text-transform:uppercase; letter-spacing:.05em; color:var(--text-faint);}
+  .doc-meta .item .v{font-weight:600; font-size:14px; margin-top:2px;}
+
+  section{margin: 2.75rem 0;}
+  h1,h2,h3,h4{scroll-margin-top:1.25rem; line-height:1.3;}
+  h2{ font-size:1.5rem; margin:0 0 .3rem; padding-bottom:.5rem; border-bottom:1px solid var(--border); }
+  h2 .id-tag{font-size:.65em; color:var(--text-faint); font-weight:500; margin-left:.4em;}
+  h3{font-size:1.15rem; margin:1.75rem 0 .5rem; color:var(--text);}
+  h4{font-size:1rem; margin:1.25rem 0 .4rem;}
+  p{color:var(--text); max-width:80ch;}
+  .lede{color:var(--text-muted); font-size:1.02rem;}
+  a{color:var(--accent);}
+  ul,ol{max-width:78ch; padding-left:1.4rem;}
+  li{margin:.3rem 0;}
+
+  .callout{
+    border:1px solid var(--border); border-left:3px solid var(--accent); background:var(--bg-subtle); border-radius:8px;
+    padding:.85rem 1.1rem; margin:1rem 0; font-size:14.2px; color:var(--text-muted);
+  }
+  .callout strong{color:var(--text);}
+  .callout.invariant{ border-left-color:#dc2626; background:#fef2f2; }
+  :root[data-theme="dark"] .callout.invariant, :root:not([data-theme="light"]) .callout.invariant { background:#2a1414; }
+  @media (prefers-color-scheme:dark){ :root:not([data-theme="light"]) .callout.invariant{ background:#2a1414; } }
+
+  .table-wrap{overflow-x:auto; margin:1rem 0; border:1px solid var(--border); border-radius:10px; box-shadow:var(--shadow);}
+  table{border-collapse:collapse; width:100%; font-size:13.6px; background:var(--bg);}
+  thead th{ text-align:left; background:var(--bg-muted); color:var(--text); padding:.6rem .8rem; font-weight:600; border-bottom:1px solid var(--border); white-space:nowrap; }
+  tbody td{padding:.55rem .8rem; border-bottom:1px solid var(--border); vertical-align:top; color:var(--text-muted);}
+  tbody tr:last-child td{border-bottom:none;}
+  tbody td:first-child{color:var(--text); font-weight:500;}
+  tbody tr:hover{background:var(--bg-subtle);}
+  td.req{color:var(--text); font-weight:400;}
+
+  .badge{ display:inline-block; font-size:11px; font-weight:700; letter-spacing:.02em; padding:.15rem .5rem; border-radius:999px; white-space:nowrap; }
+  .badge-adr{ background:var(--tag-bg); color:var(--tag-fg); font-family:ui-monospace,monospace; }
+
+  code{background:var(--code-bg); color:var(--code-text); padding:.12rem .4rem; border-radius:5px; font-size:.9em;}
+  pre{ background:var(--code-bg); color:var(--code-text); padding:1rem 1.1rem; border-radius:10px; overflow-x:auto; font-size:12.8px; border:1px solid var(--border); line-height:1.55; }
+  pre code{background:none; padding:0;}
+
+  .diagram{ border:1px solid var(--border); border-radius:12px; background:var(--bg-subtle); padding:1.25rem; margin:1.25rem 0; overflow-x:auto; box-shadow:var(--shadow); }
+  .diagram svg{display:block; margin:0 auto; max-width:100%; height:auto;}
+  .diagram-caption{text-align:center; font-size:12.5px; color:var(--text-faint); margin-top:.5rem;}
+  .dbox{fill:var(--diagram-box); stroke:var(--diagram-box-border); stroke-width:1.5;}
+  .dtext{fill:var(--diagram-text); font-family: ui-sans-serif, "Segoe UI", sans-serif;}
+  .dline{stroke:var(--diagram-line); stroke-width:1.75; fill:none;}
+  .ddash{stroke:var(--text-faint); stroke-width:1.25; stroke-dasharray:3,3; fill:none;}
+  .darrow{fill:var(--diagram-line);}
+  .dmuted{fill:var(--text-faint); font-family: ui-sans-serif, "Segoe UI", sans-serif;}
+  .dalt{fill:var(--diagram-alt); stroke:var(--diagram-alt-border); stroke-width:1.25; stroke-dasharray:4,3;}
+
+  footer{ border-top:1px solid var(--border); margin-top:4rem; padding-top:1.5rem; color:var(--text-faint); font-size:12.5px; }
+
+  .top-actions{ position:fixed; top:1rem; right:1.25rem; display:flex; gap:.5rem; z-index:50; }
+  .icon-btn{ background:var(--bg); border:1px solid var(--border); border-radius:8px; width:34px; height:34px; display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--text-muted); box-shadow:var(--shadow); }
+  .icon-btn:hover{color:var(--text); border-color:var(--accent);}
+  .menu-toggle{display:none;}
+
+  @media (max-width: 900px){
+    .layout{grid-template-columns: 1fr;}
+    .sidebar{ position:fixed; inset:0 auto 0 0; width:280px; height:100vh; z-index:60; transform:translateX(-100%); transition:transform .2s ease; }
+    .sidebar.open{transform:translateX(0); box-shadow:0 0 0 100vmax rgba(0,0,0,.35);}
+    .menu-toggle{display:flex;}
+    main{padding-top:4.5rem;}
+  }
+
+  @media print{
+    .sidebar, .top-actions{display:none;}
+    .layout{display:block;}
+    main{padding:0; max-width:100%;}
+    a{color:inherit; text-decoration:none;}
+    .table-wrap{box-shadow:none;}
+    section{margin:1.25rem 0; page-break-inside:avoid;}
+    .diagram{box-shadow:none;}
+    pre{white-space:pre-wrap;}
+  }
+</style>
+</head>
+<body>
+
+<div class="top-actions">
+  <button class="icon-btn menu-toggle" id="menuToggle" title="Toggle navigation" aria-label="Toggle navigation">☰</button>
+  <button class="icon-btn" id="themeToggle" title="Toggle theme" aria-label="Toggle theme">◐</button>
+  <button class="icon-btn" onclick="window.print()" title="Print / Save as PDF" aria-label="Print">🖨</button>
+</div>
+
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <div class="mark">DM</div>
+      <div><div class="name">eDMS</div><div class="sub">Technical Design Spec</div></div>
+    </div>
+    <nav class="toc" id="toc">
+      <div class="toc-h1">Overview</div>
+      <a href="#introduction" class="toc-h2">1. Introduction &amp; Purpose</a>
+      <a href="#architecture" class="toc-h2">2. Architecture Overview</a>
+      <a href="#solution" class="toc-h2">3. Solution &amp; Repo Structure</a>
+      <a href="#conventions" class="toc-h2">4. Cross-Cutting Conventions</a>
+
+      <div class="toc-h1">Implementation</div>
+      <a href="#backend" class="toc-h2">5. Backend Technical Design</a>
+      <a href="#database" class="toc-h2">6. Database Technical Design</a>
+      <a href="#frontend" class="toc-h2">7. Frontend Technical Design</a>
+      <a href="#api-contracts" class="toc-h2">8. API Contract Details</a>
+      <a href="#flows" class="toc-h2">9. Key Flows</a>
+
+      <div class="toc-h1">Operations</div>
+      <a href="#security" class="toc-h2">10. Security Design</a>
+      <a href="#deployment" class="toc-h2">11. Deployment &amp; Infrastructure</a>
+      <a href="#testing" class="toc-h2">12. Testing Strategy</a>
+      <a href="#standards" class="toc-h2">13. Coding Standards</a>
+      <a href="#appendix" class="toc-h2">14. Appendix</a>
+    </nav>
+  </aside>
+
+  <main>
+    <div class="cover">
+      <div class="lede">Technical Design Specification</div>
+      <h1>eDMS — Enterprise Document Management System</h1>
+      <p class="tagline">How eDMS is built: solution structure, physical schema, class-level design, request flows, deployment, and testing.</p>
+      <div class="doc-meta">
+        <div class="item"><div class="k">Version</div><div class="v">1.0</div></div>
+        <div class="item"><div class="k">Status</div><div class="v">Draft for review</div></div>
+        <div class="item"><div class="k">Date</div><div class="v">2026-08-15</div></div>
+        <div class="item"><div class="k">Audience</div><div class="v">Engineering</div></div>
+      </div>
+      <p class="callout" style="margin-top:1.5rem;"><strong>Companion documents:</strong> <code>technical-design-spec.md</code> has the same content structured for direct coding-agent use. <code>functional-spec.md</code>/<code>.html</code> cover requirements, the data model, and the API surface this document builds on top of — decisions fixed there are referenced (e.g. "FS §8.2"), not repeated.</p>
+    </div>
+
+    <!-- 1. INTRODUCTION -->
+    <section id="introduction">
+      <h2>1. Introduction &amp; Purpose</h2>
+      <p>The functional spec answers <strong>what</strong> eDMS does and <strong>why</strong>. This document answers <strong>how</strong> it is built: solution structure, physical database schema, class/interface-level design, request flows, deployment topology, testing strategy, and coding conventions.</p>
+      <p>Where the functional spec already fixes a decision — tech stack (FS §3), data model (FS §8), API surface (FS §10), permission algorithm (FS §9) — this document treats that as given and adds the implementation layer underneath it.</p>
+      <h3>1.1 How to use this document</h3>
+      <ul>
+        <li><strong>Building the backend?</strong> Start at §5 and §6.</li>
+        <li><strong>Building the frontend?</strong> Start at §7.</li>
+        <li><strong>Wiring CI/CD or an environment?</strong> Start at §11.</li>
+        <li><strong>Writing tests?</strong> Start at §12.</li>
+      </ul>
+    </section>
+
+    <!-- 2. ARCHITECTURE -->
+    <section id="architecture">
+      <h2>2. Architecture Overview</h2>
+      <h3>2.1 Architectural style</h3>
+      <p>eDMS is a <strong>modular monolith</strong>: one ASP.NET Core Web API process, one PostgreSQL database, one React SPA — not a microservices decomposition. This matches the scale in the functional spec (single organization, growing to dozens of sites, no stated requirement for independent team deployability). The backend is internally layered using <strong>Clean Architecture</strong> (Domain → Application → Infrastructure/API, FS §12.1), preserving a future service-extraction path without over-engineering toward it now.</p>
+      <p>Within the Application layer, use cases follow a <strong>CQRS-lite</strong> pattern — commands and queries as discrete objects dispatched through MediatR — so authorization, validation, and audit-logging attach per use case via pipeline behaviors instead of being duplicated per controller action.</p>
+
+      <h3>2.2 System context &amp; containers</h3>
+      <div class="diagram">
+        <svg viewBox="0 0 820 300" xmlns="http://www.w3.org/2000/svg">
+          <rect class="dbox" x="20" y="110" width="130" height="60" rx="10"/>
+          <text class="dtext" x="85" y="136" font-size="12.5" font-weight="600" text-anchor="middle">Internal user</text>
+          <text class="dmuted" x="85" y="153" font-size="10" text-anchor="middle">browser</text>
+
+          <line class="dline" x1="150" y1="140" x2="205" y2="140" marker-end="url(#a1)"/>
+          <text class="dmuted" x="177" y="130" font-size="9.5" text-anchor="middle">HTTPS</text>
+
+          <rect class="dbox" x="205" y="110" width="140" height="60" rx="10"/>
+          <text class="dtext" x="275" y="136" font-size="12.5" font-weight="600" text-anchor="middle">eDMS Web</text>
+          <text class="dmuted" x="275" y="153" font-size="10" text-anchor="middle">React SPA (static)</text>
+
+          <line class="dline" x1="345" y1="140" x2="410" y2="140" marker-end="url(#a1)"/>
+          <text class="dmuted" x="377" y="122" font-size="9.5" text-anchor="middle">HTTPS</text>
+          <text class="dmuted" x="377" y="134" font-size="9.5" text-anchor="middle">Bearer JWT</text>
+
+          <rect class="dbox" x="410" y="105" width="160" height="70" rx="10"/>
+          <text class="dtext" x="490" y="132" font-size="12.5" font-weight="600" text-anchor="middle">eDMS API</text>
+          <text class="dmuted" x="490" y="149" font-size="10" text-anchor="middle">ASP.NET Core</text>
+          <text class="dmuted" x="490" y="163" font-size="9.5" text-anchor="middle">single authZ gateway</text>
+
+          <line class="dline" x1="570" y1="120" x2="640" y2="60" marker-end="url(#a1)"/>
+          <rect class="dbox" x="640" y="30" width="150" height="55" rx="10"/>
+          <text class="dtext" x="715" y="53" font-size="12" font-weight="600" text-anchor="middle">PostgreSQL</text>
+          <text class="dmuted" x="715" y="69" font-size="9.5" text-anchor="middle">data, ACLs, audit, FTS</text>
+
+          <line class="dline" x1="570" y1="140" x2="640" y2="140" marker-end="url(#a1)"/>
+          <rect class="dbox" x="640" y="112" width="150" height="55" rx="10"/>
+          <text class="dtext" x="715" y="135" font-size="12" font-weight="600" text-anchor="middle">File storage</text>
+          <text class="dmuted" x="715" y="151" font-size="9.5" text-anchor="middle">local disk — MVP</text>
+
+          <line class="dline" x1="570" y1="160" x2="640" y2="215" marker-end="url(#a1)"/>
+          <rect class="dbox" x="640" y="195" width="150" height="55" rx="10"/>
+          <text class="dtext" x="715" y="218" font-size="12" font-weight="600" text-anchor="middle">SMTP relay</text>
+          <text class="dmuted" x="715" y="234" font-size="9.5" text-anchor="middle">password reset, shares</text>
+
+          <line class="ddash" x1="490" y1="175" x2="490" y2="255" marker-end="url(#a2)"/>
+          <text class="dmuted" x="500" y="215" font-size="9.5">P3</text>
+          <rect class="dbox" x="415" y="255" width="150" height="45" rx="10" style="fill:var(--diagram-alt);stroke:var(--diagram-alt-border);"/>
+          <text class="dtext" x="490" y="273" font-size="11.5" font-weight="600" text-anchor="middle">Identity Provider</text>
+          <text class="dmuted" x="490" y="288" font-size="9.5" text-anchor="middle">SAML2 / OIDC</text>
+
+          <defs>
+            <marker id="a1" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><path class="darrow" d="M0,0 L8,4 L0,8 Z"/></marker>
+            <marker id="a2" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" style="fill:var(--text-faint);"/></marker>
+          </defs>
+        </svg>
+        <div class="diagram-caption">System context: the API is the only component that talks to Postgres, file storage, or SMTP — and the only one that enforces authorization.</div>
+      </div>
+
+      <h3>2.3 Backend layering (dependency direction)</h3>
+      <div class="diagram">
+        <svg viewBox="0 0 760 190" xmlns="http://www.w3.org/2000/svg">
+          <rect class="dbox" x="20" y="65" width="150" height="60" rx="10"/>
+          <text class="dtext" x="95" y="90" font-size="12.5" font-weight="600" text-anchor="middle">Domain</text>
+          <text class="dmuted" x="95" y="107" font-size="9.5" text-anchor="middle">entities, invariants</text>
+
+          <rect class="dbox" x="210" y="65" width="150" height="60" rx="10"/>
+          <text class="dtext" x="285" y="90" font-size="12.5" font-weight="600" text-anchor="middle">Application</text>
+          <text class="dmuted" x="285" y="107" font-size="9.5" text-anchor="middle">commands, queries, handlers</text>
+
+          <rect class="dbox" x="400" y="20" width="150" height="60" rx="10"/>
+          <text class="dtext" x="475" y="45" font-size="12.5" font-weight="600" text-anchor="middle">Infrastructure</text>
+          <text class="dmuted" x="475" y="62" font-size="9.5" text-anchor="middle">EF Core, storage, tokens</text>
+
+          <rect class="dbox" x="400" y="105" width="150" height="60" rx="10"/>
+          <text class="dtext" x="475" y="130" font-size="12.5" font-weight="600" text-anchor="middle">Api</text>
+          <text class="dmuted" x="475" y="147" font-size="9.5" text-anchor="middle">controllers, middleware</text>
+
+          <line class="dline" x1="210" y1="95" x2="170" y2="95" marker-end="url(#a3)"/>
+          <line class="dline" x1="400" y1="55" x2="360" y2="90" marker-end="url(#a3)"/>
+          <line class="dline" x1="400" y1="130" x2="360" y2="98" marker-end="url(#a3)"/>
+          <line class="dline" x1="475" y1="105" x2="475" y2="80" marker-end="url(#a3)"/>
+
+          <text class="dmuted" x="590" y="55" font-size="10">references →</text>
+          <text class="dmuted" x="590" y="72" font-size="9.5">(arrow points at the</text>
+          <text class="dmuted" x="590" y="87" font-size="9.5">dependency, i.e. away</text>
+          <text class="dmuted" x="590" y="102" font-size="9.5">from the referencer)</text>
+
+          <defs><marker id="a3" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><path class="darrow" d="M0,0 L8,4 L0,8 Z"/></marker></defs>
+        </svg>
+        <div class="diagram-caption">Domain has zero project references. Application references only Domain. Infrastructure and Api reference inward. A CI architecture test (§13.1) fails the build if this is violated.</div>
+      </div>
+
+      <h3>2.4 Key architecture decisions (ADR summary)</h3>
+      <div class="table-wrap"><table>
+        <thead><tr><th>#</th><th>Decision</th><th>Rationale</th><th>Alternatives considered</th></tr></thead>
+        <tbody>
+          <tr><td><span class="badge badge-adr">ADR-1</span></td><td class="req">Modular monolith, not microservices</td><td>Team size/scale don't justify service-boundary overhead; layering preserves an extraction path</td><td>Microservices per bounded context — premature</td></tr>
+          <tr><td><span class="badge badge-adr">ADR-2</span></td><td class="req">CQRS-lite with MediatR, no event sourcing</td><td>Per-use-case pipeline hooks without an event store's operational cost</td><td>Plain service classes — duplicates cross-cutting concerns; full ES — no requirement for temporal queries</td></tr>
+          <tr><td><span class="badge badge-adr">ADR-3</span></td><td class="req">Controllers, not Minimal APIs</td><td>~50 endpoints benefit from attribute-based grouping and filter reuse</td><td>Minimal APIs — reconsider under ~15 endpoints</td></tr>
+          <tr><td><span class="badge badge-adr">ADR-4</span></td><td class="req">JWT (RS256) + rotating refresh token, not cookie-session auth</td><td>Decouples SPA from same-origin cookies; clean seam for SAML2/OIDC (P3) to federate into the same issuance path</td><td>Identity cookie auth — wrong fit for a separately-hosted SPA</td></tr>
+          <tr><td><span class="badge badge-adr">ADR-5</span></td><td class="req">Postgres full-text search, not Elasticsearch</td><td>Meets FR-SRCH-01…06 with no extra service to operate</td><td>Elasticsearch/OpenSearch — deferred until justified by scale</td></tr>
+          <tr><td><span class="badge badge-adr">ADR-6</span></td><td class="req">Local disk behind <code>IFileStorageProvider</code></td><td>Matches FS §13's no-mandatory-cloud-dependency goal; the interface is the real deliverable</td><td>Direct S3 SDK calls — leaks a vendor dependency into Application</td></tr>
+          <tr><td><span class="badge badge-adr">ADR-7</span></td><td class="req">Mapster over AutoMapper</td><td>Comparable capability, faster, less reflection magic to debug</td><td>AutoMapper — acceptable if the team prefers it</td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <!-- 3. SOLUTION STRUCTURE -->
+    <section id="solution">
+      <h2>3. Solution &amp; Repository Structure</h2>
+      <p>Single monorepo:</p>
+      <pre><code>eDMS/
+  doc/                        # this document, functional-spec.*
+  prototype(html)/            # clickable UX prototype (reference only, not shipped)
+  server/                     # .NET solution — §3.1
+  client/                     # React/Vite app — §3.2
+  .github/workflows/          # CI/CD — §11.3
+  docker-compose.yml          # local dev stack — §11.2</code></pre>
+
+      <h3>3.1 Backend layout</h3>
+      <pre><code>server/
+  eDMS.sln
+  src/
+    eDMS.Domain/               # entities, enums, invariants — no package refs beyond BCL
+    eDMS.Application/          # commands, queries, handlers, validators, DTOs, interfaces
+    eDMS.Infrastructure/       # EF Core DbContext + migrations, concrete implementations, background services
+    eDMS.Api/                  # controllers, Program.cs, middleware, DI composition
+  tests/
+    eDMS.Domain.UnitTests/
+    eDMS.Application.UnitTests/
+    eDMS.IntegrationTests/     # WebApplicationFactory + Testcontainers PostgreSQL</code></pre>
+      <p>Each Application use case is a <strong>vertical slice</strong>:</p>
+      <pre><code>eDMS.Application/
+  Documents/
+    Commands/
+      CheckOutDocument/
+        CheckOutDocumentCommand.cs
+        CheckOutDocumentHandler.cs
+        CheckOutDocumentValidator.cs
+      CheckInDocument/  UploadDocument/  MoveDocument/  ...
+    Queries/
+      GetDocumentById/  ListFolderItems/  ...
+  Folders/  Sites/  Libraries/  Permissions/  Search/  Admin/
+  Common/
+    Behaviors/     # ValidationBehavior, AuthorizationBehavior, AuditLoggingBehavior
+    Interfaces/    # IFileStorageProvider, IPermissionResolver, IEmailSender, ITokenService, ICurrentUser</code></pre>
+      <div class="callout">A coding agent implementing "check out a document" touches one folder — command + handler + validator — not four generic layers scattered across the codebase.</div>
+
+      <h3>3.2 Frontend layout</h3>
+      <p>Covered together with the rest of the frontend design in §7.1.</p>
+    </section>
+
+    <!-- 4. CONVENTIONS -->
+    <section id="conventions">
+      <h2>4. Cross-Cutting Conventions</h2>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Concern</th><th>Convention</th></tr></thead>
+        <tbody>
+          <tr><td class="req">IDs</td><td><code>Guid</code> everywhere, generated app-side via <code>Guid.CreateVersion7()</code> — time-ordered, keeps PK indexes append-friendly</td></tr>
+          <tr><td class="req">Timestamps</td><td>UTC only, <code>timestamptz</code> in Postgres, ISO-8601 over the wire; never store local time</td></tr>
+          <tr><td class="req">Soft delete</td><td><code>IsDeleted</code>/<code>DeletedAt</code>/<code>DeletedBy</code> on Recycle-Bin-eligible entities, enforced via an EF Core global query filter — never a manual <code>WHERE</code></td></tr>
+          <tr><td class="req">Audit fields</td><td><code>CreatedBy</code>/<code>CreatedAt</code> everywhere; <code>ModifiedBy</code>/<code>ModifiedAt</code> per FS §8.2</td></tr>
+          <tr><td class="req">Nullability</td><td>C# nullable reference types enabled solution-wide; TypeScript <code>strict: true</code></td></tr>
+          <tr><td class="req">Money/size</td><td>Byte counts as <code>bigint</code>/<code>number</code>, never float; formatting ("2.4 MB") is frontend-only, never stored</td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <!-- 5. BACKEND -->
+    <section id="backend">
+      <h2>5. Backend Technical Design</h2>
+
+      <h3>5.1 Domain layer</h3>
+      <p>Base types remove repetition across entities:</p>
+      <pre><code>public abstract class AuditableEntity
+{
+    public Guid Id { get; protected set; }
+    public Guid CreatedBy { get; protected set; }
+    public DateTimeOffset CreatedAt { get; protected set; }
+}
+
+public abstract class SoftDeletableEntity : AuditableEntity
+{
+    public bool IsDeleted { get; private set; }
+    public DateTimeOffset? DeletedAt { get; private set; }
+    public Guid? DeletedBy { get; private set; }
+
+    public void MarkDeleted(Guid byUserId, DateTimeOffset at) { /* ... */ }
+    public void Restore() { /* ... */ }
+}</code></pre>
+      <p><code>Document</code>, <code>Folder</code>, <code>Site</code>, <code>Library</code> derive from <code>SoftDeletableEntity</code>. <code>DocumentVersion</code>, <code>SitePermission</code>, <code>ItemPermission</code>, <code>AuditLogEntry</code> derive from <code>AuditableEntity</code> only — versions are immutable, permissions are removed outright, audit entries are immutable (FR-AUDIT-04). Domain entities own their invariants — e.g. <code>Document.CheckOut(userId)</code> throws if already checked out by someone else, rather than trusting every caller to re-check.</p>
+
+      <h3>5.2 Application layer</h3>
+      <p>Pattern for every use case, illustrated with check-out (FR-VER-05):</p>
+      <pre><code>public sealed record CheckOutDocumentCommand(Guid DocumentId) : IRequest&lt;Result&gt;;
+
+public sealed class CheckOutDocumentHandler(
+    IAppDbContext db, ICurrentUser currentUser, IPermissionResolver permissions, IAuditLogger audit)
+    : IRequestHandler&lt;CheckOutDocumentCommand, Result&gt;
+{
+    public async Task&lt;Result&gt; Handle(CheckOutDocumentCommand cmd, CancellationToken ct)
+    {
+        var document = await db.Documents.FindAsync([cmd.DocumentId], ct)
+            ?? throw new NotFoundException(nameof(Document), cmd.DocumentId);
+
+        await permissions.RequireAsync(currentUser.UserId, ObjectType.Document, document.Id, PermissionLevel.Contribute, ct);
+
+        document.CheckOut(currentUser.UserId);
+        await db.SaveChangesAsync(ct);
+        await audit.LogAsync(AuditAction.CheckOut, ObjectType.Document, document.Id, document.Name, ct);
+        return Result.Success();
+    }
+}</code></pre>
+      <p><strong>MediatR pipeline behaviors</strong>, applied to every command/query in this order:</p>
+      <ol>
+        <li><strong><code>ValidationBehavior</code></strong> — runs the FluentValidation validator; short-circuits with 400 on failure.</li>
+        <li><strong><code>AuthorizationBehavior</code></strong> — for any <code>IAuthorizableRequest</code>, calls <code>IPermissionResolver</code> before the handler runs. This is what makes "every mutating endpoint enforces the permission model" structurally true rather than aspirational.</li>
+        <li><strong><code>AuditLoggingBehavior</code></strong> — for any <code>IAuditableRequest</code>, writes the audit entry after a successful handler run. FR-AUDIT-01's action list is complete by construction, not by developers remembering to log at each call site.</li>
+      </ol>
+
+      <h3>5.3 <code>IPermissionResolver</code> — the resolution algorithm (FS §9)</h3>
+      <pre><code>public interface IPermissionResolver
+{
+    Task&lt;PermissionLevel&gt; GetEffectiveLevelAsync(Guid userId, ObjectType type, Guid objectId, CancellationToken ct);
+    Task RequireAsync(Guid userId, ObjectType type, Guid objectId, PermissionLevel required, CancellationToken ct);
+}</code></pre>
+      <ul>
+        <li><strong>Bypass:</strong> <code>ICurrentUser.IsSystemAdmin</code> short-circuits to Full Control immediately — but the audit-logging step still runs, so admin bypass is always audited.</li>
+        <li><strong>Caching:</strong> effective-permission lookups cached in <code>IMemoryCache</code>, keyed by <code>(userId, objectType, objectId)</code>, 30s TTL. Any mutation of <code>ItemPermission</code>/<code>SitePermission</code>/<code>GroupMember</code> invalidates descendants in the same handler, right after <code>SaveChangesAsync</code>. Bounds staleness to 30s even if an invalidation path is missed. Revisit with Redis only if the API scales beyond one instance.</li>
+      </ul>
+      <p>The physical hierarchy walk is a single recursive CTE — see §6.3.</p>
+
+      <h3>5.4 <code>IFileStorageProvider</code> and versioning</h3>
+      <p>Storage key convention: <code>{StorageRoot}/{siteId}/{libraryId}/{documentId}/{versionId}/{originalFileName}</code>.</p>
+      <p>Upload flow (backing FR-DOC-01 / FR-VER-01):</p>
+      <ol>
+        <li>Compute SHA-256 while streaming to a temp file — avoids buffering the full 250 MB ceiling in memory.</li>
+        <li>Sniff content-type from magic bytes (not the client header) and reject blocked/oversized files (FR-DOC-03).</li>
+        <li>Same name already exists in the folder? Create a new <code>DocumentVersion</code>, update <code>CurrentVersionId</code>. Otherwise create a new <code>Document</code> at v1.0.</li>
+        <li>Move the temp file to its final key only <em>after</em> the DB transaction commits — avoids orphaned blobs on a failed transaction; an hourly sweep (§5.8) cleans up any that slip through.</li>
+      </ol>
+
+      <h3>5.5 Authentication implementation</h3>
+      <ul>
+        <li><strong>User store:</strong> ASP.NET Core Identity (<code>ApplicationUser : IdentityUser&lt;Guid&gt;</code>) — password hashing, lockout tracking (backs FR-AUTH-06). <code>IsSystemAdmin</code> is a plain bool, not an Identity Role.</li>
+        <li><strong>Access token:</strong> JWT, RS256, 15 min default. Claims: <code>sub</code>, <code>email</code>, <code>is_admin</code>, <code>jti</code>. Key pair from environment/secret store — never committed.</li>
+        <li><strong>Refresh token:</strong> opaque 256-bit value; only its SHA-256 hash is persisted. Delivered as an httpOnly, Secure, SameSite=Strict cookie — never touched by frontend JS.</li>
+      </ul>
+      <p>Table not in FS §8.2 (auth plumbing, not a domain entity):</p>
+      <pre><code>CREATE TABLE refresh_tokens (
+    id                uuid PRIMARY KEY,
+    user_id           uuid NOT NULL REFERENCES "AspNetUsers"(id),
+    token_hash        text NOT NULL UNIQUE,
+    expires_at        timestamptz NOT NULL,
+    created_at        timestamptz NOT NULL DEFAULT now(),
+    created_by_ip     text,
+    revoked_at        timestamptz,
+    replaced_by_token_id uuid REFERENCES refresh_tokens(id)
+);</code></pre>
+      <div class="callout invariant"><strong>Reuse detection:</strong> if a <em>revoked</em> refresh token is ever presented again — a signal of token theft/replay — the entire token chain for that user is revoked and re-authentication is forced. This is why the schema keeps a <code>replaced_by_token_id</code> chain instead of just an <code>is_revoked</code> flag.</div>
+      <p><strong>SAML2 / OIDC (P3):</strong> both terminate at a callback endpoint that performs JIT provisioning, then calls the <em>same</em> <code>ITokenService.IssueTokenPairAsync</code> local login uses. The SPA's auth handling never needs to change when SSO ships.</p>
+
+      <h3>5.6 Authorization implementation — two layers</h3>
+      <ol>
+        <li><strong>Coarse, policy-based:</strong> <code>[Authorize]</code> / <code>[Authorize(Policy = "SystemAdmin")]</code> — cheap, no DB round-trip, filters traffic before MediatR.</li>
+        <li><strong>Fine, resource-based:</strong> the <code>AuthorizationBehavior</code> (§5.2) backed by <code>IPermissionResolver</code> (§5.3) — implements the actual hierarchy walk, which can't be a static ASP.NET Core policy since the required level depends on which specific object the request targets.</li>
+      </ol>
+
+      <h3>5.7 API layer</h3>
+      <p>One controller per aggregate root area, thin — constructs a MediatR request, sends it, maps the result. No business logic in controllers.</p>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Exception</th><th>HTTP</th><th><code>type</code></th></tr></thead>
+        <tbody>
+          <tr><td class="req"><code>ValidationException</code></td><td>400</td><td><code>urn:edms:validation-error</code>, <code>errors</code> dict populated</td></tr>
+          <tr><td class="req"><code>NotFoundException</code></td><td>404</td><td><code>urn:edms:not-found</code></td></tr>
+          <tr><td class="req"><code>ForbiddenException</code></td><td>403</td><td><code>urn:edms:forbidden</code></td></tr>
+          <tr><td class="req"><code>ConflictException</code></td><td>409</td><td><code>urn:edms:conflict</code> (e.g. checked out by someone else)</td></tr>
+          <tr><td class="req">anything else</td><td>500</td><td><code>urn:edms:internal-error</code> — generic message outside dev; full detail to Serilog only</td></tr>
+        </tbody>
+      </table></div>
+      <p>OpenAPI via <code>Microsoft.AspNetCore.OpenApi</code>, Swagger UI in Development only. Rate limiting on <code>/auth/login</code> and <code>/auth/forgot-password</code> (10 req/min/IP). CORS: explicit SPA origin allow-list, credentials allowed, never combined with a wildcard origin.</p>
+
+      <h3>5.8 Background services</h3>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Service</th><th>Schedule</th><th>Responsibility</th></tr></thead>
+        <tbody>
+          <tr><td class="req">RecycleBinPurgeService</td><td>Daily, 02:00</td><td>Hard-deletes soft-deleted items past retention (default 90d, FR-BIN-04) + their blobs</td></tr>
+          <tr><td class="req">OrphanedUploadSweepService</td><td>Hourly</td><td>Removes temp upload files older than 24h from failed transactions</td></tr>
+          <tr><td class="req">PermissionCacheWarmupService <em>(P2)</em></td><td>On startup</td><td>Pre-populates the permission cache after a deploy to avoid a cold-cache spike</td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <!-- 6. DATABASE -->
+    <section id="database">
+      <h2>6. Database Technical Design</h2>
+      <h3>6.1 Conventions</h3>
+      <ul>
+        <li>snake_case in Postgres, PascalCase in C#, bridged by <code>EFCore.NamingConventions</code> — DDL below shows the physical (snake_case) truth.</li>
+        <li>Primary keys: <code>uuid</code>, generated app-side (§4), not <code>gen_random_uuid()</code> — testable without a DB round-trip.</li>
+        <li><code>citext</code> extension for <code>AspNetUsers.email</code> case-insensitive uniqueness.</li>
+        <li>Every FK is <code>ON DELETE RESTRICT</code> by default; intentional cascades are called out explicitly.</li>
+      </ul>
+
+      <h3>6.2 Core physical schema</h3>
+      <p class="lede">Full field semantics are in FS §8.2; this is the DDL for Phase 1 tables. P2 tables (content types, share links, alerts, favorites) follow the same conventions when that phase begins.</p>
+      <pre><code>CREATE EXTENSION IF NOT EXISTS citext;
+
+-- Sites -----------------------------------------------------------------
+CREATE TABLE sites (
+    id                  uuid PRIMARY KEY,
+    name                text NOT NULL,
+    url_slug            text NOT NULL UNIQUE,
+    storage_quota_bytes bigint,
+    storage_used_bytes  bigint NOT NULL DEFAULT 0,
+    is_deleted          boolean NOT NULL DEFAULT false,
+    deleted_at          timestamptz,
+    deleted_by          uuid,
+    created_by          uuid NOT NULL REFERENCES "AspNetUsers"(id),
+    created_at          timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE TABLE site_permissions (
+    id             uuid PRIMARY KEY,
+    site_id        uuid NOT NULL REFERENCES sites(id) ON DELETE CASCADE,
+    principal_type smallint NOT NULL,   -- 0=User, 1=Group
+    principal_id   uuid NOT NULL,
+    role           smallint NOT NULL,   -- 0=Owner, 1=Member, 2=Visitor
+    UNIQUE (site_id, principal_type, principal_id)
+);
+
+-- Documents ---------------------------------------------------------------
+CREATE TABLE documents (
+    id                  uuid PRIMARY KEY,
+    library_id          uuid NOT NULL REFERENCES libraries(id) ON DELETE CASCADE,
+    folder_id           uuid REFERENCES folders(id),
+    name                text NOT NULL,
+    title               text,
+    description         text,
+    current_version_id  uuid,
+    checked_out_by      uuid REFERENCES "AspNetUsers"(id),
+    checked_out_at      timestamptz,
+    is_deleted          boolean NOT NULL DEFAULT false,
+    created_by          uuid NOT NULL REFERENCES "AspNetUsers"(id),
+    created_at          timestamptz NOT NULL DEFAULT now(),
+    search_vector       tsvector GENERATED ALWAYS AS (
+        setweight(to_tsvector('english', coalesce(name, '')), 'A') ||
+        setweight(to_tsvector('english', coalesce(title, '')), 'A') ||
+        setweight(to_tsvector('english', coalesce(description, '')), 'B')
+    ) STORED
+);
+CREATE INDEX ix_documents_folder ON documents(library_id, folder_id) WHERE NOT is_deleted;
+CREATE INDEX ix_documents_search_vector ON documents USING GIN(search_vector);
+
+CREATE TABLE document_versions (
+    id            uuid PRIMARY KEY,
+    document_id   uuid NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
+    version_major int NOT NULL,
+    version_minor int NOT NULL DEFAULT 0,
+    storage_key   text NOT NULL,
+    checksum      text NOT NULL,        -- SHA-256, hex
+    is_major      boolean NOT NULL,
+    created_by    uuid NOT NULL REFERENCES "AspNetUsers"(id),
+    created_at    timestamptz NOT NULL DEFAULT now(),
+    UNIQUE (document_id, version_major, version_minor)
+);
+
+-- Item-level ACLs -----------------------------------------------------------
+CREATE TABLE item_permissions (
+    id             uuid PRIMARY KEY,
+    object_type    smallint NOT NULL,   -- 0=Library, 1=Folder, 2=Document
+    object_id      uuid NOT NULL,
+    principal_type smallint NOT NULL,   -- 0=User, 1=Group
+    principal_id   uuid NOT NULL,
+    level          smallint NOT NULL,   -- 0=FullControl, 1=Contribute, 2=Read, 3=NoAccess
+    granted_by     uuid NOT NULL REFERENCES "AspNetUsers"(id),
+    granted_at     timestamptz NOT NULL DEFAULT now(),
+    UNIQUE (object_type, object_id, principal_type, principal_id)
+);
+CREATE INDEX ix_item_permissions_object ON item_permissions(object_type, object_id);
+
+-- Audit log (immutable) ------------------------------------------------------
+CREATE TABLE audit_log_entries (
+    id          uuid PRIMARY KEY,
+    "timestamp" timestamptz NOT NULL DEFAULT now(),
+    user_id     uuid NOT NULL REFERENCES "AspNetUsers"(id),
+    action      smallint NOT NULL,
+    object_type smallint NOT NULL,
+    object_id   uuid NOT NULL,
+    object_name text NOT NULL,
+    site_id     uuid,
+    details     jsonb,
+    ip_address  text
+);
+CREATE INDEX ix_audit_log_timestamp ON audit_log_entries("timestamp" DESC);</code></pre>
+      <div class="callout invariant"><strong>Immutability enforced at the DB, not just by API omission:</strong> <code>REVOKE UPDATE, DELETE ON audit_log_entries FROM edms_app;</code> — a bug or a future developer who didn't read this doc cannot silently mutate history; the failure is a hard DB error.</div>
+
+      <h3>6.3 The permission-hierarchy query</h3>
+      <p>A single recursive CTE resolves the nearest unique ACL up the Folder → Library → Site chain in one round trip instead of N+1 queries:</p>
+      <pre><code>WITH RECURSIVE chain AS (
+    SELECT :object_type AS object_type, :object_id AS object_id, 0 AS depth
+    UNION ALL
+    SELECT
+        CASE WHEN f.parent_folder_id IS NOT NULL THEN 1 ELSE 0 END,
+        COALESCE(f.parent_folder_id, f.library_id),
+        c.depth + 1
+    FROM chain c
+    JOIN folders f ON c.object_type = 1 AND f.id = c.object_id
+    WHERE c.depth &lt; 20   -- matches FR-FLD-06's max nesting
+)
+SELECT object_type, object_id, depth FROM chain ORDER BY depth;</code></pre>
+      <p>The resolver walks the result in order, stopping at the first level with an <code>item_permissions</code> row for the caller (direct or via group membership); falls through to <code>site_permissions</code> at the end.</p>
+
+      <h3>6.4 Migrations</h3>
+      <p><code>dotnet ef migrations add &lt;Name&gt; -p src/eDMS.Infrastructure -s src/eDMS.Api</code>. Auto-apply on startup <strong>only</strong> in Development/Testing; every other environment runs migrations as an explicit CI/CD step before the new API version deploys (§11.3) — never auto-migrate production from application startup.</p>
+
+      <h3>6.5 Seed data</h3>
+      <p>First run against an empty database creates exactly one System Administrator from configuration (<code>Seed:AdminEmail</code>/<code>Seed:AdminTempPassword</code>, required env vars, no baked-in default), forced password reset on first login. No sample content is seeded outside local dev — <code>docker-compose.yml</code> (§11.2) seeds demonstration data matching <code>prototype(html)/assets/data.js</code>.</p>
+    </section>
+
+    <!-- 7. FRONTEND -->
+    <section id="frontend">
+      <h2>7. Frontend Technical Design</h2>
+      <h3>7.1 Project structure</h3>
+      <pre><code>client/
+  src/
+    app/
+      routes.tsx              # React Router route tree, §7.2
+      AppShell.tsx              # topbar + sidebar, mirrors prototype(html) IA
+      providers.tsx             # QueryClientProvider, theme, toasts
+    components/
+      ui/                       # shadcn-generated primitives — never hand-edit
+      common/                   # FileIcon, Breadcrumbs, EmptyState, DataTable, CommandPalette
+    features/
+      auth/  sites/  libraries/  documents/  permissions/  search/  recycle-bin/  admin/
+        components/  hooks/  api.ts
+    lib/
+      api-client.ts              # §7.3
+      query-keys.ts               # §7.4
+    stores/                      # Zustand — UI state only
+    types/api.ts                 # DTOs mirroring §8.2</code></pre>
+      <p>Each <code>features/*</code> folder mirrors the backend's Application folders (§3.1) — <code>features/documents</code> owns the <code>/documents/*</code> calls and the document-details Sheet; it reaches other features only through their exported hooks.</p>
+
+      <h3>7.2 Routing</h3>
+      <p>Matches the prototype's information architecture one-to-one, so the real app and the stakeholder prototype never diverge in navigation shape:</p>
+      <pre><code>const router = createBrowserRouter([
+  { path: "/login", element: &lt;LoginPage /&gt; },
+  { path: "/forgot-password", element: &lt;ForgotPasswordPage /&gt; },
+  {
+    element: &lt;AppShell /&gt;,   // requires auth
+    children: [
+      { path: "/", element: &lt;HomePage /&gt; },
+      { path: "/sites/:siteSlug", element: &lt;SiteHomePage /&gt; },
+      { path: "/sites/:siteSlug/libraries/:libraryId/*", element: &lt;LibraryBrowserPage /&gt; },
+      { path: "/search", element: &lt;SearchPage /&gt; },
+      { path: "/recycle-bin/:siteSlug", element: &lt;RecycleBinPage /&gt; },
+      { path: "/me/profile", element: &lt;ProfilePage /&gt; },
+      { path: "/admin", element: &lt;RequireAdmin /&gt;, children: [ /* users, groups, sites, storage, audit-log, settings */ ] },
+    ],
+  },
+]);</code></pre>
+      <div class="callout invariant"><code>RequireAdmin</code> and the auth gate are UX affordances only. Every route's API calls are independently authorized server-side (§5.6) — the frontend gate is never the real security boundary.</div>
+
+      <h3>7.3 API client</h3>
+      <p>One typed wrapper, not per-feature <code>fetch</code> calls, so the 401→refresh→retry flow (§9.1) is implemented exactly once:</p>
+      <pre><code>let accessToken: string | null = null;
+let refreshPromise: Promise&lt;void&gt; | null = null;
+
+async function request&lt;T&gt;(path: string, init: RequestInit = {}): Promise&lt;T&gt; {
+  const res = await fetch(`${API_BASE}${path}`, {
+    ...init,
+    credentials: "include",   // sends the httpOnly refresh cookie
+    headers: { ...init.headers, ...(accessToken && { Authorization: `Bearer ${accessToken}` }) },
+  });
+  if (res.status === 401 &amp;&amp; !path.startsWith("/auth/")) {
+    refreshPromise ??= refreshAccessToken().finally(() => (refreshPromise = null));
+    await refreshPromise;         // concurrent 401s de-dupe to one refresh call
+    return request&lt;T&gt;(path, init);
+  }
+  if (!res.ok) throw await ApiError.fromResponse(res);
+  return res.status === 204 ? (undefined as T) : res.json();
+}</code></pre>
+      <p><code>accessToken</code> lives in module memory only — never <code>localStorage</code>. An XSS payload that can read <code>localStorage</code> can read a token stored there; keeping it in memory costs one silent refresh call on page reload and closes that gap.</p>
+
+      <h3>7.4 State management</h3>
+      <div class="table-wrap"><table>
+        <thead><tr><th>State category</th><th>Tool</th><th>Convention</th></tr></thead>
+        <tbody>
+          <tr><td class="req">Server data</td><td>TanStack Query</td><td>Hierarchical query-key factory (<code>queryKeys.documents.detail(id)</code>) so invalidation after a mutation is exhaustive, not stringly-typed</td></tr>
+          <tr><td class="req">Client/UI-only state</td><td>Zustand</td><td>One small store per feature; never mirrors server data — derive, don't duplicate</td></tr>
+          <tr><td class="req">Theme selection</td><td>Zustand + <code>localStorage</code></td><td>Ports the mechanism already proven in <code>prototype(html)/assets/app.js</code> rather than redesigning it</td></tr>
+          <tr><td class="req">Auth/session</td><td>Context wrapping a <code>/auth/me</code> query</td><td>Server-owned data, not client UI state — not Zustand</td></tr>
+        </tbody>
+      </table></div>
+
+      <h3>7.5 Forms</h3>
+      <p><code>react-hook-form</code> + <code>zod</code>, schema colocated with (and structurally matching) the DTO it submits:</p>
+      <pre><code>const checkInSchema = z.object({
+  comment: z.string().max(1000).optional(),
+  versionType: z.enum(["major", "minor"]),
+});</code></pre>
+      <p>Rendered exclusively via shadcn's <code>Form</code> primitives — no ad hoc inputs with manual error wiring.</p>
+
+      <h3>7.6 Build &amp; environment</h3>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Variable</th><th>Purpose</th></tr></thead>
+        <tbody>
+          <tr><td class="req"><code>VITE_API_BASE_URL</code></td><td>Base URL the API client targets; differs per environment (§11.1)</td></tr>
+          <tr><td class="req"><code>VITE_APP_NAME</code></td><td>Overrides topbar branding, mirrors Admin → Settings' app name</td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <!-- 8. API CONTRACTS -->
+    <section id="api-contracts">
+      <h2>8. API Contract Details</h2>
+      <p>Recap of FS §10.1 (base path, pagination envelope, Problem Details errors) not repeated here. Below: concrete shapes for the endpoints with the most implementation-relevant nuance.</p>
+      <pre><code>// POST /auth/login
+interface LoginRequest { email: string; password: string; }
+interface LoginResponse { accessToken: string; expiresInSeconds: number; user: CurrentUserDto; }
+// refresh token never appears in the JSON body — set as an httpOnly cookie
+
+interface CurrentUserDto {
+  id: string; email: string; displayName: string; isSystemAdmin: boolean;
+  siteMemberships: { siteId: string; siteSlug: string; role: "Owner" | "Member" | "Visitor" }[];
+}
+
+// POST /folders/{id}/documents (multipart/form-data)
+interface UploadDocumentResponseItem {
+  documentId: string; name: string; versionId: string; version: string; // "1.0"
+  sizeBytes: number; status: "created" | "new-version" | "rejected";
+  rejectionReason?: "file-too-large" | "blocked-extension" | "checked-out-by-other-user";
+}
+type UploadDocumentResponse = UploadDocumentResponseItem[];  // partial success allowed, FR-DOC-02
+
+// GET /documents/{id}/permissions
+interface PermissionEntryDto {
+  principalType: "User" | "Group"; principalId: string; principalName: string;
+  level: "FullControl" | "Contribute" | "Read";
+  source: "Direct" | "Inherited";              // FR-PERM-05
+  inheritedFrom?: { objectType: "Library" | "Folder"; objectId: string; name: string };
+}
+
+// GET /search?q=&amp;siteId=&amp;libraryId=&amp;type=&amp;modifiedFrom=&amp;modifiedTo=&amp;page=&amp;pageSize=
+interface SearchResultItemDto {
+  documentId: string; name: string; ext: string; sizeBytes: number;
+  siteId: string; siteName: string; libraryId: string; libraryName: string; folderPath: string;
+  modifiedAt: string; modifiedBy: string; rank: number;   // ts_rank, FR-SRCH-03
+}</code></pre>
+      <p>Validation errors extend the base Problem Details envelope with an <code>errors</code> map, matching ASP.NET Core's conventional shape so the frontend's error mapper needs no per-endpoint special-casing:</p>
+      <pre><code>{
+  "type": "urn:edms:validation-error",
+  "title": "One or more validation errors occurred.",
+  "status": 400,
+  "errors": { "Email": ["'Email' must not be empty."] }
+}</code></pre>
+    </section>
+
+    <!-- 9. FLOWS -->
+    <section id="flows">
+      <h2>9. Key Flows</h2>
+      <p class="lede">Sequence diagrams for the two flows with the most implementation nuance. Upload/versioning and search request flows are diagrammed in <code>technical-design-spec.md</code> §9.2 (Mermaid) — omitted here to keep this page focused.</p>
+
+      <h3>9.1 Local login, silent refresh, and 401 recovery</h3>
+      <div class="diagram">
+        <svg viewBox="0 0 640 380" xmlns="http://www.w3.org/2000/svg">
+          <text class="dtext" x="90" y="22" font-size="12.5" font-weight="600" text-anchor="middle">SPA</text>
+          <text class="dtext" x="330" y="22" font-size="12.5" font-weight="600" text-anchor="middle">API</text>
+          <text class="dtext" x="560" y="22" font-size="12.5" font-weight="600" text-anchor="middle">Postgres</text>
+          <line class="ddash" x1="90" y1="32" x2="90" y2="360"/>
+          <line class="ddash" x1="330" y1="32" x2="330" y2="360"/>
+          <line class="ddash" x1="560" y1="32" x2="560" y2="360"/>
+
+          <line class="dline" x1="90" y1="55" x2="330" y2="55" marker-end="url(#a4)"/>
+          <text class="dmuted" x="210" y="47" font-size="10" text-anchor="middle">POST /auth/login {email, password}</text>
+
+          <line class="dline" x1="330" y1="78" x2="560" y2="78" marker-end="url(#a4)"/>
+          <text class="dmuted" x="445" y="70" font-size="9.5" text-anchor="middle">verify password hash</text>
+          <line class="dline" x1="330" y1="98" x2="560" y2="98" marker-end="url(#a4)"/>
+          <text class="dmuted" x="445" y="90" font-size="9.5" text-anchor="middle">INSERT refresh_tokens (hash)</text>
+
+          <line class="dline" x1="330" y1="122" x2="90" y2="122" marker-end="url(#a4)"/>
+          <text class="dmuted" x="210" y="114" font-size="10" text-anchor="middle">200 {accessToken}; Set-Cookie: refresh (httpOnly)</text>
+          <text class="dmuted" x="90" y="140" font-size="9" text-anchor="start">accessToken kept in memory only</text>
+
+          <line class="dline" x1="90" y1="175" x2="330" y2="175" marker-end="url(#a4)"/>
+          <text class="dmuted" x="210" y="167" font-size="10" text-anchor="middle">GET /documents/{id} (Bearer &lt;expired&gt;)</text>
+          <line class="dline" x1="330" y1="198" x2="90" y2="198" marker-end="url(#a4)"/>
+          <text class="dmuted" x="210" y="190" font-size="10" text-anchor="middle">401</text>
+
+          <line class="dline" x1="90" y1="222" x2="330" y2="222" marker-end="url(#a4)"/>
+          <text class="dmuted" x="210" y="214" font-size="10" text-anchor="middle">POST /auth/refresh (cookie sent automatically)</text>
+          <line class="dline" x1="330" y1="245" x2="560" y2="245" marker-end="url(#a4)"/>
+          <text class="dmuted" x="445" y="237" font-size="9.5" text-anchor="middle">lookup by hash, validate, rotate</text>
+
+          <line class="dline" x1="330" y1="270" x2="90" y2="270" marker-end="url(#a4)"/>
+          <text class="dmuted" x="210" y="262" font-size="10" text-anchor="middle">200 {accessToken}; Set-Cookie: new refresh</text>
+
+          <line class="dline" x1="90" y1="300" x2="330" y2="300" marker-end="url(#a4)"/>
+          <text class="dmuted" x="210" y="292" font-size="10" text-anchor="middle">GET /documents/{id} (Bearer &lt;new&gt;)</text>
+          <line class="dline" x1="330" y1="323" x2="90" y2="323" marker-end="url(#a4)"/>
+          <text class="dmuted" x="210" y="315" font-size="10" text-anchor="middle">200 {...}</text>
+
+          <defs><marker id="a4" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><path class="darrow" d="M0,0 L8,4 L0,8 Z"/></marker></defs>
+        </svg>
+        <div class="diagram-caption">A 401 triggers exactly one de-duped refresh call, then the original request is retried once with the new access token.</div>
+      </div>
+
+      <h3>9.2 Permission-checked request (AuthorizationBehavior)</h3>
+      <div class="diagram">
+        <svg viewBox="0 0 700 400" xmlns="http://www.w3.org/2000/svg">
+          <text class="dtext" x="60" y="20" font-size="11.5" font-weight="600" text-anchor="middle">Controller</text>
+          <text class="dtext" x="200" y="20" font-size="11.5" font-weight="600" text-anchor="middle">MediatR</text>
+          <text class="dtext" x="330" y="20" font-size="11.5" font-weight="600" text-anchor="middle">AuthZBehavior</text>
+          <text class="dtext" x="460" y="20" font-size="11.5" font-weight="600" text-anchor="middle">PermissionResolver</text>
+          <text class="dtext" x="600" y="20" font-size="11.5" font-weight="600" text-anchor="middle">Cache / DB</text>
+          <line class="ddash" x1="60" y1="30" x2="60" y2="380"/>
+          <line class="ddash" x1="200" y1="30" x2="200" y2="380"/>
+          <line class="ddash" x1="330" y1="30" x2="330" y2="380"/>
+          <line class="ddash" x1="460" y1="30" x2="460" y2="380"/>
+          <line class="ddash" x1="600" y1="30" x2="600" y2="380"/>
+
+          <line class="dline" x1="60" y1="50" x2="200" y2="50" marker-end="url(#a5)"/>
+          <text class="dmuted" x="130" y="43" font-size="9.5" text-anchor="middle">Send(MoveDocumentCommand)</text>
+          <line class="dline" x1="200" y1="70" x2="330" y2="70" marker-end="url(#a5)"/>
+          <text class="dmuted" x="265" y="63" font-size="9.5" text-anchor="middle">next()</text>
+          <line class="dline" x1="330" y1="95" x2="460" y2="95" marker-end="url(#a5)"/>
+          <text class="dmuted" x="395" y="88" font-size="9" text-anchor="middle">RequireAsync(user, Document,</text>
+          <text class="dmuted" x="395" y="100" font-size="9" text-anchor="middle">id, Contribute)</text>
+          <line class="dline" x1="460" y1="122" x2="600" y2="122" marker-end="url(#a5)"/>
+          <text class="dmuted" x="530" y="115" font-size="9.5" text-anchor="middle">cache lookup</text>
+
+          <rect class="dalt" x="440" y="140" width="200" height="66" rx="4"/>
+          <text class="dmuted" x="448" y="153" font-size="9" font-weight="600">alt [cache miss]</text>
+          <line class="dline" x1="460" y1="168" x2="600" y2="168" marker-end="url(#a5)"/>
+          <text class="dmuted" x="530" y="163" font-size="8.5" text-anchor="middle">recursive CTE walk (§6.3)</text>
+          <line class="dline" x1="600" y1="190" x2="460" y2="190" marker-end="url(#a5)"/>
+          <text class="dmuted" x="530" y="185" font-size="8.5" text-anchor="middle">nearest ACL / site role → cache, 30s TTL</text>
+
+          <rect class="dalt" x="290" y="225" width="360" height="130" rx="4"/>
+          <text class="dmuted" x="298" y="238" font-size="9" font-weight="600">alt [level &gt;= required]</text>
+          <line class="dline" x1="330" y1="255" x2="200" y2="255" marker-end="url(#a5)"/>
+          <text class="dmuted" x="265" y="248" font-size="9" text-anchor="middle">next() → Handler</text>
+          <line class="dline" x1="200" y1="278" x2="60" y2="278" marker-end="url(#a5)"/>
+          <text class="dmuted" x="130" y="271" font-size="9" text-anchor="middle">Result</text>
+          <text class="dmuted" x="298" y="300" font-size="9" font-weight="600">else [insufficient]</text>
+          <line class="dline" x1="330" y1="318" x2="60" y2="318" marker-end="url(#a5)"/>
+          <text class="dmuted" x="195" y="311" font-size="9" text-anchor="middle">throw ForbiddenException → 403</text>
+
+          <defs><marker id="a5" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><path class="darrow" d="M0,0 L8,4 L0,8 Z"/></marker></defs>
+        </svg>
+        <div class="diagram-caption">The permission check runs before the handler on every mutating command — there is no code path that reaches business logic without it.</div>
+      </div>
+    </section>
+
+    <!-- 10. SECURITY -->
+    <section id="security">
+      <h2>10. Security Design</h2>
+      <div class="callout invariant"><strong>Authorization is server-authoritative.</strong> The SPA's route guards, disabled buttons, and hidden menu items (§7.2) are UX polish. The <code>AuthorizationBehavior</code> (§5.2, §5.6) is the only thing that decides whether a mutation is allowed, on every command, with no opt-out short of the explicit marker used only for <code>/auth/login</code>, <code>/auth/forgot-password</code>, <code>/auth/reset-password</code>.</div>
+      <h3>10.1 Transport &amp; secrets</h3>
+      <p>TLS terminated at the reverse proxy; Kestrel does not hold the certificate above local dev. <code>Strict-Transport-Security</code> added in non-dev environments. Secrets come from environment variables / the host's secret manager (§11.4) — never from committed <code>appsettings.json</code>. Local dev uses <code>dotnet user-secrets</code>.</p>
+      <h3>10.2 Input validation &amp; file safety</h3>
+      <p>Every command/query has a FluentValidation validator — no endpoint skips validation "because the frontend already checks it." File content-type is sniffed from magic bytes server-side, independent of the client header. <code>IFileStorageProvider.SaveAsync</code> has a pluggable <code>IAntivirusScanner</code> hook (no-op in MVP) so a ClamAV integration later is a new DI registration, not a call-site change.</p>
+      <h3>10.3 Rate limiting &amp; lockout</h3>
+      <p><code>/auth/login</code> and <code>/auth/forgot-password</code>: 10 req/min/IP. Account lockout after 5 failed logins, 15-minute cooldown (FR-AUTH-06) — enforced by ASP.NET Core Identity's built-in tracking, not reimplemented.</p>
+      <h3>10.4 Audit logging</h3>
+      <p>The <code>AuditLoggingBehavior</code> writes <em>after</em> the handler's transaction commits, as a separate <code>SaveChangesAsync</code> call. A failure to write the audit row does not roll back the business mutation — an audit outage shouldn't stop the product — but is itself logged at <code>Error</code> so an audit gap stays operationally visible.</p>
+    </section>
+
+    <!-- 11. DEPLOYMENT -->
+    <section id="deployment">
+      <h2>11. Deployment &amp; Infrastructure</h2>
+      <h3>11.1 Environments</h3>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Environment</th><th>Purpose</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td class="req">Local dev</td><td>Individual development</td><td><code>docker-compose.yml</code>, §11.2</td></tr>
+          <tr><td class="req">Staging</td><td>Pre-prod validation, UAT</td><td>Mirrors production topology at smaller scale</td></tr>
+          <tr><td class="req">Production</td><td>Live</td><td>Single organization deployment (FS §16) — no multi-region requirement</td></tr>
+        </tbody>
+      </table></div>
+      <h3>11.2 Local dev stack</h3>
+      <pre><code># docker-compose.yml
+services:
+  postgres:
+    image: postgres:17
+    environment: { POSTGRES_DB: edms, POSTGRES_PASSWORD: devonly }
+    ports: ["5432:5432"]
+
+  api:
+    build: ./server
+    environment:
+      ConnectionStrings__Default: "Host=postgres;Database=edms;Password=devonly"
+      Seed__AdminEmail: "admin@edms.local"
+      Seed__AdminTempPassword: "ChangeMe123!"
+    ports: ["5080:8080"]
+    depends_on: [postgres]
+
+  web:
+    build: ./client
+    environment: { VITE_API_BASE_URL: "http://localhost:5080/api/v1" }
+    ports: ["5173:5173"]
+    depends_on: [api]
+
+  mailhog:            # local IEmailSender target
+    image: mailhog/mailhog
+    ports: ["8025:8025"]</code></pre>
+      <h3>11.3 CI/CD (GitHub Actions)</h3>
+      <pre><code>.github/workflows/
+  ci.yml              # PR: restore, build, unit + integration tests, lint, format-check
+  deploy-staging.yml  # push to main: build images, run migrations, deploy, smoke test
+  deploy-prod.yml     # manual approval after staging: same steps against production</code></pre>
+      <p>Migrations run as their own job <em>before</em> the new API image rolls out — never auto-migrate on boot outside local dev (§6.4).</p>
+      <h3>11.4 Configuration &amp; secrets</h3>
+      <p><code>appsettings.json</code> holds only non-secret defaults; every environment above local dev supplies connection strings, JWT keys, and SMTP credentials via the hosting platform's secret manager. This document stays deployment-target-agnostic (FS §16 assumption 1) — the contract is "secrets arrive as environment variables," which any mainstream host satisfies.</p>
+    </section>
+
+    <!-- 12. TESTING -->
+    <section id="testing">
+      <h2>12. Testing Strategy</h2>
+      <h3>12.1 Backend</h3>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Layer</th><th>Tool</th><th>Covers</th></tr></thead>
+        <tbody>
+          <tr><td class="req">Domain.UnitTests</td><td>xUnit + FluentAssertions</td><td>Entity invariants — no mocks, pure domain logic</td></tr>
+          <tr><td class="req">Application.UnitTests</td><td>xUnit + FluentAssertions + NSubstitute</td><td>Handlers with dependencies mocked, one test class per use case</td></tr>
+          <tr><td class="req">IntegrationTests</td><td>WebApplicationFactory + Testcontainers.PostgreSql</td><td>Full HTTP round-trip against a real ephemeral Postgres — permission CTE, migrations, auth/refresh end-to-end</td></tr>
+        </tbody>
+      </table></div>
+      <h3>12.2 Frontend</h3>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Layer</th><th>Tool</th><th>Covers</th></tr></thead>
+        <tbody>
+          <tr><td class="req">Unit/component</td><td>Vitest + React Testing Library</td><td>Components, hooks, <code>api-client.ts</code> refresh/retry logic with <code>msw</code></td></tr>
+          <tr><td class="req">E2E</td><td>Playwright</td><td>Login → browse → upload → check-out/in → share → search, against the full docker-compose stack — the automated equivalent of the manual walkthrough <code>prototype(html)</code> enables today</td></tr>
+        </tbody>
+      </table></div>
+      <h3>12.3 Non-negotiable test cases</h3>
+      <ul>
+        <li>Permission resolution is correct at every hierarchy point (unique ACL per level, Site inheritance, group-derived grants, additive-across-groups).</li>
+        <li>Refresh-token reuse detection actually revokes the full chain.</li>
+        <li>Soft-deleted rows never appear in a default query (the global filter is easy to bypass by accident with a leftover <code>IgnoreQueryFilters()</code>).</li>
+        <li>An audit entry is written for every FR-AUDIT-01 action — one parameterized test over the action enum, so a newly added action can't be forgotten.</li>
+      </ul>
+    </section>
+
+    <!-- 13. STANDARDS -->
+    <section id="standards">
+      <h2>13. Coding Standards &amp; Conventions</h2>
+      <h3>13.1 C# / .NET</h3>
+      <ul>
+        <li>Nullable reference types enabled solution-wide; a possible-null-dereference warning is an error in CI.</li>
+        <li>File-scoped namespaces, primary constructors for DI, <code>sealed</code> by default.</li>
+        <li>Project-reference direction (§2.3) enforced by a CI architecture test (e.g. <code>NetArchTest.Rules</code> asserting Domain has no outward dependencies) — a rule stated only in prose gets violated eventually.</li>
+      </ul>
+      <h3>13.2 TypeScript / React</h3>
+      <ul>
+        <li><code>strict: true</code>; no <code>any</code> without an inline comment explaining why.</li>
+        <li>Function components + hooks only.</li>
+        <li>ESLint + Prettier, both blocking in CI, not editor-only suggestions.</li>
+        <li>Test files co-located next to the component they test, not in a parallel tree.</li>
+      </ul>
+      <h3>13.3 Git workflow</h3>
+      <ul>
+        <li>Trunk-based: short-lived feature branches off <code>main</code>, merged via PR with required green CI.</li>
+        <li>Conventional Commits style (<code>feat:</code>, <code>fix:</code>, <code>refactor:</code>) — convention now, tooling-enforced changelog generation later.</li>
+        <li>No direct pushes to <code>main</code>; branch protection requires review + green CI.</li>
+      </ul>
+    </section>
+
+    <!-- 14. APPENDIX -->
+    <section id="appendix">
+      <h2>14. Appendix</h2>
+      <h3>14.1 Open technical risks</h3>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Risk</th><th>Impact if unaddressed</th><th>Mitigation</th></tr></thead>
+        <tbody>
+          <tr><td class="req">Permission cache 30s staleness could let a just-revoked user complete one more request</td><td>Low — bounded window, still audit-logged</td><td>Acceptable for MVP; revisit if compliance demands immediate revocation</td></tr>
+          <tr><td class="req">Local-disk storage has no built-in redundancy</td><td>Data loss on disk failure without a separate backup job</td><td>Out of scope here (infra/ops) — flag explicitly to whoever owns production infrastructure before go-live</td></tr>
+          <tr><td class="req">Recursive CTE performance at deep nesting + large group memberships is untested</td><td>Possible latency regression at scale</td><td>Add to integration suite once realistic fixtures exist; not blocking given FR-FLD-06's 20-level cap</td></tr>
+        </tbody>
+      </table></div>
+      <h3>14.2 Glossary</h3>
+      <p>See FS §17 — no terms specific to this document beyond what's already defined there.</p>
+      <h3>14.3 Document history</h3>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Version</th><th>Date</th><th>Change</th></tr></thead>
+        <tbody><tr><td>1.0</td><td>2026-08-15</td><td class="req">Initial draft technical design specification.</td></tr></tbody>
+      </table></div>
+    </section>
+
+    <footer>eDMS Technical Design Specification v1.0 — Draft for review — 2026-08-15</footer>
+  </main>
+</div>
+
+<script>
+  (function(){
+    var toggle = document.getElementById('menuToggle');
+    var sidebar = document.getElementById('sidebar');
+    if(toggle){ toggle.addEventListener('click', function(){ sidebar.classList.toggle('open'); }); }
+    document.addEventListener('click', function(e){
+      if(sidebar.classList.contains('open') && !sidebar.contains(e.target) && e.target !== toggle){ sidebar.classList.remove('open'); }
+    });
+    document.querySelectorAll('nav.toc a').forEach(function(a){
+      a.addEventListener('click', function(){ sidebar.classList.remove('open'); });
+    });
+
+    var themeBtn = document.getElementById('themeToggle');
+    var root = document.documentElement;
+    themeBtn.addEventListener('click', function(){
+      var current = root.getAttribute('data-theme');
+      var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      var effectiveIsDark = current ? current === 'dark' : prefersDark;
+      root.setAttribute('data-theme', effectiveIsDark ? 'light' : 'dark');
+    });
+
+    var links = Array.prototype.slice.call(document.querySelectorAll('nav.toc a'));
+    var sections = links.map(function(a){ return document.querySelector(a.getAttribute('href')); }).filter(Boolean);
+    function onScroll(){
+      var pos = window.scrollY + 120;
+      var activeIdx = 0;
+      sections.forEach(function(sec, i){ if(sec.offsetTop <= pos) activeIdx = i; });
+      links.forEach(function(a){ a.classList.remove('active'); });
+      if(links[activeIdx]) links[activeIdx].classList.add('active');
+    }
+    window.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
+  })();
+</script>
+
+</body>
+</html>
