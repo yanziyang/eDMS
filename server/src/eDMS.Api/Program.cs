@@ -1,5 +1,7 @@
 using eDMS.Application;
 using eDMS.Application.Auth;
+using eDMS.Application.Common.Interfaces;
+using eDMS.Api.Auth;
 using eDMS.Domain;
 using eDMS.Infrastructure;
 using eDMS.Infrastructure.Options;
@@ -29,6 +31,7 @@ public class Program
         builder.Services.AddOpenApi();
         builder.Services.AddHealthChecks();
         builder.Services.AddHttpContextAccessor();
+        builder.Services.AddScoped<ICurrentUser, CurrentUser>();
 
         builder.Services.AddApplication();
         builder.Services.AddInfrastructure(builder.Configuration);

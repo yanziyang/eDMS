@@ -2,6 +2,7 @@ using eDMS.Application.Auth;
 using eDMS.Application.Common.Interfaces;
 using eDMS.Domain;
 using eDMS.Infrastructure.Auth;
+using eDMS.Infrastructure.Auditing;
 using eDMS.Infrastructure.Options;
 using eDMS.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Identity;
@@ -50,6 +51,8 @@ public sealed class AuthServiceTests : IDisposable
             _userManager,
             _provider.GetRequiredService<SignInManager<ApplicationUser>>(),
             new FakeTokenService(),
+            new AuditLogger(_provider.GetRequiredService<AppDbContext>(), new FakeCurrentUser()),
+            new FakeCurrentUser(),
             jwtOptions);
     }
 
@@ -169,5 +172,16 @@ public sealed class AuthServiceTests : IDisposable
 
         public Task RevokeAsync(string refreshToken, CancellationToken cancellationToken = default) =>
             Task.CompletedTask;
+    }
+
+    private sealed class FakeCurrentUser : ICurrentUser
+    {
+        public Guid? UserId => Guid.Empty;
+
+        public bool IsSystemAdmin => false;
+
+        public string? Email => null;
+
+        public string? IpAddress => null;
     }
 }

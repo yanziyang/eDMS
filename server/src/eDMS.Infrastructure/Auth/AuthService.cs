@@ -12,17 +12,23 @@ public sealed class AuthService : IAuthService
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly SignInManager<ApplicationUser> _signInManager;
     private readonly ITokenService _tokenService;
+    private readonly IAuditLogger _auditLogger;
+    private readonly ICurrentUser _currentUser;
     private readonly JwtOptions _jwtOptions;
 
     public AuthService(
         UserManager<ApplicationUser> userManager,
         SignInManager<ApplicationUser> signInManager,
         ITokenService tokenService,
+        IAuditLogger auditLogger,
+        ICurrentUser currentUser,
         IOptions<JwtOptions> jwtOptions)
     {
         _userManager = userManager;
         _signInManager = signInManager;
         _tokenService = tokenService;
+        _auditLogger = auditLogger;
+        _currentUser = currentUser;
         _jwtOptions = jwtOptions.Value;
     }
 
@@ -51,6 +57,7 @@ public sealed class AuthService : IAuthService
         await _userManager.UpdateAsync(user);
 
         var tokens = await _tokenService.IssueTokenPairAsync(user, ipAddress, cancellationToken);
+        await _auditLogger.LogAuthAsync(user.Id, AuditAction.Login, user.Email ?? user.UserName ?? string.Empty, cancellationToken);
         return new AuthResult(ToCurrentUser(user), tokens, _jwtOptions.AccessTokenLifetimeMinutes * 60);
     }
 
@@ -66,8 +73,18 @@ public sealed class AuthService : IAuthService
             _jwtOptions.AccessTokenLifetimeMinutes * 60);
     }
 
-    public Task RevokeRefreshTokenAsync(string refreshToken, CancellationToken cancellationToken) =>
-        _tokenService.RevokeAsync(refreshToken, cancellationToken);
+    public async Task RevokeRefreshTokenAsync(string refreshToken, CancellationToken cancellationToken)
+    {
+        await _tokenService.RevokeAsync(refreshToken, cancellationToken);
+        if (_currentUser.UserId is { } userId)
+        {
+            await _auditLogger.LogAuthAsync(
+                userId,
+                AuditAction.Logout,
+                _currentUser.Email ?? string.Empty,
+                cancellationToken);
+        }
+    }
 
     public async Task<CurrentUserDto?> GetCurrentUserAsync(Guid userId, CancellationToken cancellationToken)
     {

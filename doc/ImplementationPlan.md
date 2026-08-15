@@ -97,7 +97,7 @@ Columns: **Track** — `BE` backend, `FE` frontend, `INF` infra/tooling, `DOC` d
 | Done | M1.3 | BE | `refresh_tokens` table/migration; `ITokenService` — RS256 access token issuance + opaque refresh token with hash-only storage + rotation-with-reuse-detection | M1.1 | M | TDS §5.5 |
 | Done | M1.4 | BE | `POST /auth/login`, `POST /auth/logout`, `POST /auth/refresh`, `GET /auth/me` | M1.3 | M | FR-AUTH-01/02/03, TDS §8.2 DTOs |
 | Done | M1.5 | BE | Account lockout after 5 failed logins / 15 min cooldown via Identity's built-in `AccessFailedCount`/`LockoutEnd` | M1.4 | S | FR-AUTH-06 |
-| Not Started | M1.6 | BE | `audit_log_entries` table/migration incl. `REVOKE UPDATE, DELETE` grant; `AuditLoggingBehavior` wired for Login/Logout actions | M0.5, M1.4 | M | FR-AUDIT-01 (partial), TDS §6.2, §5.2 |
+| Done | M1.6 | BE | `audit_log_entries` table/migration incl. `REVOKE UPDATE, DELETE` grant; `AuditLoggingBehavior` wired for Login/Logout actions | M0.5, M1.4 | M | FR-AUDIT-01 (partial), TDS §6.2, §5.2 |
 | Not Started | M1.7 | BE | `IPermissionResolver` interface + stub implementation (System Administrator bypass only — no hierarchy to walk yet); `AuthorizationBehavior` pipeline step wired | M0.5, M1.1 | M | TDS §5.3, §5.6 |
 | Not Started | M1.8 | BE | Rate limiting on `/auth/login`, `/auth/forgot-password`; `POST /auth/forgot-password` + `/auth/reset-password` (email via `IEmailSender` → Mailhog in dev) | M1.4 | S | FR-AUTH-04, TDS §10.3, §5.7 |
 | Not Started | M1.9 | FE | `lib/api-client.ts` with the 401 → refresh → retry flow; auth context/hook wrapping `GET /auth/me` | M0.2, M1.4 | M | TDS §7.3, §9.1 |

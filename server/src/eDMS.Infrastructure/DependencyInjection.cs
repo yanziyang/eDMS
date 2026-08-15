@@ -1,6 +1,7 @@
 using eDMS.Application.Auth;
 using eDMS.Application.Common.Interfaces;
 using eDMS.Infrastructure.Auth;
+using eDMS.Infrastructure.Auditing;
 using eDMS.Infrastructure.Options;
 using eDMS.Infrastructure.Persistence;
 using eDMS.Infrastructure.Persistence.Seeding;
@@ -31,6 +32,7 @@ public static class DependencyInjection
         services.AddSingleton(TimeProvider.System);
         services.AddScoped<ITokenService, JwtTokenService>();
         services.AddScoped<IAuthService, AuthService>();
+        services.AddScoped<IAuditLogger, AuditLogger>();
 
         return services;
     }
