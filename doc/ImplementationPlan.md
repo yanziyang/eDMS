@@ -115,9 +115,9 @@ Columns: **Track** — `BE` backend, `FE` frontend, `INF` infra/tooling, `DOC` d
 | Done | M2.5 | BE | **Real** `IPermissionResolver`: Site/Library-level walk + `IMemoryCache` (30s TTL) + invalidation on permission mutations (Folder→Library→Site CTE lands with M3/M5 when Folder/ItemPermission exist) | M1.7, M2.2 | L | TDS §5.3, §6.3 — see callout below |
 | Done | M2.6 | BE | `GET /sites` (permission-filtered), `GET/PUT /sites/{id}`, `DELETE /sites/{id}` | M2.5 | S | FR-SITE-05 |
 | Done | M2.7 | BE | Admin: `GET/POST /users`, `PUT /users/{id}`, deactivate/reactivate (deactivation immediately revokes all outstanding refresh tokens) | M1.1, M1.3 | M | FR-ADMIN-01, FR-AUTH-07 |
-| Not Started | M2.8 | FE | Home page ("My Sites" grid, stat tiles) wired to real API | M1.11, M2.6 | M | mirror `prototype(html)/home.html` |
-| Not Started | M2.9 | FE | Site Home page (library list, permission groups panel, manage-access dialog) | M2.8 | M | mirror `prototype(html)/site-home.html` |
-| Not Started | M2.10 | FE | Admin → Users, Groups, Sites pages wired to real API | M2.7, M2.4, M2.6 | M | mirror `prototype(html)/admin-users.html`, `admin-groups.html`, `admin-sites.html` |
+| Done | M2.8 | FE | Home page ("My Sites" grid, stat tiles) wired to real API | M1.11, M2.6 | M | mirror `prototype(html)/home.html` |
+| Done | M2.9 | FE | Site Home page (library list, permission groups panel, manage-access dialog) | M2.8 | M | mirror `prototype(html)/site-home.html` |
+| Done | M2.10 | FE | Admin → Users, Groups, Sites pages wired to real API | M2.7, M2.4, M2.6 | M | mirror `prototype(html)/admin-users.html`, `admin-groups.html`, `admin-sites.html` |
 
 > **M2.5 is the highest-risk task in the whole plan up to this point.** It backs every authorization decision the system will ever make. Do not mark it `Done` without: a unit test per level of the hierarchy (unique ACL at the target object, at a parent, at the Site only), a test proving group-membership grants are additive across multiple group memberships, and an integration test hitting the real recursive CTE against Testcontainers Postgres (TDS §12.1, §12.3).
 

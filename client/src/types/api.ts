@@ -30,3 +30,32 @@ export interface ProblemDetails {
   detail?: string;
   errors?: Record<string, string[]>;
 }
+
+export interface SiteDto {
+  id: string;
+  name: string;
+  description: string | null;
+  urlSlug: string;
+  storageQuotaBytes: number | null;
+  storageUsedBytes: number;
+  createdAt: string;
+}
+
+export interface GroupDto {
+  id: string;
+  name: string;
+  description: string | null;
+  isSystem: boolean;
+  siteId: string | null;
+  memberIds: string[];
+}
+
+export interface UserDto {
+  id: string;
+  email: string;
+  displayName: string;
+  isActive: boolean;
+  isSystemAdmin: boolean;
+  createdAt: string;
+  lastLoginAt: string | null;
+}
