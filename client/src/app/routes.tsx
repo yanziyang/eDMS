@@ -12,6 +12,7 @@ import { SiteHome } from "@/pages/site-home";
 import { AdminGroups } from "@/pages/admin/groups";
 import { AdminSites } from "@/pages/admin/sites";
 import { AdminUsers } from "@/pages/admin/users";
+import { LibraryBrowser } from "@/pages/library";
 
 export const router = createBrowserRouter([
   { path: "/login", element: <Login /> },
@@ -22,6 +23,7 @@ export const router = createBrowserRouter([
     children: [
       { path: "/", element: <Home /> },
       { path: "/sites/:siteSlug", element: <SiteHome /> },
+      { path: "/sites/:siteSlug/libraries/:libraryId", element: <LibraryBrowser /> },
       { path: "/search", element: <Search /> },
       { path: "/recycle-bin", element: <RecycleBin /> },
       { path: "/recycle-bin/:siteSlug", element: <RecycleBin /> },

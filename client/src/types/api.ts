@@ -59,3 +59,32 @@ export interface UserDto {
   createdAt: string;
   lastLoginAt: string | null;
 }
+
+export interface LibraryDto {
+  id: string;
+  siteId: string;
+  name: string;
+  description: string | null;
+  enableVersioning: boolean;
+  enableMinorVersions: boolean;
+  requireCheckout: boolean;
+}
+
+export interface ItemDto {
+  kind: "folder" | "document";
+  id: string;
+  name: string;
+  sizeBytes: number;
+  modifiedAt: string;
+  folderId: string | null;
+  documentId: string | null;
+}
+
+export interface UploadResult {
+  documentId: string;
+  name: string;
+  versionId: string;
+  versionLabel: string;
+  sizeBytes: number;
+  status: string;
+}

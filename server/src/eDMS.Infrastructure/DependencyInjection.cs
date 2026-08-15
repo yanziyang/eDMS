@@ -9,6 +9,10 @@ using eDMS.Infrastructure.Options;
 using eDMS.Infrastructure.Persistence;
 using eDMS.Infrastructure.Persistence.Seeding;
 using eDMS.Infrastructure.Security;
+using eDMS.Infrastructure.Storage;
+using eDMS.Infrastructure.Documents;
+using eDMS.Application.Documents;
+using eDMS.Infrastructure.Background;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -35,6 +39,7 @@ public static class DependencyInjection
         services.Configure<JwtOptions>(configuration.GetSection(JwtOptions.SectionName));
         services.Configure<SmtpOptions>(configuration.GetSection(SmtpOptions.SectionName));
         services.Configure<ClientOptions>(configuration.GetSection(ClientOptions.SectionName));
+        services.Configure<StorageOptions>(configuration.GetSection(StorageOptions.SectionName));
         services.AddSingleton(TimeProvider.System);
         services.AddScoped<ITokenService, JwtTokenService>();
         services.AddScoped<IAuthService, AuthService>();
@@ -43,7 +48,10 @@ public static class DependencyInjection
         services.AddSingleton<IPermissionCacheInvalidator, PermissionCacheInvalidator>();
         services.AddScoped<IEmailSender, EmailSender>();
         services.AddScoped<IUserManagementService, UserManagementService>();
+        services.AddScoped<IDocumentService, DocumentService>();
+        services.AddSingleton<IFileStorageProvider, LocalDiskFileStorageProvider>();
         services.AddMemoryCache();
+        services.AddHostedService<OrphanedUploadSweepService>();
 
         return services;
     }

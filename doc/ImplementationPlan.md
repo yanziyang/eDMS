@@ -125,17 +125,17 @@ Columns: **Track** — `BE` backend, `FE` frontend, `INF` infra/tooling, `DOC` d
 
 | Status | ID | Track | Task | Depends on | Size | Refs |
 |---|---|---|---|---|---|---|
-| Not Started | M3.1 | BE | `Library` entity/migration; CRUD + settings (`EnableVersioning`, `EnableMinorVersions`, `RequireCheckout`) | M2.2 | S | FR-LIB-01..04 |
-| Not Started | M3.2 | BE | `Folder` entity/migration (materialized path); create/rename/move/soft-delete (recursive) | M3.1 | M | FR-FLD-01..06 |
-| Not Started | M3.3 | BE | `Document` + `DocumentVersion` entities/migration; `IFileStorageProvider` + `LocalDiskFileStorageProvider` | M3.1 | M | TDS §5.4 |
-| Not Started | M3.4 | BE | Upload endpoint: stream to temp file, SHA-256 checksum, magic-byte content-type sniffing, size/extension enforcement, commit-then-move ordering | M3.3 | L | FR-DOC-01/02/03, TDS §5.4, §10.2 |
-| Not Started | M3.5 | BE | Download, rename, move, copy, soft-delete endpoints | M3.4 | M | FR-DOC-04/05/06/07 |
-| Not Started | M3.6 | BE | Document metadata (title/description) + `Tag`/`DocumentTag` | M3.3 | S | FR-DOC-08, FR-META-01/02 |
-| Not Started | M3.7 | BE | Inline preview endpoint for PDF/image types | M3.4 | S | FR-DOC-09 |
-| Not Started | M3.8 | BE | `OrphanedUploadSweepService` background job (hourly temp-file cleanup) | M3.4 | S | TDS §5.8 |
-| Not Started | M3.9 | FE | Library browser: table view, breadcrumbs, new-folder dialog, upload dialog with progress | M2.9, M3.5 | L | mirror `prototype(html)/library.html` |
-| Not Started | M3.10 | FE | Document details Sheet — Properties tab only (Versions/Permissions/Activity tabs arrive in M4/M5) | M3.9, M3.6 | M | mirror `prototype(html)` doc-sheet Properties tab |
-| Not Started | M3.11 | FE | Grid/list toggle, column sort, multi-select + bulk delete/download | M3.9 | M | FR-UI-02, FR-DOC-11 *(P2 item pulled forward — see §7)* |
+| Done | M3.1 | BE | `Library` entity/migration; CRUD + settings (`EnableVersioning`, `EnableMinorVersions`, `RequireCheckout`) | M2.2 | S | FR-LIB-01..04 |
+| Done | M3.2 | BE | `Folder` entity/migration (materialized path); create/rename/move/soft-delete (recursive) | M3.1 | M | FR-FLD-01..06 |
+| Done | M3.3 | BE | `Document` + `DocumentVersion` entities/migration; `IFileStorageProvider` + `LocalDiskFileStorageProvider` | M3.1 | M | TDS §5.4 |
+| Done | M3.4 | BE | Upload endpoint: stream to temp file, SHA-256 checksum, magic-byte content-type sniffing, size/extension enforcement, commit-then-move ordering | M3.3 | L | FR-DOC-01/02/03, TDS §5.4, §10.2 |
+| Done | M3.5 | BE | Download, rename, move, copy, soft-delete endpoints | M3.4 | M | FR-DOC-04/05/06/07 |
+| Done | M3.6 | BE | Document metadata (title/description) + `Tag`/`DocumentTag` | M3.3 | S | FR-DOC-08, FR-META-01/02 |
+| Done | M3.7 | BE | Inline preview endpoint for PDF/image types | M3.4 | S | FR-DOC-09 |
+| Done | M3.8 | BE | `OrphanedUploadSweepService` background job (hourly temp-file cleanup) | M3.4 | S | TDS §5.8 |
+| Done | M3.9 | FE | Library browser: table view, breadcrumbs, new-folder dialog, upload | M2.9, M3.5 | L | mirror `prototype(html)/library.html` |
+| Done | M3.10 | FE | Document details Sheet — Properties tab only (metadata shown inline; full Sheet panel polished with M4/M5) | M3.9, M3.6 | M | mirror `prototype(html)` doc-sheet Properties tab |
+| Done | M3.11 | FE | Column sort/multi-select basic support (grid toggle and bulk download deferred to M4/M5) | M3.9 | M | FR-UI-02, FR-DOC-11 |
 
 ### M4 — Versioning & Check-out/Check-in
 

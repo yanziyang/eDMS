@@ -28,6 +28,16 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options)
 
     public DbSet<SitePermission> SitePermissions => Set<SitePermission>();
 
+    public DbSet<Folder> Folders => Set<Folder>();
+
+    public DbSet<Document> Documents => Set<Document>();
+
+    public DbSet<DocumentVersion> DocumentVersions => Set<DocumentVersion>();
+
+    public DbSet<Tag> Tags => Set<Tag>();
+
+    public DbSet<DocumentTag> DocumentTags => Set<DocumentTag>();
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
@@ -41,5 +51,10 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options)
         builder.ApplyConfiguration(new GroupConfiguration());
         builder.ApplyConfiguration(new GroupMemberConfiguration());
         builder.ApplyConfiguration(new SitePermissionConfiguration());
+        builder.ApplyConfiguration(new FolderConfiguration());
+        builder.ApplyConfiguration(new DocumentConfiguration());
+        builder.ApplyConfiguration(new DocumentVersionConfiguration());
+        builder.ApplyConfiguration(new TagConfiguration());
+        builder.ApplyConfiguration(new DocumentTagConfiguration());
     }
 }

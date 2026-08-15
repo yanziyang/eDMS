@@ -23,5 +23,15 @@ public interface IAppDbContext
 
     DbSet<AuditLogEntry> AuditLogEntries { get; }
 
+    DbSet<Folder> Folders { get; }
+
+    DbSet<Document> Documents { get; }
+
+    DbSet<DocumentVersion> DocumentVersions { get; }
+
+    DbSet<Tag> Tags { get; }
+
+    DbSet<DocumentTag> DocumentTags { get; }
+
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

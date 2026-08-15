@@ -67,3 +67,5 @@ coverage/
 
 # ASP.NET Core Data Protection key ring (local dev)
 dataprotection-keys/
+server/storage/
+server/storage-*/
