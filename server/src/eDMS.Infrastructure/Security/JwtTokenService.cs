@@ -105,6 +105,24 @@ public sealed class JwtTokenService : ITokenService
         }
     }
 
+    public async Task RevokeAllForUserAsync(Guid userId, CancellationToken cancellationToken = default)
+    {
+        var active = await _db.RefreshTokens
+            .Where(token => token.UserId == userId && token.RevokedAt == null)
+            .ToListAsync(cancellationToken);
+
+        var now = _timeProvider.GetUtcNow();
+        foreach (var token in active)
+        {
+            token.RevokedAt = now;
+        }
+
+        if (active.Count != 0)
+        {
+            await _db.SaveChangesAsync(cancellationToken);
+        }
+    }
+
     private (TokenPair Pair, RefreshToken Entity) CreateTokenPair(
         ApplicationUser user,
         string? ipAddress,

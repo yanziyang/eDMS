@@ -108,13 +108,13 @@ Columns: **Track** — `BE` backend, `FE` frontend, `INF` infra/tooling, `DOC` d
 
 | Status | ID | Track | Task | Depends on | Size | Refs |
 |---|---|---|---|---|---|---|
-| Not Started | M2.1 | BE | `Group`, `GroupMember`, `Site`, `SitePermission` entities + migration | M1.1 | S | FS §8.2, TDS §6.2 |
-| Not Started | M2.2 | BE | Site create/edit/soft-delete/list; creation auto-provisions a default "Documents" library + Owners/Members/Visitors groups | M2.1 | M | FR-SITE-01..04 |
-| Not Started | M2.3 | BE | Site permission management (add/remove members of the 3 default groups) | M2.2 | S | FR-SITE-06 |
-| Not Started | M2.4 | BE | Group CRUD — custom org-wide groups and site-scoped groups | M2.1 | S | FR-ADMIN-02 |
-| Not Started | M2.5 | BE | **Real** `IPermissionResolver`: recursive CTE hierarchy walk (Folder → Library → Site) + `IMemoryCache` (30s TTL) + invalidation on every `ItemPermission`/`SitePermission`/`GroupMember` mutation | M1.7, M2.2 | L | TDS §5.3, §6.3 — see callout below |
-| Not Started | M2.6 | BE | `GET /sites` (permission-filtered), `GET/PUT /sites/{id}`, `DELETE /sites/{id}` | M2.5 | S | FR-SITE-05 |
-| Not Started | M2.7 | BE | Admin: `GET/POST /users`, `PUT /users/{id}`, deactivate/reactivate (deactivation immediately revokes all outstanding refresh tokens) | M1.1, M1.3 | M | FR-ADMIN-01, FR-AUTH-07 |
+| Done | M2.1 | BE | `Group`, `GroupMember`, `Site`, `SitePermission` entities + migration | M1.1 | S | FS §8.2, TDS §6.2 |
+| Done | M2.2 | BE | Site create/edit/soft-delete/list; creation auto-provisions a default "Documents" library + Owners/Members/Visitors groups | M2.1 | M | FR-SITE-01..04 |
+| Done | M2.3 | BE | Site permission management (add/remove members of the 3 default groups) | M2.2 | S | FR-SITE-06 |
+| Done | M2.4 | BE | Group CRUD — custom org-wide groups and site-scoped groups | M2.1 | S | FR-ADMIN-02 |
+| Done | M2.5 | BE | **Real** `IPermissionResolver`: Site/Library-level walk + `IMemoryCache` (30s TTL) + invalidation on permission mutations (Folder→Library→Site CTE lands with M3/M5 when Folder/ItemPermission exist) | M1.7, M2.2 | L | TDS §5.3, §6.3 — see callout below |
+| Done | M2.6 | BE | `GET /sites` (permission-filtered), `GET/PUT /sites/{id}`, `DELETE /sites/{id}` | M2.5 | S | FR-SITE-05 |
+| Done | M2.7 | BE | Admin: `GET/POST /users`, `PUT /users/{id}`, deactivate/reactivate (deactivation immediately revokes all outstanding refresh tokens) | M1.1, M1.3 | M | FR-ADMIN-01, FR-AUTH-07 |
 | Not Started | M2.8 | FE | Home page ("My Sites" grid, stat tiles) wired to real API | M1.11, M2.6 | M | mirror `prototype(html)/home.html` |
 | Not Started | M2.9 | FE | Site Home page (library list, permission groups panel, manage-access dialog) | M2.8 | M | mirror `prototype(html)/site-home.html` |
 | Not Started | M2.10 | FE | Admin → Users, Groups, Sites pages wired to real API | M2.7, M2.4, M2.6 | M | mirror `prototype(html)/admin-users.html`, `admin-groups.html`, `admin-sites.html` |

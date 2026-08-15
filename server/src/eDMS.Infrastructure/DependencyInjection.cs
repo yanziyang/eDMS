@@ -2,6 +2,8 @@ using eDMS.Application.Auth;
 using eDMS.Application.Common.Interfaces;
 using eDMS.Infrastructure.Auth;
 using eDMS.Infrastructure.Auditing;
+using eDMS.Infrastructure.Admin;
+using eDMS.Application.Admin;
 using eDMS.Infrastructure.Email;
 using eDMS.Infrastructure.Options;
 using eDMS.Infrastructure.Persistence;
@@ -25,6 +27,7 @@ public static class DependencyInjection
             options
                 .UseNpgsql(connectionString)
                 .UseSnakeCaseNamingConvention());
+        services.AddScoped<IAppDbContext>(provider => provider.GetRequiredService<AppDbContext>());
 
         services.Configure<SeedOptions>(configuration.GetSection(SeedOptions.SectionName));
         services.AddScoped<AdminSeeder>();
@@ -37,7 +40,10 @@ public static class DependencyInjection
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IAuditLogger, AuditLogger>();
         services.AddScoped<IPermissionResolver, PermissionResolver>();
+        services.AddSingleton<IPermissionCacheInvalidator, PermissionCacheInvalidator>();
         services.AddScoped<IEmailSender, EmailSender>();
+        services.AddScoped<IUserManagementService, UserManagementService>();
+        services.AddMemoryCache();
 
         return services;
     }

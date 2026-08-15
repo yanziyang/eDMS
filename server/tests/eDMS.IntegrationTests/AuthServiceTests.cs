@@ -211,6 +211,9 @@ public sealed class AuthServiceTests : IDisposable
 
         public Task RevokeAsync(string refreshToken, CancellationToken cancellationToken = default) =>
             Task.CompletedTask;
+
+        public Task RevokeAllForUserAsync(Guid userId, CancellationToken cancellationToken = default) =>
+            Task.CompletedTask;
     }
 
     private sealed class FakeCurrentUser : ICurrentUser

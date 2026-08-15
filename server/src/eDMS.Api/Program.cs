@@ -91,7 +91,8 @@ public class Program
                 };
             });
 
-        builder.Services.AddAuthorization();
+        builder.Services.AddAuthorization(options =>
+            options.AddPolicy("SystemAdmin", policy => policy.RequireClaim("is_admin", "true")));
 
         var app = builder.Build();
 
