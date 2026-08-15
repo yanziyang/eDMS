@@ -44,7 +44,11 @@ public sealed class JwtTokenServiceTests : IDisposable
             RefreshTokenLifetimeDays = 14,
         });
 
-        _sut = new JwtTokenService(_db, jwtOptions, TimeProvider.System);
+        _sut = new JwtTokenService(
+            _db,
+            jwtOptions,
+            new TokenKeyMaterial(jwtOptions.Value),
+            TimeProvider.System);
     }
 
     public void Dispose() => _db.Dispose();

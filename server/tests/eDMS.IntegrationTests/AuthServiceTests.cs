@@ -1,0 +1,147 @@
+using eDMS.Application.Auth;
+using eDMS.Application.Common.Interfaces;
+using eDMS.Domain;
+using eDMS.Infrastructure.Auth;
+using eDMS.Infrastructure.Options;
+using eDMS.Infrastructure.Persistence;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
+using Xunit;
+
+namespace eDMS.IntegrationTests;
+
+public sealed class AuthServiceTests : IDisposable
+{
+    private readonly ServiceProvider _provider;
+    private readonly UserManager<ApplicationUser> _userManager;
+    private readonly AuthService _sut;
+
+    public AuthServiceTests()
+    {
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddHttpContextAccessor();
+        services.AddAuthentication(options => options.DefaultScheme = IdentityConstants.ApplicationScheme);
+        services.AddDbContext<AppDbContext>(options =>
+            options.UseInMemoryDatabase(Guid.NewGuid().ToString()));
+        services
+            .AddIdentityCore<ApplicationUser>(options => options.User.RequireUniqueEmail = true)
+            .AddSignInManager()
+            .AddEntityFrameworkStores<AppDbContext>();
+
+        _provider = services.BuildServiceProvider();
+        _userManager = _provider.GetRequiredService<UserManager<ApplicationUser>>();
+
+        var jwtOptions = Options.Create(new JwtOptions
+        {
+            AccessTokenLifetimeMinutes = 15,
+            RefreshTokenLifetimeDays = 14,
+        });
+
+        _sut = new AuthService(
+            _userManager,
+            _provider.GetRequiredService<SignInManager<ApplicationUser>>(),
+            new FakeTokenService(),
+            jwtOptions);
+    }
+
+    public void Dispose() => _provider.Dispose();
+
+    [Fact]
+    public async Task Login_with_valid_credentials_returns_a_token_pair()
+    {
+        await CreateUserAsync("admin@edms.local", "Password1!");
+
+        var result = await _sut.LoginAsync(new LoginRequest("admin@edms.local", "Password1!"), "1.2.3.4", default);
+
+        Assert.NotNull(result);
+        Assert.Equal("admin@edms.local", result!.User.Email);
+        Assert.Equal(15 * 60, result.ExpiresInSeconds);
+        Assert.False(string.IsNullOrWhiteSpace(result.Tokens.AccessToken));
+        Assert.False(string.IsNullOrWhiteSpace(result.Tokens.RefreshToken));
+    }
+
+    [Fact]
+    public async Task Login_with_wrong_password_returns_null()
+    {
+        await CreateUserAsync("admin@edms.local", "Password1!");
+
+        var result = await _sut.LoginAsync(new LoginRequest("admin@edms.local", "wrong"), null, default);
+
+        Assert.Null(result);
+    }
+
+    [Fact]
+    public async Task Login_with_unknown_email_returns_null()
+    {
+        var result = await _sut.LoginAsync(new LoginRequest("nobody@edms.local", "Password1!"), null, default);
+
+        Assert.Null(result);
+    }
+
+    [Fact]
+    public async Task Login_with_inactive_user_returns_null()
+    {
+        await CreateUserAsync("admin@edms.local", "Password1!", isActive: false);
+
+        var result = await _sut.LoginAsync(new LoginRequest("admin@edms.local", "Password1!"), null, default);
+
+        Assert.Null(result);
+    }
+
+    [Fact]
+    public async Task GetCurrentUser_maps_identity_fields()
+    {
+        var created = await CreateUserAsync("admin@edms.local", "Password1!", isSystemAdmin: true);
+
+        var result = await _sut.GetCurrentUserAsync(created.Id, default);
+
+        Assert.NotNull(result);
+        Assert.True(result!.IsSystemAdmin);
+        Assert.Equal("admin@edms.local", result.Email);
+        Assert.Empty(result.SiteMemberships);
+    }
+
+    private async Task<ApplicationUser> CreateUserAsync(
+        string email,
+        string password,
+        bool isActive = true,
+        bool isSystemAdmin = false)
+    {
+        var user = new ApplicationUser
+        {
+            Id = Guid.NewGuid(),
+            UserName = email,
+            Email = email,
+            DisplayName = email,
+            EmailConfirmed = true,
+            IsActive = isActive,
+            IsSystemAdmin = isSystemAdmin,
+            CreatedAt = DateTimeOffset.UtcNow,
+        };
+
+        var result = await _userManager.CreateAsync(user, password);
+        Assert.True(result.Succeeded, string.Join("; ", result.Errors.Select(e => e.Description)));
+        return user;
+    }
+
+    private sealed class FakeTokenService : ITokenService
+    {
+        public Task<TokenPair> IssueTokenPairAsync(
+            ApplicationUser user,
+            string? ipAddress,
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult(new TokenPair("access", "refresh", DateTimeOffset.UtcNow.AddDays(14)));
+
+        public Task<RefreshTokenRotationResult> RotateAsync(
+            string refreshToken,
+            string? ipAddress,
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult(new RefreshTokenRotationResult(RefreshTokenRotationStatus.Success, new TokenPair("access", "refresh", DateTimeOffset.UtcNow.AddDays(14))));
+
+        public Task RevokeAsync(string refreshToken, CancellationToken cancellationToken = default) =>
+            Task.CompletedTask;
+    }
+}

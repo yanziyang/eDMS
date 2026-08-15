@@ -21,17 +21,18 @@ public sealed class JwtTokenService : ITokenService
     private readonly AppDbContext _db;
     private readonly JwtOptions _options;
     private readonly TimeProvider _timeProvider;
-    private readonly RsaSecurityKey _signingKey;
+    private readonly TokenKeyMaterial _keyMaterial;
 
     public JwtTokenService(
         AppDbContext db,
         IOptions<JwtOptions> options,
+        TokenKeyMaterial keyMaterial,
         TimeProvider timeProvider)
     {
         _db = db;
         _options = options.Value;
+        _keyMaterial = keyMaterial;
         _timeProvider = timeProvider;
-        _signingKey = BuildSigningKey(_options);
     }
 
     public async Task<TokenPair> IssueTokenPairAsync(
@@ -142,7 +143,7 @@ public sealed class JwtTokenService : ITokenService
             claims: claims,
             notBefore: now.UtcDateTime,
             expires: now.UtcDateTime.AddMinutes(_options.AccessTokenLifetimeMinutes),
-            signingCredentials: new SigningCredentials(_signingKey, SecurityAlgorithms.RsaSha256));
+            signingCredentials: new SigningCredentials(_keyMaterial.SigningKey, SecurityAlgorithms.RsaSha256));
 
         return new JwtSecurityTokenHandler().WriteToken(token);
     }
@@ -175,17 +176,4 @@ public sealed class JwtTokenService : ITokenService
         await _db.SaveChangesAsync(cancellationToken);
     }
 
-    private static RsaSecurityKey BuildSigningKey(JwtOptions options)
-    {
-        if (!string.IsNullOrWhiteSpace(options.PrivateKey))
-        {
-            var rsa = RSA.Create();
-            rsa.ImportFromPem(options.PrivateKey);
-            return new RsaSecurityKey(rsa);
-        }
-
-        // Local development fallback only. Above local dev the key pair is supplied
-        // via configuration/secret store (TDS §11.4).
-        return new RsaSecurityKey(RSA.Create(2048));
-    }
 }
