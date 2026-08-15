@@ -15,6 +15,8 @@ using eDMS.Application.Documents;
 using eDMS.Infrastructure.Background;
 using eDMS.Infrastructure.Permissions;
 using eDMS.Application.Permissions;
+using eDMS.Application.RecycleBin;
+using eDMS.Infrastructure.RecycleBin;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -42,6 +44,7 @@ public static class DependencyInjection
         services.Configure<SmtpOptions>(configuration.GetSection(SmtpOptions.SectionName));
         services.Configure<ClientOptions>(configuration.GetSection(ClientOptions.SectionName));
         services.Configure<StorageOptions>(configuration.GetSection(StorageOptions.SectionName));
+        services.Configure<RecycleBinOptions>(configuration.GetSection(RecycleBinOptions.SectionName));
         services.AddSingleton(TimeProvider.System);
         services.AddScoped<ITokenService, JwtTokenService>();
         services.AddScoped<IAuthService, AuthService>();
@@ -52,9 +55,11 @@ public static class DependencyInjection
         services.AddScoped<IUserManagementService, UserManagementService>();
         services.AddScoped<IDocumentService, DocumentService>();
         services.AddScoped<IPermissionService, PermissionService>();
+        services.AddScoped<IRecycleBinService, RecycleBinService>();
         services.AddSingleton<IFileStorageProvider, LocalDiskFileStorageProvider>();
         services.AddMemoryCache();
         services.AddHostedService<OrphanedUploadSweepService>();
+        services.AddHostedService<RecycleBinPurgeService>();
 
         return services;
     }

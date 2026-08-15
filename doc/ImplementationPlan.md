@@ -163,9 +163,9 @@ Columns: **Track** — `BE` backend, `FE` frontend, `INF` infra/tooling, `DOC` d
 
 | Status | ID | Track | Task | Depends on | Size | Refs |
 |---|---|---|---|---|---|---|
-| Not Started | M6.1 | BE | `GET /sites/{id}/recycle-bin`, restore, permanent-delete endpoints | M3.5 | S | FR-BIN-01/02/03/05 |
-| Not Started | M6.2 | BE | `RecycleBinPurgeService` background job, configurable retention (default 90 days) | M6.1 | S | FR-BIN-04, TDS §5.8 |
-| Not Started | M6.3 | FE | Recycle Bin page | M6.1 | S | mirror `prototype(html)/recycle-bin.html` |
+| Done | M6.1 | BE | `GET /sites/{id}/recycle-bin`, restore, permanent-delete endpoints | M3.5 | S | FR-BIN-01/02/03/05 |
+| Done | M6.2 | BE | `RecycleBinPurgeService` background job, configurable retention (default 90 days) | M6.1 | S | FR-BIN-04, TDS §5.8 |
+| Done | M6.3 | FE | Recycle Bin page (basic list wired to API) | M6.1 | S | mirror `prototype(html)/recycle-bin.html` |
 
 ### M7 — Search
 
