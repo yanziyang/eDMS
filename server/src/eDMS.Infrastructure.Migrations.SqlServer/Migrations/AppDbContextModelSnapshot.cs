@@ -185,6 +185,25 @@ namespace eDMS.Infrastructure.Migrations.SqlServer.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
+            modelBuilder.Entity("eDMS.Domain.AppSetting", b =>
+                {
+                    b.Property<string>("Key")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)")
+                        .HasColumnName("key");
+
+                    b.Property<string>("Value")
+                        .IsRequired()
+                        .HasMaxLength(2048)
+                        .HasColumnType("nvarchar(2048)")
+                        .HasColumnName("value");
+
+                    b.HasKey("Key")
+                        .HasName("pk_app_settings");
+
+                    b.ToTable("app_settings", (string)null);
+                });
+
             modelBuilder.Entity("eDMS.Domain.ApplicationUser", b =>
                 {
                     b.Property<Guid>("Id")

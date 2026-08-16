@@ -1,30 +1,52 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { createUser, listUsers, setUserActive } from "@/features/admin/api";
+import { queryKeys } from "@/lib/queryKeys";
 import type { UserDto } from "@/types/api";
 
 export function AdminUsers() {
-  const [users, setUsers] = useState<UserDto[]>([]);
+  const queryClient = useQueryClient();
   const [email, setEmail] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [tempPassword, setTempPassword] = useState("");
   const [isSystemAdmin, setIsSystemAdmin] = useState(false);
 
-  const reload = () => listUsers().then(setUsers);
-  useEffect(() => {
-    reload();
-  }, []);
+  const usersQuery = useQuery({
+    queryKey: queryKeys.admin.users(),
+    queryFn: () => listUsers(),
+  });
 
-  const submit = async (event: React.FormEvent) => {
+  const invalidate = () => queryClient.invalidateQueries({ queryKey: queryKeys.admin.users() });
+
+  const create = useMutation({
+    mutationFn: () => createUser({ email, displayName, tempPassword, isSystemAdmin }),
+    onSuccess: () => {
+      setEmail("");
+      setDisplayName("");
+      setTempPassword("");
+      setIsSystemAdmin(false);
+      toast.success("User created");
+      invalidate();
+    },
+    onError: () => toast.error("Failed to create user"),
+  });
+
+  const toggleActive = useMutation({
+    mutationFn: (user: UserDto) => setUserActive(user.id, !user.isActive),
+    onSuccess: (_data, user) => {
+      toast.success(user.isActive ? "User deactivated" : "User reactivated");
+      invalidate();
+    },
+    onError: () => toast.error("Failed to update user"),
+  });
+
+  const submit = (event: React.FormEvent) => {
     event.preventDefault();
-    await createUser({ email, displayName, tempPassword, isSystemAdmin });
-    setEmail("");
-    setDisplayName("");
-    setTempPassword("");
-    setIsSystemAdmin(false);
-    await reload();
+    create.mutate();
   };
 
   return (
@@ -50,7 +72,7 @@ export function AdminUsers() {
           />
           System admin
         </label>
-        <Button type="submit">Create user</Button>
+        <Button type="submit" disabled={create.isPending}>Create user</Button>
       </form>
 
       <div className="overflow-x-auto rounded-lg border">
@@ -65,7 +87,7 @@ export function AdminUsers() {
             </tr>
           </thead>
           <tbody>
-            {users.map((user) => (
+            {(usersQuery.data ?? []).map((user) => (
               <tr key={user.id} className="border-b last:border-0">
                 <td className="px-4 py-2">{user.displayName}</td>
                 <td className="px-4 py-2 text-muted-foreground">{user.email}</td>
@@ -79,10 +101,8 @@ export function AdminUsers() {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={async () => {
-                      await setUserActive(user.id, !user.isActive);
-                      await reload();
-                    }}
+                    onClick={() => toggleActive.mutate(user)}
+                    disabled={toggleActive.isPending}
                   >
                     {user.isActive ? "Deactivate" : "Reactivate"}
                   </Button>

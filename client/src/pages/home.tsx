@@ -1,22 +1,21 @@
-import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Folder, HardDrive } from "lucide-react";
 import { Link } from "react-router-dom";
 import { listSites } from "@/features/sites/api";
+import { queryKeys } from "@/lib/queryKeys";
 import type { SiteDto } from "@/types/api";
 
 export function Home() {
-  const [sites, setSites] = useState<SiteDto[]>([]);
-  const [loading, setLoading] = useState(true);
+  const {
+    data: sites = [],
+    isLoading,
+  } = useQuery({
+    queryKey: queryKeys.sites.list(),
+    queryFn: listSites,
+  });
 
-  useEffect(() => {
-    listSites()
-      .then(setSites)
-      .catch(() => setSites([]))
-      .finally(() => setLoading(false));
-  }, []);
-
-  if (loading) {
-    return <div className="text-sm text-muted-foreground">Loading…</div>;
+  if (isLoading) {
+    return <div className="text-sm text-muted-foreground">Loading.</div>;
   }
 
   return (
@@ -67,3 +66,5 @@ function formatBytes(bytes: number): string {
   if (bytes < 1024 * 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
   return `${(bytes / 1024 / 1024 / 1024).toFixed(1)} GB`;
 }
+
+export type { SiteDto };

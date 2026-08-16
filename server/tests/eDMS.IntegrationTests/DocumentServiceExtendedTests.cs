@@ -39,7 +39,7 @@ public sealed class DocumentServiceExtendedTests : IDisposable
             _currentUser,
             new AllowAllResolver(),
             new FakeAuditLogger(),
-            Options.Create(new StorageOptions { RootPath = "test-storage", MaxUploadSizeBytes = 1024 }));
+            new TestAppSettings { MaxUploadSizeBytes = 1024 });
     }
 
     public void Dispose() => _db.Dispose();
@@ -91,7 +91,7 @@ public sealed class DocumentServiceExtendedTests : IDisposable
         var other = new FakeCurrentUser(Guid.NewGuid());
         var otherService = new DocumentService(
             _db, _storage, other, new AllowAllResolver(), new FakeAuditLogger(),
-            Options.Create(new StorageOptions { MaxUploadSizeBytes = 1_000_000 }));
+            TestSupport.DefaultAppSettings());
         await otherService.CheckOutAsync(upload.DocumentId, default);
 
         await Assert.ThrowsAsync<ConflictException>(() =>
@@ -137,7 +137,7 @@ public sealed class DocumentServiceExtendedTests : IDisposable
         var other = new FakeCurrentUser(Guid.NewGuid());
         var otherService = new DocumentService(
             _db, _storage, other, new AllowAllResolver(), new FakeAuditLogger(),
-            Options.Create(new StorageOptions()));
+            TestSupport.DefaultAppSettings());
         await Assert.ThrowsAsync<ConflictException>(() =>
             otherService.CheckOutAsync(upload.DocumentId, default));
         await Assert.ThrowsAsync<ForbiddenException>(() =>
@@ -148,7 +148,7 @@ public sealed class DocumentServiceExtendedTests : IDisposable
         var admin = new FakeCurrentUser(Guid.NewGuid()) { IsAdmin = true };
         var adminService = new DocumentService(
             _db, _storage, admin, new AllowAllResolver(), new FakeAuditLogger(),
-            Options.Create(new StorageOptions()));
+            TestSupport.DefaultAppSettings());
         await adminService.CheckInAsync(upload.DocumentId, "admin checkin", default);
     }
 
@@ -182,7 +182,7 @@ public sealed class DocumentServiceExtendedTests : IDisposable
     {
         var anonymous = new DocumentService(
             _db, _storage, new FakeCurrentUser(null), new AllowAllResolver(), new FakeAuditLogger(),
-            Options.Create(new StorageOptions()));
+            TestSupport.DefaultAppSettings());
         await Assert.ThrowsAsync<ForbiddenException>(() =>
             anonymous.ListAsync(_libraryId, null, default));
     }

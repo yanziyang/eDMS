@@ -11,7 +11,6 @@ namespace eDMS.Infrastructure.Background;
 
 public sealed class RecycleBinPurgeService(
     IServiceScopeFactory scopeFactory,
-    IOptions<RecycleBinOptions> options,
     ILogger<RecycleBinPurgeService> logger) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -43,7 +42,9 @@ public sealed class RecycleBinPurgeService(
         using var scope = scopeFactory.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<IAppDbContext>();
         var storage = scope.ServiceProvider.GetRequiredService<IFileStorageProvider>();
-        var cutoff = DateTimeOffset.UtcNow.AddDays(-options.Value.RetentionDays);
+        var settings = scope.ServiceProvider.GetRequiredService<IAppSettings>();
+        var retentionDays = await settings.GetRecycleBinRetentionDaysAsync(cancellationToken);
+        var cutoff = DateTimeOffset.UtcNow.AddDays(-retentionDays);
 
         var expiredDocuments = await db.Documents.IgnoreQueryFilters()
             .Where(document => document.IsDeleted && document.DeletedAt != null && document.DeletedAt < cutoff)

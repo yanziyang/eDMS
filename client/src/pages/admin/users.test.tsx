@@ -1,10 +1,17 @@
 import { http, HttpResponse } from "msw";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { server } from "@/test/server";
+import { toast } from "sonner";
 import { AdminUsers } from "./users";
 
+vi.mock("sonner", () => ({
+  toast: { success: vi.fn(), error: vi.fn() },
+}));
+
+const mockedToast = vi.mocked(toast);
 const base = "http://localhost:5080/api/v1";
 
 function userDto(overrides: Record<string, unknown> = {}) {
@@ -20,7 +27,26 @@ function userDto(overrides: Record<string, unknown> = {}) {
   };
 }
 
+function renderUsers() {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
+  return {
+    queryClient,
+    ...render(
+      <QueryClientProvider client={queryClient}>
+        <AdminUsers />
+      </QueryClientProvider>,
+    ),
+  };
+}
+
 describe("AdminUsers", () => {
+  afterEach(() => {
+    vi.clearAllMocks();
+    vi.restoreAllMocks();
+  });
+
   it("lists users with status and role", async () => {
     server.use(
       http.get(`${base}/users`, () =>
@@ -31,7 +57,7 @@ describe("AdminUsers", () => {
       ),
     );
 
-    render(<AdminUsers />);
+    renderUsers();
 
     expect(await screen.findByText("Alice")).toBeInTheDocument();
     expect(screen.getByText("a@b.c")).toBeInTheDocument();
@@ -57,7 +83,7 @@ describe("AdminUsers", () => {
     );
 
     const user = userEvent.setup();
-    render(<AdminUsers />);
+    renderUsers();
     await screen.findByText("Alice");
 
     const textInputs = screen.getAllByRole("textbox");
@@ -80,6 +106,24 @@ describe("AdminUsers", () => {
     });
   });
 
+  it("reports a failed user creation", async () => {
+    server.use(
+      http.get(`${base}/users`, () => HttpResponse.json([userDto()])),
+      http.post(`${base}/users`, () => new HttpResponse(null, { status: 500 })),
+    );
+
+    const user = userEvent.setup();
+    renderUsers();
+    await screen.findByText("Alice");
+
+    await user.type(screen.getAllByRole("textbox")[0], "new@x.c");
+    await user.type(screen.getAllByRole("textbox")[1], "New");
+    await user.type(screen.getAllByRole("textbox")[2], "temp-pass");
+    await user.click(screen.getByRole("button", { name: "Create user" }));
+
+    await waitFor(() => expect(mockedToast.error).toHaveBeenCalledWith("Failed to create user"));
+  });
+
   it("deactivates an active user", async () => {
     const users = [userDto()];
     const urls: string[] = [];
@@ -93,7 +137,7 @@ describe("AdminUsers", () => {
     );
 
     const user = userEvent.setup();
-    render(<AdminUsers />);
+    renderUsers();
 
     await user.click(await screen.findByRole("button", { name: "Deactivate" }));
 
@@ -115,11 +159,25 @@ describe("AdminUsers", () => {
     );
 
     const user = userEvent.setup();
-    render(<AdminUsers />);
+    renderUsers();
 
     await user.click(await screen.findByRole("button", { name: "Reactivate" }));
 
     await waitFor(() => expect(urls).toHaveLength(1));
     expect(await screen.findByText("Active")).toBeInTheDocument();
+  });
+
+  it("reports a failed deactivation", async () => {
+    server.use(
+      http.get(`${base}/users`, () => HttpResponse.json([userDto()])),
+      http.post(`${base}/users/u1/deactivate`, () => new HttpResponse(null, { status: 500 })),
+    );
+
+    const user = userEvent.setup();
+    renderUsers();
+
+    await user.click(await screen.findByRole("button", { name: "Deactivate" }));
+
+    await waitFor(() => expect(mockedToast.error).toHaveBeenCalledWith("Failed to update user"));
   });
 });

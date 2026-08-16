@@ -35,5 +35,7 @@ public interface IAppDbContext
 
     DbSet<ItemPermission> ItemPermissions { get; }
 
+    DbSet<AppSetting> AppSettings { get; }
+
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

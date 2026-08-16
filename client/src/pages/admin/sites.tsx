@@ -1,25 +1,47 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { createSite, deleteSite, listSites } from "@/features/sites/api";
+import { queryKeys } from "@/lib/queryKeys";
 import type { SiteDto } from "@/types/api";
 
 export function AdminSites() {
-  const [sites, setSites] = useState<SiteDto[]>([]);
+  const queryClient = useQueryClient();
   const [name, setName] = useState("");
   const [urlSlug, setUrlSlug] = useState("");
 
-  const reload = () => listSites().then(setSites);
-  useEffect(() => {
-    reload();
-  }, []);
+  const sitesQuery = useQuery({
+    queryKey: queryKeys.sites.list(),
+    queryFn: listSites,
+  });
 
-  const submit = async (event: React.FormEvent) => {
+  const invalidate = () => queryClient.invalidateQueries({ queryKey: queryKeys.sites.list() });
+
+  const create = useMutation({
+    mutationFn: () => createSite({ name, urlSlug }),
+    onSuccess: () => {
+      setName("");
+      setUrlSlug("");
+      toast.success("Site created");
+      invalidate();
+    },
+    onError: () => toast.error("Failed to create site"),
+  });
+
+  const remove = useMutation({
+    mutationFn: (site: SiteDto) => deleteSite(site.id),
+    onSuccess: () => {
+      toast.success("Site deleted");
+      invalidate();
+    },
+    onError: () => toast.error("Failed to delete site"),
+  });
+
+  const submit = (event: React.FormEvent) => {
     event.preventDefault();
-    await createSite({ name, urlSlug });
-    setName("");
-    setUrlSlug("");
-    await reload();
+    create.mutate();
   };
 
   return (
@@ -33,7 +55,7 @@ export function AdminSites() {
           <span className="text-xs text-muted-foreground">URL slug</span>
           <Input value={urlSlug} onChange={(event) => setUrlSlug(event.target.value)} required />
         </div>
-        <Button type="submit">Create site</Button>
+        <Button type="submit" disabled={create.isPending}>Create site</Button>
       </form>
 
       <div className="overflow-x-auto rounded-lg border">
@@ -46,7 +68,7 @@ export function AdminSites() {
             </tr>
           </thead>
           <tbody>
-            {sites.map((site) => (
+            {(sitesQuery.data ?? []).map((site) => (
               <tr key={site.id} className="border-b last:border-0">
                 <td className="px-4 py-2">{site.name}</td>
                 <td className="px-4 py-2 text-muted-foreground">{site.urlSlug}</td>
@@ -54,10 +76,8 @@ export function AdminSites() {
                   <Button
                     variant="destructive"
                     size="sm"
-                    onClick={async () => {
-                      await deleteSite(site.id);
-                      await reload();
-                    }}
+                    onClick={() => remove.mutate(site)}
+                    disabled={remove.isPending}
                   >
                     Delete
                   </Button>

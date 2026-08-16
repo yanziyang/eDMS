@@ -33,6 +33,22 @@ if (!window.matchMedia) {
   });
 }
 
+if (!Element.prototype.hasPointerCapture) {
+  Object.defineProperty(Element.prototype, "hasPointerCapture", {
+    writable: true,
+    configurable: true,
+    value: () => false,
+  });
+}
+
+if (!Element.prototype.scrollIntoView) {
+  Object.defineProperty(Element.prototype, "scrollIntoView", {
+    writable: true,
+    configurable: true,
+    value: () => {},
+  });
+}
+
 if (!window.ResizeObserver) {
   class ResizeObserverStub {
     observe() {}

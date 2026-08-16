@@ -51,11 +51,11 @@ public sealed class RecycleBinPurgeServiceTests
         var services = new ServiceCollection();
         services.AddSingleton<IAppDbContext>(db);
         services.AddSingleton<IFileStorageProvider>(storage);
+        services.AddSingleton<IAppSettings>(new TestAppSettings { RecycleBinRetentionDays = 90 });
         var provider = services.BuildServiceProvider();
 
         var purge = new RecycleBinPurgeService(
             provider.GetRequiredService<IServiceScopeFactory>(),
-            Options.Create(new RecycleBinOptions { RetentionDays = 90 }),
             NullLogger<RecycleBinPurgeService>.Instance);
 
         using var cancellation = new CancellationTokenSource();

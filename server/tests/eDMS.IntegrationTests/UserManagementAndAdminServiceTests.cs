@@ -150,8 +150,11 @@ public sealed class UserManagementAndAdminServiceTests : IDisposable
 
         var admin = new AdminService(
             _db,
-            Options.Create(new StorageOptions { MaxUploadSizeBytes = 123 }),
-            Options.Create(new RecycleBinOptions { RetentionDays = 45 }),
+            new TestAppSettings
+            {
+                MaxUploadSizeBytes = 123,
+                RecycleBinRetentionDays = 45,
+            },
             Options.Create(new JwtOptions { AccessTokenLifetimeMinutes = 15, RefreshTokenLifetimeDays = 14 }));
 
         var siteLog = await admin.ListAuditLogAsync(site.Id, default);

@@ -44,6 +44,27 @@ public interface IDocumentService
 
     Task RestoreVersionAsync(Guid documentId, Guid versionId, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Moves a document to another folder/library within the same Site (FR-DOC-06).
+    /// Returns the document id; the version history travels with the document.
+    /// </summary>
+    Task<Guid> MoveAsync(
+        Guid documentId,
+        Guid destinationLibraryId,
+        Guid? destinationFolderId,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Copies the current version of a document to another folder/library within the
+    /// same Site as a new Document at v1.0 with no link to the source (FR-DOC-06).
+    /// Returns the new document id.
+    /// </summary>
+    Task<Guid> CopyAsync(
+        Guid documentId,
+        Guid destinationLibraryId,
+        Guid? destinationFolderId,
+        CancellationToken cancellationToken = default);
+
     Task CheckOutAsync(Guid documentId, CancellationToken cancellationToken = default);
 
     Task CheckInAsync(Guid documentId, string? comment, CancellationToken cancellationToken = default);

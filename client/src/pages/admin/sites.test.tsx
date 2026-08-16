@@ -1,10 +1,17 @@
 import { http, HttpResponse } from "msw";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { server } from "@/test/server";
+import { toast } from "sonner";
 import { AdminSites } from "./sites";
 
+vi.mock("sonner", () => ({
+  toast: { success: vi.fn(), error: vi.fn() },
+}));
+
+const mockedToast = vi.mocked(toast);
 const base = "http://localhost:5080/api/v1";
 
 function siteDto(overrides: Record<string, unknown> = {}) {
@@ -20,13 +27,32 @@ function siteDto(overrides: Record<string, unknown> = {}) {
   };
 }
 
+function renderSites() {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
+  return {
+    queryClient,
+    ...render(
+      <QueryClientProvider client={queryClient}>
+        <AdminSites />
+      </QueryClientProvider>,
+    ),
+  };
+}
+
 describe("AdminSites", () => {
+  afterEach(() => {
+    vi.clearAllMocks();
+    vi.restoreAllMocks();
+  });
+
   it("lists sites with their slugs", async () => {
     server.use(
       http.get(`${base}/sites`, () => HttpResponse.json([siteDto(), siteDto({ id: "s2", name: "Site Two", urlSlug: "site-two" })])),
     );
 
-    render(<AdminSites />);
+    renderSites();
 
     expect(await screen.findByText("Site One")).toBeInTheDocument();
     expect(screen.getByText("site-one")).toBeInTheDocument();
@@ -47,7 +73,7 @@ describe("AdminSites", () => {
     );
 
     const user = userEvent.setup();
-    render(<AdminSites />);
+    renderSites();
     await screen.findByText("Site One");
 
     const inputs = screen.getAllByRole("textbox");
@@ -59,6 +85,23 @@ describe("AdminSites", () => {
     expect(inputs[0]).toHaveValue("");
     expect(inputs[1]).toHaveValue("");
     await expect(requests[0].json()).resolves.toEqual({ name: "New Site", urlSlug: "new-site" });
+  });
+
+  it("reports a failed site creation", async () => {
+    server.use(
+      http.get(`${base}/sites`, () => HttpResponse.json([siteDto()])),
+      http.post(`${base}/sites`, () => new HttpResponse(null, { status: 500 })),
+    );
+
+    const user = userEvent.setup();
+    renderSites();
+    await screen.findByText("Site One");
+
+    await user.type(screen.getAllByRole("textbox")[0], "New Site");
+    await user.type(screen.getAllByRole("textbox")[1], "new-site");
+    await user.click(screen.getByRole("button", { name: "Create site" }));
+
+    await waitFor(() => expect(mockedToast.error).toHaveBeenCalledWith("Failed to create site"));
   });
 
   it("deletes a site and reloads", async () => {
@@ -74,11 +117,25 @@ describe("AdminSites", () => {
     );
 
     const user = userEvent.setup();
-    render(<AdminSites />);
+    renderSites();
 
     await user.click(await screen.findByRole("button", { name: "Delete" }));
 
     await waitFor(() => expect(urls).toHaveLength(1));
     await waitFor(() => expect(screen.queryByText("Site One")).not.toBeInTheDocument());
+  });
+
+  it("reports a failed site deletion", async () => {
+    server.use(
+      http.get(`${base}/sites`, () => HttpResponse.json([siteDto()])),
+      http.delete(`${base}/sites/s1`, () => new HttpResponse(null, { status: 500 })),
+    );
+
+    const user = userEvent.setup();
+    renderSites();
+
+    await user.click(await screen.findByRole("button", { name: "Delete" }));
+
+    await waitFor(() => expect(mockedToast.error).toHaveBeenCalledWith("Failed to delete site"));
   });
 });

@@ -18,9 +18,15 @@ public sealed record StorageReportDto(Guid SiteId, string SiteName, long UsedByt
 public sealed record AdminSettingsDto(
     long MaxUploadSizeBytes,
     int RecycleBinRetentionDays,
+    bool SiteCreationRestricted,
     int AccessTokenLifetimeMinutes,
     int RefreshTokenLifetimeDays,
     string AppName);
+
+public sealed record UpdateAdminSettingsRequest(
+    long? MaxUploadSizeBytes,
+    int? RecycleBinRetentionDays,
+    bool? SiteCreationRestricted);
 
 public interface IAdminService
 {
@@ -31,4 +37,8 @@ public interface IAdminService
     Task<IReadOnlyList<StorageReportDto>> GetStorageReportAsync(CancellationToken cancellationToken = default);
 
     Task<AdminSettingsDto> GetSettingsAsync(CancellationToken cancellationToken = default);
+
+    Task UpdateSettingsAsync(
+        UpdateAdminSettingsRequest request,
+        CancellationToken cancellationToken = default);
 }

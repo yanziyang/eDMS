@@ -5,6 +5,10 @@ export function listSites(): Promise<SiteDto[]> {
   return request<SiteDto[]>("/sites");
 }
 
+export function getSite(id: string): Promise<SiteDto> {
+  return request<SiteDto>(`/sites/${id}`);
+}
+
 export function createSite(input: {
   name: string;
   description?: string;

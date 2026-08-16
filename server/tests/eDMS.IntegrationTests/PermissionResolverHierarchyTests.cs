@@ -3,6 +3,7 @@ using eDMS.Application.Common.Interfaces;
 using eDMS.Domain;
 using eDMS.Infrastructure.Persistence;
 using eDMS.Infrastructure.Security;
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 
@@ -10,6 +11,7 @@ namespace eDMS.IntegrationTests;
 
 public sealed class PermissionResolverHierarchyTests : IDisposable
 {
+    private readonly SqliteConnection _connection;
     private readonly AppDbContext _db;
     private readonly PermissionResolver _resolver;
     private readonly MemoryCache _cache = new(new MemoryCacheOptions());
@@ -25,10 +27,14 @@ public sealed class PermissionResolverHierarchyTests : IDisposable
 
     public PermissionResolverHierarchyTests()
     {
+        _connection = new SqliteConnection("Data Source=:memory:");
+        _connection.Open();
         var options = new DbContextOptionsBuilder<AppDbContext>()
-            .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .UseSnakeCaseNamingConvention()
+            .UseSqlite(_connection)
             .Options;
         _db = new AppDbContext(options);
+        _db.Database.EnsureCreated();
 
         var site = new Site { Name = "Test", UrlSlug = "test" };
         site.SetCreator(_userId);
@@ -63,6 +69,7 @@ public sealed class PermissionResolverHierarchyTests : IDisposable
         _db.Documents.Add(documentInFolder);
         var groupA = new Group { Name = "A" };
         var groupB = new Group { Name = "B" };
+        _db.Users.Add(new ApplicationUser { Id = _userId, UserName = "user", Email = "user@edms.test" });
         _db.Groups.Add(groupA);
         _db.Groups.Add(groupB);
         _db.SaveChanges();
@@ -83,7 +90,11 @@ public sealed class PermissionResolverHierarchyTests : IDisposable
             new PermissionCacheInvalidator());
     }
 
-    public void Dispose() => _db.Dispose();
+    public void Dispose()
+    {
+        _db.Dispose();
+        _connection.Dispose();
+    }
 
     [Fact]
     public async Task No_grants_yields_no_access_at_every_level()

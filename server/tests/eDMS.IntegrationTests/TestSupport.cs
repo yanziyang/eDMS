@@ -2,6 +2,7 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 using eDMS.Application.Auth;
+using eDMS.Application.Common.Interfaces;
 using eDMS.Domain;
 using eDMS.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Identity;
@@ -137,4 +138,27 @@ internal static class TestSupport
         using var problem = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
         Assert.NotNull(problem.RootElement.GetProperty("title").GetString());
     }
+
+    public static TestAppSettings DefaultAppSettings() => new();
+}
+
+internal sealed class TestAppSettings : IAppSettings
+{
+    public long MaxUploadSizeBytes { get; set; } = 262_144_000;
+
+    public int RecycleBinRetentionDays { get; set; } = 90;
+
+    public bool SiteCreationRestricted { get; set; }
+
+    public Task<long> GetMaxUploadSizeBytesAsync(CancellationToken cancellationToken = default) =>
+        Task.FromResult(MaxUploadSizeBytes);
+
+    public Task<int> GetRecycleBinRetentionDaysAsync(CancellationToken cancellationToken = default) =>
+        Task.FromResult(RecycleBinRetentionDays);
+
+    public Task<bool> GetSiteCreationRestrictedAsync(CancellationToken cancellationToken = default) =>
+        Task.FromResult(SiteCreationRestricted);
+
+    public Task UpsertAsync(IReadOnlyCollection<(string Key, string Value)> updates, CancellationToken cancellationToken = default) =>
+        Task.CompletedTask;
 }

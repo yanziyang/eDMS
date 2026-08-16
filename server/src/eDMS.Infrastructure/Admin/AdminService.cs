@@ -1,5 +1,6 @@
 using eDMS.Application.Admin;
 using eDMS.Application.Common.Interfaces;
+using eDMS.Domain;
 using eDMS.Infrastructure.Options;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -8,8 +9,7 @@ namespace eDMS.Infrastructure.Admin;
 
 public sealed class AdminService(
     IAppDbContext db,
-    IOptions<StorageOptions> storageOptions,
-    IOptions<RecycleBinOptions> recycleBinOptions,
+    IAppSettings appSettings,
     IOptions<JwtOptions> jwtOptions) : IAdminService
 {
     public async Task<IReadOnlyList<AuditLogDto>> ListAuditLogAsync(
@@ -59,13 +59,35 @@ public sealed class AdminService(
         return report.OrderByDescending(item => item.UsedBytes).ToList();
     }
 
-    public Task<AdminSettingsDto> GetSettingsAsync(CancellationToken cancellationToken = default)
+    public async Task<AdminSettingsDto> GetSettingsAsync(CancellationToken cancellationToken = default)
     {
-        return Task.FromResult(new AdminSettingsDto(
-            storageOptions.Value.MaxUploadSizeBytes,
-            recycleBinOptions.Value.RetentionDays,
+        return new AdminSettingsDto(
+            await appSettings.GetMaxUploadSizeBytesAsync(cancellationToken),
+            await appSettings.GetRecycleBinRetentionDaysAsync(cancellationToken),
+            await appSettings.GetSiteCreationRestrictedAsync(cancellationToken),
             jwtOptions.Value.AccessTokenLifetimeMinutes,
             jwtOptions.Value.RefreshTokenLifetimeDays,
-            "eDMS"));
+            "eDMS");
+    }
+
+    public async Task UpdateSettingsAsync(
+        UpdateAdminSettingsRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var updates = new List<(string Key, string Value)>();
+        if (request.MaxUploadSizeBytes is { } maxUpload)
+        {
+            updates.Add((AppSettingKeys.MaxUploadSizeBytes, maxUpload.ToString()));
+        }
+        if (request.RecycleBinRetentionDays is { } retention)
+        {
+            updates.Add((AppSettingKeys.RecycleBinRetentionDays, retention.ToString()));
+        }
+        if (request.SiteCreationRestricted is { } restricted)
+        {
+            updates.Add((AppSettingKeys.SiteCreationRestricted, restricted ? "true" : "false"));
+        }
+
+        await appSettings.UpsertAsync(updates, cancellationToken);
     }
 }

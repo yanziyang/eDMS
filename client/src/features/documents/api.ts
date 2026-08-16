@@ -1,5 +1,5 @@
 import { request, requestBlob } from "@/lib/api-client";
-import type { ItemDto, LibraryDto, UploadResult } from "@/types/api";
+import type { DocumentDto, DocumentVersionDto, ItemDto, LibraryDto, UploadResult } from "@/types/api";
 
 export function listLibraries(siteId: string): Promise<LibraryDto[]> {
   return request<LibraryDto[]>(`/sites/${siteId}/libraries`);
@@ -36,6 +36,26 @@ export function deleteDocument(documentId: string): Promise<void> {
   return request<void>(`/documents/${documentId}`, { method: "DELETE" });
 }
 
+export function moveDocument(
+  documentId: string,
+  input: { destinationLibraryId: string; destinationFolderId: string | null },
+): Promise<string> {
+  return request<string>(`/documents/${documentId}/move`, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export function copyDocument(
+  documentId: string,
+  input: { destinationLibraryId: string; destinationFolderId: string | null },
+): Promise<string> {
+  return request<string>(`/documents/${documentId}/copy`, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
 export function deleteFolder(folderId: string): Promise<void> {
   return request<void>(`/folders/${folderId}`, { method: "DELETE" });
 }
@@ -50,4 +70,38 @@ export async function downloadDocument(documentId: string, fileName: string): Pr
   anchor.click();
   anchor.remove();
   URL.revokeObjectURL(url);
+}
+
+export function getDocument(documentId: string): Promise<DocumentDto> {
+  return request<DocumentDto>(`/documents/${documentId}`);
+}
+
+export function updateDocument(
+  documentId: string,
+  input: { name?: string; title?: string | null; description?: string | null },
+): Promise<void> {
+  return request<void>(`/documents/${documentId}`, { method: "PUT", body: JSON.stringify(input) });
+}
+
+export function listDocumentVersions(documentId: string): Promise<DocumentVersionDto[]> {
+  return request<DocumentVersionDto[]>(`/documents/${documentId}/versions`);
+}
+
+export function restoreVersion(documentId: string, versionId: string): Promise<void> {
+  return request<void>(`/documents/${documentId}/versions/${versionId}/restore`, { method: "POST" });
+}
+
+export function checkOutDocument(documentId: string): Promise<void> {
+  return request<void>(`/documents/${documentId}/checkout`, { method: "POST" });
+}
+
+export function checkInDocument(documentId: string, comment?: string): Promise<void> {
+  return request<void>(`/documents/${documentId}/checkin`, {
+    method: "POST",
+    body: JSON.stringify({ comment: comment ?? null }),
+  });
+}
+
+export function discardCheckout(documentId: string): Promise<void> {
+  return request<void>(`/documents/${documentId}/discard-checkout`, { method: "POST" });
 }

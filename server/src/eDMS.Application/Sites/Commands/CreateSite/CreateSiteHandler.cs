@@ -8,6 +8,7 @@ namespace eDMS.Application.Sites.Commands.CreateSite;
 public sealed class CreateSiteHandler(
     IAppDbContext db,
     ICurrentUser currentUser,
+    IAppSettings appSettings,
     IPermissionCacheInvalidator cacheInvalidator) : IRequestHandler<CreateSiteCommand, Guid>
 {
     public async Task<Guid> Handle(CreateSiteCommand command, CancellationToken cancellationToken)
@@ -15,6 +16,13 @@ public sealed class CreateSiteHandler(
         if (currentUser.UserId is not { } userId)
         {
             throw new Common.Exceptions.ForbiddenException();
+        }
+
+        // FR-ADMIN-04: admins can restrict site creation (FS §16 assumption 7);
+        // the default allows any authenticated user.
+        if (await appSettings.GetSiteCreationRestrictedAsync(cancellationToken) && !currentUser.IsSystemAdmin)
+        {
+            throw new Common.Exceptions.ForbiddenException("Site creation is restricted to administrators.");
         }
 
         var slugTaken = await db.Sites.AnyAsync(site => site.UrlSlug == command.UrlSlug, cancellationToken);

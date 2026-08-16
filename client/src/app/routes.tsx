@@ -12,6 +12,9 @@ import { SiteHome } from "@/pages/site-home";
 import { AdminGroups } from "@/pages/admin/groups";
 import { AdminSites } from "@/pages/admin/sites";
 import { AdminUsers } from "@/pages/admin/users";
+import { AdminAuditLog } from "@/pages/admin/audit-log";
+import { AdminSettings } from "@/pages/admin/settings";
+import { AdminStorage } from "@/pages/admin/storage";
 import { LibraryBrowser } from "@/pages/library";
 
 export const router = createBrowserRouter([
@@ -36,6 +39,9 @@ export const router = createBrowserRouter([
           { path: "users", element: <AdminUsers /> },
           { path: "groups", element: <AdminGroups /> },
           { path: "sites", element: <AdminSites /> },
+          { path: "storage", element: <AdminStorage /> },
+          { path: "audit-log", element: <AdminAuditLog /> },
+          { path: "settings", element: <AdminSettings /> },
         ],
       },
       { path: "*", element: <Navigate to="/" replace /> },

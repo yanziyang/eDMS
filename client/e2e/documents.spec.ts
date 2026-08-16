@@ -20,6 +20,7 @@ test.describe.serial("document lifecycle", () => {
     await page.goto(`/sites/${siteSlug}/libraries/${libraryId}`);
     await expect(page.getByRole("heading", { name: "Documents" })).toBeVisible();
 
+    await page.getByRole("button", { name: "Upload", exact: true }).click();
     await page.locator('input[type="file"]').setInputFiles({
       name: fileName,
       mimeType: "text/plain",
@@ -46,7 +47,7 @@ test.describe.serial("document lifecycle", () => {
     const downloadPromise = page.waitForEvent("download");
     await page
       .locator("tr", { hasText: fileName })
-      .getByRole("button", { name: "Download" })
+      .getByRole("button", { name: /Download/ })
       .click();
     const download = await downloadPromise;
 

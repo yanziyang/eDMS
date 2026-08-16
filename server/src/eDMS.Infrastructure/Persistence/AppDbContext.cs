@@ -41,6 +41,8 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options)
 
     public DbSet<ItemPermission> ItemPermissions => Set<ItemPermission>();
 
+    public DbSet<AppSetting> AppSettings => Set<AppSetting>();
+
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
         // The SQLite provider has no DateTimeOffset support; store as UTC binary.
@@ -76,6 +78,14 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options)
         builder.ApplyConfiguration(new TagConfiguration());
         builder.ApplyConfiguration(new DocumentTagConfiguration());
         builder.ApplyConfiguration(new ItemPermissionConfiguration());
+
+        builder.Entity<AppSetting>(entity =>
+        {
+            entity.ToTable("app_settings");
+            entity.HasKey(setting => setting.Key);
+            entity.Property(setting => setting.Key).HasMaxLength(128);
+            entity.Property(setting => setting.Value).HasMaxLength(2048);
+        });
 
         ApplyProviderSpecificColumnTypes(builder);
     }

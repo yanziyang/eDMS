@@ -77,7 +77,7 @@ public sealed class SitesAndLibrariesApiTests : IClassFixture<ApiFactory>
     }
 
     [Fact]
-    public async Task Non_admin_cannot_create_or_update_sites()
+    public async Task Non_admin_can_create_sites_by_default_but_cannot_manage_foreign_sites()
     {
         var email = TestSupport.UniqueEmail();
         await TestSupport.SeedUserAsync(_factory, email, "Password1!");
@@ -86,13 +86,19 @@ public sealed class SitesAndLibrariesApiTests : IClassFixture<ApiFactory>
 
         var createResponse = await client.PostAsJsonAsync(
             "/api/v1/sites",
-            new { name = "Nope", urlSlug = TestSupport.UniqueSlug() });
-        Assert.Equal(HttpStatusCode.Forbidden, createResponse.StatusCode);
+            new { name = "My Site", urlSlug = TestSupport.UniqueSlug() });
+        Assert.Equal(HttpStatusCode.Created, createResponse.StatusCode);
+        var ownSiteId = Guid.Parse((await createResponse.Content.ReadAsStringAsync()).Trim('"'));
 
         var listResponse = await client.GetAsync("/api/v1/sites");
-        Assert.Equal(HttpStatusCode.OK, listResponse.StatusCode);
         var sites = await listResponse.Content.ReadFromJsonAsync<List<SiteDto>>();
-        Assert.Empty(sites!);
+        Assert.Contains(sites!, site => site.Id == ownSiteId);
+
+        // Managing a site the user has no access to is still forbidden.
+        var foreignUpdate = await client.PutAsJsonAsync(
+            $"/api/v1/sites/{Guid.NewGuid()}",
+            new { name = "X", description = (string?)null, storageQuotaBytes = (long?)null });
+        await TestSupport.AssertProblemAsync(foreignUpdate, HttpStatusCode.Forbidden);
     }
 
     [Fact]

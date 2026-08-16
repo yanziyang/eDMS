@@ -1,7 +1,7 @@
 import { http, HttpResponse } from "msw";
 import { describe, expect, it } from "vitest";
 import { server } from "@/test/server";
-import { createSite, deleteSite, listSites, updateSite } from "./api";
+import { createSite, deleteSite, getSite, listSites, updateSite } from "./api";
 
 const base = "http://localhost:5080/api/v1";
 
@@ -14,6 +14,16 @@ describe("sites api", () => {
     const result = await listSites();
 
     expect(result).toEqual([{ id: "s1", name: "Site" }]);
+  });
+
+  it("getSite gets a site by id", async () => {
+    server.use(
+      http.get(`${base}/sites/s1`, () => HttpResponse.json({ id: "s1", name: "Site" })),
+    );
+
+    const result = await getSite("s1");
+
+    expect(result).toEqual({ id: "s1", name: "Site" });
   });
 
   it("createSite posts name, description and slug", async () => {

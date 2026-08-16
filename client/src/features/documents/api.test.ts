@@ -2,13 +2,22 @@ import { http, HttpResponse } from "msw";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { server } from "@/test/server";
 import {
+  checkInDocument,
+  checkOutDocument,
+  copyDocument,
   createFolder,
   deleteDocument,
   deleteFolder,
+  discardCheckout,
   downloadDocument,
+  getDocument,
+  listDocumentVersions,
   listFolderItems,
   listItems,
   listLibraries,
+  moveDocument,
+  restoreVersion,
+  updateDocument,
   uploadToFolder,
   uploadToLibrary,
 } from "./api";
@@ -156,6 +165,44 @@ describe("documents api", () => {
     expect(called).toBe(true);
   });
 
+  it("moveDocument posts the destination", async () => {
+    const requests: Request[] = [];
+    server.use(
+      http.post(`${base}/documents/d1/move`, async ({ request }) => {
+        requests.push(request);
+        return HttpResponse.json("d2");
+      }),
+    );
+
+    const id = await moveDocument("d1", { destinationLibraryId: "l2", destinationFolderId: null });
+
+    expect(id).toBe("d2");
+    expect(requests).toHaveLength(1);
+    await expect(requests[0].json()).resolves.toEqual({
+      destinationLibraryId: "l2",
+      destinationFolderId: null,
+    });
+  });
+
+  it("copyDocument posts the destination", async () => {
+    const requests: Request[] = [];
+    server.use(
+      http.post(`${base}/documents/d1/copy`, async ({ request }) => {
+        requests.push(request);
+        return HttpResponse.json("d9");
+      }),
+    );
+
+    const id = await copyDocument("d1", { destinationLibraryId: "l2", destinationFolderId: "f3" });
+
+    expect(id).toBe("d9");
+    expect(requests).toHaveLength(1);
+    await expect(requests[0].json()).resolves.toEqual({
+      destinationLibraryId: "l2",
+      destinationFolderId: "f3",
+    });
+  });
+
   it("downloadDocument fetches the blob and triggers an anchor download", async () => {
     server.use(
       http.get(`${base}/documents/d1/download`, () =>
@@ -177,5 +224,114 @@ describe("documents api", () => {
     await expect(blob.text()).resolves.toBe("file-bytes");
     expect(clickSpy).toHaveBeenCalledTimes(1);
     expect(revokeObjectURL).toHaveBeenCalledWith("blob:fake-url");
+  });
+
+  it("getDocument gets a document by id", async () => {
+    server.use(
+      http.get(`${base}/documents/d1`, () => HttpResponse.json({ id: "d1", name: "a.txt" })),
+    );
+
+    const result = await getDocument("d1");
+
+    expect(result).toEqual({ id: "d1", name: "a.txt" });
+  });
+
+  it("updateDocument puts the update payload", async () => {
+    const requests: Request[] = [];
+    server.use(
+      http.put(`${base}/documents/d1`, async ({ request }) => {
+        requests.push(request);
+        return new HttpResponse(null, { status: 204 });
+      }),
+    );
+
+    await updateDocument("d1", { name: "renamed.txt", title: "T", description: "D" });
+
+    expect(requests).toHaveLength(1);
+    await expect(requests[0].json()).resolves.toEqual({ name: "renamed.txt", title: "T", description: "D" });
+  });
+
+  it("listDocumentVersions gets the version history", async () => {
+    server.use(
+      http.get(`${base}/documents/d1/versions`, () =>
+        HttpResponse.json([{ id: "v1", versionMajor: 1, versionMinor: 0 }]),
+      ),
+    );
+
+    const result = await listDocumentVersions("d1");
+
+    expect(result).toEqual([{ id: "v1", versionMajor: 1, versionMinor: 0 }]);
+  });
+
+  it("restoreVersion posts the restore action", async () => {
+    let called = false;
+    server.use(
+      http.post(`${base}/documents/d1/versions/v1/restore`, () => {
+        called = true;
+        return new HttpResponse(null, { status: 204 });
+      }),
+    );
+
+    await restoreVersion("d1", "v1");
+
+    expect(called).toBe(true);
+  });
+
+  it("checkOutDocument posts the checkout action", async () => {
+    let called = false;
+    server.use(
+      http.post(`${base}/documents/d1/checkout`, () => {
+        called = true;
+        return new HttpResponse(null, { status: 204 });
+      }),
+    );
+
+    await checkOutDocument("d1");
+
+    expect(called).toBe(true);
+  });
+
+  it("checkInDocument posts the checkin action with a comment", async () => {
+    const requests: Request[] = [];
+    server.use(
+      http.post(`${base}/documents/d1/checkin`, async ({ request }) => {
+        requests.push(request);
+        return new HttpResponse(null, { status: 204 });
+      }),
+    );
+
+    await checkInDocument("d1", "Fixed typo");
+
+    expect(requests).toHaveLength(1);
+    await expect(requests[0].json()).resolves.toEqual({ comment: "Fixed typo" });
+  });
+
+  it("checkInDocument posts a null comment when none is given", async () => {
+    const requests: Request[] = [];
+    server.use(
+      http.post(`${base}/documents/d1/checkin`, async ({ request }) => {
+        requests.push(request);
+        return new HttpResponse(null, { status: 204 });
+      }),
+    );
+
+    await checkInDocument("d1");
+
+    expect(requests).toHaveLength(1);
+    await expect(requests[0].json()).resolves.toEqual({ comment: null });
+  });
+
+  it("discardCheckout posts the discard action", async () => {
+    let called = false;
+    server.use(
+      http.post(`${base}/documents/d1/discard-checkout`, () => {
+        called = true;
+        return new HttpResponse(null, { status: 204 });
+      }),
+    );
+
+    await discardCheckout("d1");
+
+    expect(called).toBe(true);
   });
 });

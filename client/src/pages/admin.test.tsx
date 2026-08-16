@@ -12,6 +12,9 @@ function renderAdmin(initialPath = "/admin/users") {
           <Route path="users" element={<div>USERS_PANEL</div>} />
           <Route path="groups" element={<div>GROUPS_PANEL</div>} />
           <Route path="sites" element={<div>SITES_PANEL</div>} />
+          <Route path="storage" element={<div>STORAGE_PANEL</div>} />
+          <Route path="audit-log" element={<div>AUDIT_LOG_PANEL</div>} />
+          <Route path="settings" element={<div>SETTINGS_PANEL</div>} />
         </Route>
       </Routes>
     </MemoryRouter>,
@@ -27,6 +30,23 @@ describe("Admin", () => {
     expect(screen.getByRole("link", { name: "Users" })).toHaveAttribute("href", "/admin/users");
     expect(screen.getByRole("link", { name: "Groups" })).toHaveAttribute("href", "/admin/groups");
     expect(screen.getByRole("link", { name: "Sites" })).toHaveAttribute("href", "/admin/sites");
+    expect(screen.getByRole("link", { name: "Storage" })).toHaveAttribute("href", "/admin/storage");
+    expect(screen.getByRole("link", { name: "Audit Log" })).toHaveAttribute("href", "/admin/audit-log");
+    expect(screen.getByRole("link", { name: "Settings" })).toHaveAttribute("href", "/admin/settings");
+  });
+
+  it("renders the storage, audit log, and settings tab content", async () => {
+    const user = userEvent.setup();
+    renderAdmin();
+
+    await user.click(screen.getByRole("link", { name: "Storage" }));
+    expect(screen.getByText("STORAGE_PANEL")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("link", { name: "Audit Log" }));
+    expect(screen.getByText("AUDIT_LOG_PANEL")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("link", { name: "Settings" }));
+    expect(screen.getByText("SETTINGS_PANEL")).toBeInTheDocument();
   });
 
   it("marks the active tab and switches content", async () => {

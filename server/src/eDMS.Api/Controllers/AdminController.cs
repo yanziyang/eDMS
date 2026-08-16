@@ -20,4 +20,13 @@ public sealed class AdminController(IAdminService admin) : ControllerBase
     [HttpGet("admin/settings")]
     public async Task<IActionResult> Settings(CancellationToken cancellationToken) =>
         Ok(await admin.GetSettingsAsync(cancellationToken));
+
+    [HttpPut("admin/settings")]
+    public async Task<IActionResult> UpdateSettings(
+        [FromBody] UpdateAdminSettingsRequest request,
+        CancellationToken cancellationToken)
+    {
+        await admin.UpdateSettingsAsync(request, cancellationToken);
+        return NoContent();
+    }
 }

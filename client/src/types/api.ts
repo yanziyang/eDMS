@@ -89,3 +89,83 @@ export interface UploadResult {
   sizeBytes: number;
   status: string;
 }
+
+export type PermissionLevel = "FullControl" | "Contribute" | "Read" | "NoAccess";
+
+export type PrincipalType = "User" | "Group";
+
+export interface DocumentDto {
+  id: string;
+  libraryId: string;
+  folderId: string | null;
+  name: string;
+  title: string | null;
+  description: string | null;
+  contentType: string;
+  sizeBytes: number;
+  checkedOutBy: string | null;
+  checkedOutAt: string | null;
+  createdAt: string;
+  modifiedAt: string | null;
+  versionLabel: string;
+}
+
+export interface DocumentVersionDto {
+  id: string;
+  versionMajor: number;
+  versionMinor: number;
+  sizeBytes: number;
+  comment: string | null;
+  isMajor: boolean;
+  createdBy: string;
+  createdAt: string;
+}
+
+export interface PermissionEntryDto {
+  principalType: PrincipalType;
+  principalId: string;
+  principalName: string;
+  level: PermissionLevel;
+  source: "Direct" | "Inherited";
+}
+
+export interface PermissionsStateDto {
+  hasUniqueAcl: boolean;
+  entries: PermissionEntryDto[];
+}
+
+export interface RecycleBinItemDto {
+  id: string;
+  kind: "document" | "folder";
+  name: string;
+  deletedAt: string;
+  deletedBy: string;
+  siteId: string;
+}
+
+export interface AdminSettingsDto {
+  maxUploadSizeBytes: number;
+  recycleBinRetentionDays: number;
+  siteCreationRestricted: boolean;
+  accessTokenLifetimeMinutes: number;
+  refreshTokenLifetimeDays: number;
+  appName: string;
+}
+
+export interface StorageReportDto {
+  siteId: string;
+  siteName: string;
+  usedBytes: number;
+}
+
+export interface AuditLogDto {
+  id: string;
+  timestamp: string;
+  userId: string;
+  action: string;
+  objectType: string;
+  objectId: string;
+  objectName: string;
+  siteId: string;
+  ipAddress: string;
+}

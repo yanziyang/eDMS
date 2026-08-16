@@ -1,7 +1,13 @@
 import { http, HttpResponse } from "msw";
 import { describe, expect, it } from "vitest";
 import { server } from "@/test/server";
-import { addGroupMember, listGroups, removeGroupMember } from "./api";
+import {
+  addGroupMember,
+  createGroup,
+  deleteGroup,
+  listGroups,
+  removeGroupMember,
+} from "./api";
 
 const base = "http://localhost:5080/api/v1";
 
@@ -56,5 +62,38 @@ describe("groups api", () => {
     await removeGroupMember("g1", "u1");
 
     expect(urls[0]).toContain("/groups/g1/members/u1");
+  });
+
+  it("createGroup posts the group payload", async () => {
+    const requests: Request[] = [];
+    server.use(
+      http.post(`${base}/groups`, async ({ request }) => {
+        requests.push(request);
+        return HttpResponse.json("g9", { status: 201 });
+      }),
+    );
+
+    const id = await createGroup({ name: "Finance", description: "Money", siteId: null });
+
+    expect(id).toBe("g9");
+    await expect(requests[0].json()).resolves.toEqual({
+      name: "Finance",
+      description: "Money",
+      siteId: null,
+    });
+  });
+
+  it("deleteGroup deletes the group", async () => {
+    const urls: string[] = [];
+    server.use(
+      http.delete(`${base}/groups/g1`, ({ request }) => {
+        urls.push(request.url);
+        return new HttpResponse(null, { status: 204 });
+      }),
+    );
+
+    await deleteGroup("g1");
+
+    expect(urls[0]).toContain("/groups/g1");
   });
 });

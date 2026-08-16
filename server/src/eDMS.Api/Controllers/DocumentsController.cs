@@ -82,6 +82,28 @@ public sealed class DocumentsController(IDocumentService documents) : Controller
         return NoContent();
     }
 
+    [HttpPost("documents/{id:guid}/move")]
+    public async Task<IActionResult> Move(Guid id, [FromBody] MoveCopyRequest request, CancellationToken cancellationToken)
+    {
+        var documentId = await documents.MoveAsync(
+            id,
+            request.DestinationLibraryId,
+            request.DestinationFolderId,
+            cancellationToken);
+        return Ok(documentId);
+    }
+
+    [HttpPost("documents/{id:guid}/copy")]
+    public async Task<IActionResult> Copy(Guid id, [FromBody] MoveCopyRequest request, CancellationToken cancellationToken)
+    {
+        var documentId = await documents.CopyAsync(
+            id,
+            request.DestinationLibraryId,
+            request.DestinationFolderId,
+            cancellationToken);
+        return Ok(documentId);
+    }
+
     [HttpPost("documents/{id:guid}/checkout")]
     public async Task<IActionResult> Checkout(Guid id, CancellationToken cancellationToken)
     {
@@ -106,5 +128,7 @@ public sealed class DocumentsController(IDocumentService documents) : Controller
 }
 
 public sealed record UpdateDocumentRequest(string? Name, string? Title, string? Description);
+
+public sealed record MoveCopyRequest(Guid DestinationLibraryId, Guid? DestinationFolderId);
 
 public sealed record CheckinRequest(string? Comment);

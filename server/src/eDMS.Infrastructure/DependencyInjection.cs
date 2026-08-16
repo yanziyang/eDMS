@@ -79,6 +79,7 @@ public static class DependencyInjection
         services.AddScoped<IAuditLogger, AuditLogger>();
         services.AddScoped<IPermissionResolver, PermissionResolver>();
         services.AddSingleton<IPermissionCacheInvalidator, PermissionCacheInvalidator>();
+        services.AddScoped<IAppSettings, AppSettingsStore>();
         services.AddScoped<IEmailSender, EmailSender>();
         services.AddScoped<IUserManagementService, UserManagementService>();
         services.AddScoped<IDocumentService, DocumentService>();

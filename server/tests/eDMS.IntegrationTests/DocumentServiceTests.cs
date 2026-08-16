@@ -43,7 +43,7 @@ public sealed class DocumentServiceTests : IDisposable
             new FakeCurrentUser(_userId),
             new AllowAllResolver(),
             new FakeAuditLogger(),
-            Options.Create(new StorageOptions { RootPath = "test-storage", MaxUploadSizeBytes = 262_144_000 }));
+            TestSupport.DefaultAppSettings());
     }
 
     public void Dispose() => _db.Dispose();

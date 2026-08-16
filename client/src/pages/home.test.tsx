@@ -2,6 +2,7 @@ import { http, HttpResponse } from "msw";
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { MemoryRouter } from "react-router-dom";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { server } from "@/test/server";
 import { Home } from "./home";
 
@@ -21,10 +22,15 @@ function site(overrides: Partial<Record<"id" | "name" | "description" | "urlSlug
 }
 
 function renderHome() {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
   return render(
-    <MemoryRouter>
-      <Home />
-    </MemoryRouter>,
+    <QueryClientProvider client={queryClient}>
+      <MemoryRouter>
+        <Home />
+      </MemoryRouter>
+    </QueryClientProvider>,
   );
 }
 
@@ -36,7 +42,7 @@ describe("Home", () => {
 
     renderHome();
 
-    expect(screen.getByText("Loading…")).toBeInTheDocument();
+    expect(screen.getByText("Loading.")).toBeInTheDocument();
     expect(await screen.findByText("Site One")).toBeInTheDocument();
     expect(screen.getByText("A site")).toBeInTheDocument();
     expect(screen.getByText("0 B used")).toBeInTheDocument();

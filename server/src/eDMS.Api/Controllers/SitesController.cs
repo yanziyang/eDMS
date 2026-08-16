@@ -23,7 +23,6 @@ public sealed class SitesController(IMediator mediator) : ControllerBase
         Ok(await mediator.Send(new GetSiteQuery(id), cancellationToken));
 
     [HttpPost]
-    [Authorize(Policy = "SystemAdmin")]
     public async Task<IActionResult> Create([FromBody] CreateSiteCommand command, CancellationToken cancellationToken)
     {
         var id = await mediator.Send(command, cancellationToken);

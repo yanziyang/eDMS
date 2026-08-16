@@ -3,9 +3,7 @@ using eDMS.Application.Common.Exceptions;
 using eDMS.Application.Common.Interfaces;
 using eDMS.Application.Documents;
 using eDMS.Domain;
-using eDMS.Infrastructure.Options;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
 
 namespace eDMS.Infrastructure.Documents;
 
@@ -15,7 +13,7 @@ public sealed class DocumentService(
     ICurrentUser currentUser,
     IPermissionResolver permissions,
     IAuditLogger audit,
-    IOptions<StorageOptions> storageOptions) : IDocumentService
+    IAppSettings appSettings) : IDocumentService
 {
     private static readonly string[] BlockedExtensions = [".exe", ".bat", ".cmd", ".sh", ".ps1", ".msi", ".dll"];
 
@@ -99,6 +97,7 @@ public sealed class DocumentService(
         var checksum = string.Empty;
         var sizeBytes = 0L;
         var contentType = "application/octet-stream";
+        var maxUploadSizeBytes = await appSettings.GetMaxUploadSizeBytesAsync(cancellationToken);
 
         try
         {
@@ -113,7 +112,7 @@ public sealed class DocumentService(
                 while ((read = await content.ReadAsync(buffer, cancellationToken)) > 0)
                 {
                     sizeBytes += read;
-                    if (sizeBytes > storageOptions.Value.MaxUploadSizeBytes)
+                    if (sizeBytes > maxUploadSizeBytes)
                     {
                         throw new ConflictException("The file exceeds the maximum upload size.");
                     }
@@ -403,6 +402,134 @@ public sealed class DocumentService(
         document.ModifiedBy = userId;
         document.ModifiedAt = DateTimeOffset.UtcNow;
         await db.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task<Guid> MoveAsync(
+        Guid documentId,
+        Guid destinationLibraryId,
+        Guid? destinationFolderId,
+        CancellationToken cancellationToken = default)
+    {
+        var userId = currentUser.UserId ?? throw new ForbiddenException();
+        await permissions.RequireAsync(userId, ObjectType.Document, documentId, PermissionLevel.Contribute, cancellationToken);
+        await permissions.RequireAsync(userId, ObjectType.Library, destinationLibraryId, PermissionLevel.Contribute, cancellationToken);
+
+        var document = await db.Documents.IgnoreQueryFilters()
+            .SingleOrDefaultAsync(item => item.Id == documentId, cancellationToken)
+            ?? throw new NotFoundException(nameof(Document), documentId);
+
+        await ValidateDestinationAsync(document.LibraryId, destinationLibraryId, destinationFolderId, cancellationToken);
+        var siteId = await db.Libraries.IgnoreQueryFilters()
+            .Where(item => item.Id == destinationLibraryId)
+            .Select(item => item.SiteId)
+            .SingleAsync(cancellationToken);
+
+        document.LibraryId = destinationLibraryId;
+        document.FolderId = destinationFolderId;
+        document.ModifiedBy = userId;
+        document.ModifiedAt = DateTimeOffset.UtcNow;
+        await db.SaveChangesAsync(cancellationToken);
+        await audit.LogAsync(AuditAction.Move, ObjectType.Document, document.Id, document.Name, siteId, cancellationToken);
+        return document.Id;
+    }
+
+    public async Task<Guid> CopyAsync(
+        Guid documentId,
+        Guid destinationLibraryId,
+        Guid? destinationFolderId,
+        CancellationToken cancellationToken = default)
+    {
+        var userId = currentUser.UserId ?? throw new ForbiddenException();
+        await permissions.RequireAsync(userId, ObjectType.Document, documentId, PermissionLevel.Read, cancellationToken);
+        await permissions.RequireAsync(userId, ObjectType.Library, destinationLibraryId, PermissionLevel.Contribute, cancellationToken);
+
+        var document = await db.Documents.IgnoreQueryFilters()
+            .SingleOrDefaultAsync(item => item.Id == documentId, cancellationToken)
+            ?? throw new NotFoundException(nameof(Document), documentId);
+
+        var sourceVersion = await db.DocumentVersions
+            .SingleAsync(version => version.Id == document.CurrentVersionId, cancellationToken);
+
+        await ValidateDestinationAsync(document.LibraryId, destinationLibraryId, destinationFolderId, cancellationToken);
+
+        var nameTaken = await db.Documents.IgnoreQueryFilters().AnyAsync(
+            item => item.LibraryId == destinationLibraryId
+                && item.FolderId == destinationFolderId
+                && item.Name == document.Name,
+            cancellationToken);
+        if (nameTaken)
+        {
+            throw new ConflictException("A document with this name already exists in the destination folder.");
+        }
+
+        var copy = new Document
+        {
+            LibraryId = destinationLibraryId,
+            FolderId = destinationFolderId,
+            Name = document.Name,
+            Title = document.Title,
+            Description = document.Description,
+            ContentType = document.ContentType,
+        };
+        copy.SetCreator(userId);
+
+        var newVersion = new DocumentVersion
+        {
+            DocumentId = copy.Id,
+            VersionMajor = 1,
+            VersionMinor = 0,
+            SizeBytes = sourceVersion.SizeBytes,
+            Checksum = sourceVersion.Checksum,
+            IsMajor = true,
+        };
+        newVersion.SetCreator(userId);
+
+        var destinationLibrary = await db.Libraries.IgnoreQueryFilters()
+            .SingleAsync(item => item.Id == destinationLibraryId, cancellationToken);
+        var storageKey = $"{destinationLibrary.SiteId}/{destinationLibraryId}/{copy.Id}/{newVersion.Id}/{document.Name}";
+        newVersion.StorageKey = storageKey;
+
+        copy.CurrentVersionId = newVersion.Id;
+        db.Documents.Add(copy);
+        db.DocumentVersions.Add(newVersion);
+        await db.SaveChangesAsync(cancellationToken);
+
+        await using (var sourceStream = await storage.OpenReadAsync(sourceVersion.StorageKey, cancellationToken))
+        {
+            await storage.SaveAsync(sourceStream, storageKey, cancellationToken);
+        }
+
+        await audit.LogAsync(AuditAction.Copy, ObjectType.Document, copy.Id, copy.Name, destinationLibrary.SiteId, cancellationToken);
+        return copy.Id;
+    }
+
+    private async Task ValidateDestinationAsync(
+        Guid sourceLibraryId,
+        Guid destinationLibraryId,
+        Guid? destinationFolderId,
+        CancellationToken cancellationToken)
+    {
+        var destinationLibrary = await db.Libraries.IgnoreQueryFilters()
+            .SingleOrDefaultAsync(item => item.Id == destinationLibraryId, cancellationToken)
+            ?? throw new NotFoundException(nameof(Library), destinationLibraryId);
+
+        if (destinationFolderId is { } folderId)
+        {
+            var folder = await db.Folders.IgnoreQueryFilters()
+                .SingleOrDefaultAsync(item => item.Id == folderId, cancellationToken)
+                ?? throw new NotFoundException(nameof(Folder), folderId);
+            if (folder.LibraryId != destinationLibraryId)
+            {
+                throw new ConflictException("The destination folder does not belong to the destination library.");
+            }
+        }
+
+        var sourceLibrary = await db.Libraries.IgnoreQueryFilters()
+            .SingleAsync(item => item.Id == sourceLibraryId, cancellationToken);
+        if (sourceLibrary.SiteId != destinationLibrary.SiteId)
+        {
+            throw new ConflictException("Documents can only be moved or copied within the same site.");
+        }
     }
 
     public async Task CheckOutAsync(Guid documentId, CancellationToken cancellationToken = default)

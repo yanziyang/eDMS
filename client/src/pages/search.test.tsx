@@ -2,14 +2,26 @@ import { http, HttpResponse } from "msw";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { server } from "@/test/server";
 import { Search } from "./search";
 
 const base = "http://localhost:5080/api/v1";
 
+function renderSearch() {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <Search />
+    </QueryClientProvider>,
+  );
+}
+
 describe("Search", () => {
   it("renders the form and initial state", () => {
-    render(<Search />);
+    renderSearch();
 
     expect(screen.getByRole("heading", { name: "Search" })).toBeInTheDocument();
     expect(screen.getByPlaceholderText("Search documents…")).toBeInTheDocument();
@@ -26,7 +38,7 @@ describe("Search", () => {
     );
 
     const user = userEvent.setup();
-    render(<Search />);
+    renderSearch();
 
     await user.type(screen.getByPlaceholderText("Search documents…"), "   ");
     await user.click(screen.getByRole("button", { name: "Search" }));
@@ -47,7 +59,7 @@ describe("Search", () => {
     );
 
     const user = userEvent.setup();
-    render(<Search />);
+    renderSearch();
 
     await user.type(screen.getByPlaceholderText("Search documents…"), " contract ");
     await user.click(screen.getByRole("button", { name: "Search" }));
@@ -64,7 +76,7 @@ describe("Search", () => {
     );
 
     const user = userEvent.setup();
-    render(<Search />);
+    renderSearch();
 
     await user.type(screen.getByPlaceholderText("Search documents…"), "nothing");
     await user.click(screen.getByRole("button", { name: "Search" }));
@@ -78,7 +90,7 @@ describe("Search", () => {
     );
 
     const user = userEvent.setup();
-    render(<Search />);
+    renderSearch();
 
     await user.type(screen.getByPlaceholderText("Search documents…"), "boom");
     await user.click(screen.getByRole("button", { name: "Search" }));
