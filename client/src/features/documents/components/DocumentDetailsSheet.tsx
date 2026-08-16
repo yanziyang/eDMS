@@ -1,10 +1,13 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  Download,
   FileText,
+  FileWarning,
   LoaderCircle,
   Lock,
   LockOpen,
+  RefreshCw,
   RotateCcw,
   Share2,
   ShieldCheck,
@@ -34,7 +37,9 @@ import {
   checkInDocument,
   checkOutDocument,
   discardCheckout,
+  downloadDocument,
   getDocument,
+  getDocumentPreview,
   listDocumentVersions,
   restoreVersion,
   updateDocument,
@@ -98,6 +103,9 @@ export function DocumentDetailsSheet({ documentId, open, onOpenChange }: Documen
 
             <Tabs defaultValue="properties" className="min-h-0 flex-1">
               <TabsList>
+                <TabsTrigger value="preview" className="text-foreground/70">
+                  Preview
+                </TabsTrigger>
                 <TabsTrigger value="properties" className="text-foreground/70">
                   Properties
                 </TabsTrigger>
@@ -108,6 +116,9 @@ export function DocumentDetailsSheet({ documentId, open, onOpenChange }: Documen
                   Permissions
                 </TabsTrigger>
               </TabsList>
+              <TabsContent value="preview" className="mt-4">
+                <PreviewTab document={detail.data} />
+              </TabsContent>
               <TabsContent value="properties" className="mt-4">
                 <PropertiesTab document={detail.data} />
               </TabsContent>
@@ -130,6 +141,122 @@ export function DocumentDetailsSheet({ documentId, open, onOpenChange }: Documen
       </SheetContent>
     </Sheet>
   );
+}
+
+type PreviewState =
+  | { kind: "loading" }
+  | { kind: "ready"; url: string }
+  | { kind: "error" }
+  | { kind: "unavailable" };
+
+function PreviewTab({ document }: { document: DocumentDto }) {
+  const [attempt, setAttempt] = useState(0);
+  const [state, setState] = useState<PreviewState>(() =>
+    isPreviewable(document.contentType) ? { kind: "loading" } : { kind: "unavailable" },
+  );
+  const objectUrlRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!isPreviewable(document.contentType)) {
+      return;
+    }
+    let cancelled = false;
+    setState({ kind: "loading" });
+    getDocumentPreview(document.id)
+      .then((blob) => {
+        if (cancelled) {
+          return;
+        }
+        const contentType = blob.type || document.contentType;
+        if (!isBrowserRenderable(contentType)) {
+          setState({ kind: "unavailable" });
+          return;
+        }
+        const url = URL.createObjectURL(blob);
+        objectUrlRef.current = url;
+        setState({ kind: "ready", url });
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setState({ kind: "error" });
+        }
+      });
+    return () => {
+      cancelled = true;
+      if (objectUrlRef.current) {
+        URL.revokeObjectURL(objectUrlRef.current);
+        objectUrlRef.current = null;
+      }
+    };
+  }, [attempt, document.id, document.contentType, document.versionLabel]);
+
+  if (state.kind === "unavailable") {
+    return <PreviewUnavailable document={document} />;
+  }
+
+  if (state.kind === "error") {
+    return (
+      <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed p-6 text-center">
+        <p className="text-sm text-destructive">Failed to load preview.</p>
+        <Button variant="outline" size="sm" onClick={() => setAttempt((current) => current + 1)}>
+          <RefreshCw className="size-4" />
+          Try again
+        </Button>
+      </div>
+    );
+  }
+
+  if (state.kind === "ready") {
+    return <iframe src={state.url} title="Preview" className="h-[420px] w-full rounded-lg border" />;
+  }
+
+  return (
+    <div className="flex items-center justify-center gap-2 p-8 text-sm text-muted-foreground">
+      <LoaderCircle className="size-4 animate-spin" />
+      Loading preview…
+    </div>
+  );
+}
+
+function PreviewUnavailable({ document }: { document: DocumentDto }) {
+  return (
+    <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed p-6 text-center">
+      <FileWarning className="size-8 text-muted-foreground" />
+      <div>
+        <p className="text-sm font-medium">Preview not available for this file type</p>
+        {isOfficeContentType(document.contentType) && (
+          <p className="mt-1 text-xs text-muted-foreground">
+            Office preview conversion is unavailable right now. Download the file to view it.
+          </p>
+        )}
+      </div>
+      <Button variant="outline" size="sm" onClick={() => downloadDocument(document.id, document.name)}>
+        <Download className="size-4" />
+        Download
+      </Button>
+    </div>
+  );
+}
+
+function isBrowserRenderable(contentType: string): boolean {
+  return (
+    contentType === "application/pdf" ||
+    contentType.startsWith("image/") ||
+    contentType.startsWith("text/")
+  );
+}
+
+function isOfficeContentType(contentType: string): boolean {
+  return (
+    contentType === "application/msword" ||
+    contentType === "application/vnd.ms-excel" ||
+    contentType === "application/vnd.ms-powerpoint" ||
+    contentType.startsWith("application/vnd.openxmlformats-officedocument.")
+  );
+}
+
+function isPreviewable(contentType: string): boolean {
+  return isBrowserRenderable(contentType) || isOfficeContentType(contentType);
 }
 
 function PropertiesTab({ document }: { document: DocumentDto }) {

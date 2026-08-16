@@ -5,6 +5,7 @@ using eDMS.Infrastructure.Auditing;
 using eDMS.Infrastructure.Admin;
 using eDMS.Application.Admin;
 using eDMS.Infrastructure.Email;
+using eDMS.Infrastructure.Office;
 using eDMS.Infrastructure.Options;
 using eDMS.Infrastructure.Persistence;
 using eDMS.Infrastructure.Persistence.Seeding;
@@ -27,6 +28,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 
 namespace eDMS.Infrastructure;
 
@@ -77,6 +79,12 @@ public static class DependencyInjection
         services.Configure<ClientOptions>(configuration.GetSection(ClientOptions.SectionName));
         services.Configure<StorageOptions>(configuration.GetSection(StorageOptions.SectionName));
         services.Configure<RecycleBinOptions>(configuration.GetSection(RecycleBinOptions.SectionName));
+        services.Configure<OfficeConversionOptions>(configuration.GetSection(OfficeConversionOptions.SectionName));
+        services.AddHttpClient<IOfficeConversionService, HttpOfficeConversionService>((services, client) =>
+        {
+            var options = services.GetRequiredService<IOptions<OfficeConversionOptions>>().Value;
+            client.Timeout = options.Timeout;
+        });
         services.AddSingleton(TimeProvider.System);
         services.AddScoped<ITokenService, JwtTokenService>();
         services.AddScoped<IAuthService, AuthService>();

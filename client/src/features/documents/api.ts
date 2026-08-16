@@ -97,6 +97,10 @@ export async function downloadDocument(documentId: string, fileName: string): Pr
   URL.revokeObjectURL(url);
 }
 
+export function getDocumentPreview(documentId: string): Promise<Blob> {
+  return requestBlob(`/documents/${documentId}/preview`);
+}
+
 export function getDocument(documentId: string): Promise<DocumentDto> {
   return request<DocumentDto>(`/documents/${documentId}`);
 }

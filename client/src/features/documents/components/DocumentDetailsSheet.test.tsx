@@ -1,10 +1,11 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { server } from "@/test/server";
 import { toast } from "sonner";
+import { requestBlob } from "@/lib/api-client";
 import { queryKeys } from "@/lib/queryKeys";
 import { DocumentDetailsSheet } from "./DocumentDetailsSheet";
 
@@ -21,7 +22,13 @@ vi.mock("@/features/auth/auth-context", () => ({
   }),
 }));
 
+vi.mock("@/lib/api-client", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/api-client")>();
+  return { ...actual, requestBlob: vi.fn() };
+});
+
 const mockedToast = vi.mocked(toast);
+const requestBlobMock = vi.mocked(requestBlob);
 const base = "http://localhost:5080/api/v1";
 const permissionsUrl = `${base}/Document/objects/d1/permissions`;
 const metadataUrl = `${base}/documents/d1/metadata`;
@@ -85,6 +92,14 @@ async function openTab(name: "Versions" | "Permissions") {
   const user = userEvent.setup();
   await user.click(await screen.findByRole("tab", { name }));
   return user;
+}
+
+function mockObjectURLs() {
+  const createObjectURL = vi.fn(() => "blob:preview-url");
+  const revokeObjectURL = vi.fn(() => {});
+  Object.defineProperty(URL, "createObjectURL", { value: createObjectURL, configurable: true, writable: true });
+  Object.defineProperty(URL, "revokeObjectURL", { value: revokeObjectURL, configurable: true, writable: true });
+  return { createObjectURL, revokeObjectURL };
 }
 
 describe("DocumentDetailsSheet", () => {
@@ -1106,5 +1121,177 @@ describe("DocumentDetailsSheet", () => {
     await waitFor(() =>
       expect(mockedToast.error).toHaveBeenCalledWith("Failed to update metadata"),
     );
+  });
+
+  describe("Preview tab", () => {
+    const officeContentType =
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+
+    it("shows a loading state while the preview is fetched", async () => {
+      requestBlobMock.mockReturnValueOnce(new Promise<Blob>(() => {}));
+      server.use(
+        http.get(`${base}/documents/d1`, () => HttpResponse.json(documentDto())),
+      );
+
+      const user = userEvent.setup();
+      renderSheet();
+      await screen.findByText("contract.pdf");
+      await user.click(screen.getByRole("tab", { name: "Preview" }));
+
+      expect(screen.getByText("Loading preview…")).toBeInTheDocument();
+      expect(screen.queryByTitle("Preview")).not.toBeInTheDocument();
+      expect(requestBlobMock).toHaveBeenCalledWith("/documents/d1/preview");
+    });
+
+    it("renders the preview iframe with a blob url", async () => {
+      mockObjectURLs();
+      requestBlobMock.mockResolvedValueOnce(new Blob(["%PDF"], { type: "application/pdf" }));
+      server.use(
+        http.get(`${base}/documents/d1`, () => HttpResponse.json(documentDto())),
+      );
+
+      const user = userEvent.setup();
+      renderSheet();
+      await screen.findByText("contract.pdf");
+      await user.click(screen.getByRole("tab", { name: "Preview" }));
+
+      const iframe = await screen.findByTitle("Preview");
+      expect(iframe).toHaveAttribute("src", "blob:preview-url");
+      expect(requestBlobMock).toHaveBeenCalledWith("/documents/d1/preview");
+    });
+
+    it("shows an error state and retries the fetch", async () => {
+      mockObjectURLs();
+      requestBlobMock
+        .mockRejectedValueOnce(new Error("boom"))
+        .mockResolvedValueOnce(new Blob(["%PDF"], { type: "application/pdf" }));
+      server.use(
+        http.get(`${base}/documents/d1`, () => HttpResponse.json(documentDto())),
+      );
+
+      const user = userEvent.setup();
+      renderSheet();
+      await screen.findByText("contract.pdf");
+      await user.click(screen.getByRole("tab", { name: "Preview" }));
+
+      expect(await screen.findByText("Failed to load preview.")).toBeInTheDocument();
+
+      await user.click(screen.getByRole("button", { name: "Try again" }));
+
+      expect(await screen.findByTitle("Preview")).toBeInTheDocument();
+      expect(requestBlobMock).toHaveBeenCalledTimes(2);
+    });
+
+    it("revokes the object url when the preview tab is closed", async () => {
+      const { revokeObjectURL } = mockObjectURLs();
+      requestBlobMock.mockResolvedValueOnce(new Blob(["%PDF"], { type: "application/pdf" }));
+      server.use(
+        http.get(`${base}/documents/d1`, () => HttpResponse.json(documentDto())),
+      );
+
+      const user = userEvent.setup();
+      renderSheet();
+      await screen.findByText("contract.pdf");
+      await user.click(screen.getByRole("tab", { name: "Preview" }));
+      await screen.findByTitle("Preview");
+
+      await user.click(screen.getByRole("tab", { name: "Properties" }));
+
+      await waitFor(() => expect(revokeObjectURL).toHaveBeenCalledWith("blob:preview-url"));
+    });
+
+    it("renders the converted pdf for an office document", async () => {
+      mockObjectURLs();
+      requestBlobMock.mockResolvedValueOnce(new Blob(["%PDF"], { type: "application/pdf" }));
+      server.use(
+        http.get(`${base}/documents/d1`, () => HttpResponse.json(documentDto({ contentType: officeContentType }))),
+      );
+
+      const user = userEvent.setup();
+      renderSheet();
+      await screen.findByText("contract.pdf");
+      await user.click(screen.getByRole("tab", { name: "Preview" }));
+
+      expect(await screen.findByTitle("Preview")).toHaveAttribute("src", "blob:preview-url");
+    });
+
+    it("shows the office fallback note when preview conversion is unavailable", async () => {
+      requestBlobMock.mockResolvedValueOnce(new Blob(["PK"], { type: officeContentType }));
+      server.use(
+        http.get(`${base}/documents/d1`, () => HttpResponse.json(documentDto({ contentType: officeContentType }))),
+      );
+
+      const user = userEvent.setup();
+      renderSheet();
+      await screen.findByText("contract.pdf");
+      await user.click(screen.getByRole("tab", { name: "Preview" }));
+
+      expect(await screen.findByText("Preview not available for this file type")).toBeInTheDocument();
+      expect(
+        screen.getByText("Office preview conversion is unavailable right now. Download the file to view it."),
+      ).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Download" })).toBeInTheDocument();
+      expect(screen.queryByTitle("Preview")).not.toBeInTheDocument();
+    });
+
+    it("shows the non-renderable note for other file types without fetching", async () => {
+      server.use(
+        http.get(`${base}/documents/d1`, () => HttpResponse.json(documentDto({ contentType: "application/zip" }))),
+      );
+
+      const user = userEvent.setup();
+      renderSheet();
+      await screen.findByText("contract.pdf");
+      await user.click(screen.getByRole("tab", { name: "Preview" }));
+
+      expect(await screen.findByText("Preview not available for this file type")).toBeInTheDocument();
+      expect(screen.queryByText(/Office preview conversion/)).not.toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Download" })).toBeInTheDocument();
+      expect(requestBlobMock).not.toHaveBeenCalled();
+    });
+
+    it("ignores a stale preview result after the tab is closed", async () => {
+      const { createObjectURL } = mockObjectURLs();
+      let resolvePreview!: (blob: Blob) => void;
+      requestBlobMock.mockReturnValueOnce(
+        new Promise<Blob>((resolve) => {
+          resolvePreview = resolve;
+        }),
+      );
+      server.use(
+        http.get(`${base}/documents/d1`, () => HttpResponse.json(documentDto())),
+      );
+
+      const user = userEvent.setup();
+      renderSheet();
+      await screen.findByText("contract.pdf");
+      await user.click(screen.getByRole("tab", { name: "Preview" }));
+      expect(screen.getByText("Loading preview…")).toBeInTheDocument();
+
+      await user.click(screen.getByRole("tab", { name: "Properties" }));
+      await act(async () => {
+        resolvePreview(new Blob(["%PDF"], { type: "application/pdf" }));
+      });
+
+      expect(createObjectURL).not.toHaveBeenCalled();
+      expect(screen.queryByTitle("Preview")).not.toBeInTheDocument();
+    });
+
+    it("downloads the file from the unavailable note", async () => {
+      mockObjectURLs();
+      requestBlobMock.mockResolvedValueOnce(new Blob(["data"], { type: "application/zip" }));
+      const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
+      server.use(
+        http.get(`${base}/documents/d1`, () => HttpResponse.json(documentDto({ contentType: "application/zip" }))),
+      );
+
+      const user = userEvent.setup();
+      renderSheet();
+      await screen.findByText("contract.pdf");
+      await user.click(screen.getByRole("tab", { name: "Preview" }));
+      await user.click(await screen.findByRole("button", { name: "Download" }));
+
+      await waitFor(() => expect(clickSpy).toHaveBeenCalled());
+    });
   });
 });

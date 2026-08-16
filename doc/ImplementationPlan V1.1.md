@@ -107,7 +107,7 @@ M12–M18 have no dependency on each other beyond M10 and may be worked in any o
 | [M10](#m10--phase-1-close-out-core-gaps) | Finish everything V1.0 left open | Every document has a working details panel (Properties/Versions/Permissions tabs) and share dialog; admin has working Settings/Audit Log/Storage Report pages; recycle bin actually restores/purges from the UI — all via TanStack Query, not placeholders | Done |
 | [M11](#m11--phase-1-hardening--sign-off-close-out) | Actually satisfy FS §15's Phase 1 checklist | Validator coverage is complete, the permission CTE has a documented perf profile at 20-level nesting, an accessibility + responsive pass is done, and a staging deploy has been run at least once | Done |
 | [M12](#m12--content-types--custom-metadata-columns) | Content Types & typed columns | Admin defines a Content Type with a required column on a Library; upload/check-in in that Library blocks completion until it's filled | Not Started |
-| [M13](#m13--office-preview) | In-browser Office preview | Opening a .docx/.xlsx/.pptx shows a PDF-converted preview, no download required | Not Started |
+| [M13](#m13--office-preview) | In-browser Office preview | Opening a .docx/.xlsx/.pptx shows a PDF-converted preview, no download required | Done |
 | [M14](#m14--chunked-upload--minor-version-retention) | Large-file resilience + version hygiene | A >100MB upload resumes after a network interruption; a Library with a minor-version cap auto-trims old minors on check-in | Done |
 | [M15](#m15--notifications--alerts) | Notifications/alerts ("Follow") | Sharing a document emails + in-app-notifies the recipient; following a folder delivers a digest at the configured frequency | Not Started |
 | [M16](#m16--org-wide-share-links) | Non-anonymous org-wide links | A generated link opens for any authenticated internal user without an individual ACL entry; revoking it blocks further access | Done |
@@ -177,9 +177,9 @@ FS §8.2 already sketches `ContentType`/`ColumnDefinition` — use those shapes 
 
 | Status | ID | Track | Task | Depends on | Size | Refs |
 |---|---|---|---|---|---|---|
-| Not Started | M13.1 | INF | Add a LibreOffice-headless (or equivalent) conversion service to `docker-compose.yml` as its own container — this is a heavyweight native dependency, not a NuGet package; don't shell out to a binary installed ad hoc inside the API container. | M10 (all) | M | FR-DOC-10 |
-| Not Started | M13.2 | BE | `IOfficeConversionService` behind an interface, mirroring the `IFileStorageProvider` abstraction pattern (ADR-6) — implementation calls the M13.1 container to convert docx/xlsx/pptx → PDF; extend the existing preview endpoint (V1.0's M3.7) to use it for Office content types. Record the conversion approach as **ADR-10** in TDS §2.4. | M13.1 | L | FR-DOC-10, TDS §5.4 |
-| Not Started | M13.3 | FE | Wire Office file types into the existing preview UI path inside the Document Details Sheet. | M13.2, M10.6 | S | FR-DOC-10 |
+| Done | M13.1 | INF | Add a LibreOffice-headless (or equivalent) conversion service to `docker-compose.yml` as its own container — this is a heavyweight native dependency, not a NuGet package; don't shell out to a binary installed ad hoc inside the API container. | M10 (all) | M | FR-DOC-10 |
+| Done | M13.2 | BE | `IOfficeConversionService` behind an interface, mirroring the `IFileStorageProvider` abstraction pattern (ADR-6) — implementation calls the M13.1 container to convert docx/xlsx/pptx → PDF; extend the existing preview endpoint (V1.0's M3.7) to use it for Office content types. Record the conversion approach as **ADR-10** in TDS §2.4. | M13.1 | L | FR-DOC-10, TDS §5.4 |
+| Done | M13.3 | FE | Wire Office file types into the existing preview UI path inside the Document Details Sheet. | M13.2, M10.6 | S | FR-DOC-10 |
 
 ### M14 — Chunked Upload & Minor-Version Retention
 

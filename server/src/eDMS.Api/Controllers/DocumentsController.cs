@@ -1,5 +1,6 @@
 using System.Text.Json;
 using eDMS.Application.Admin;
+using eDMS.Application.Common.Interfaces;
 using eDMS.Application.Documents;
 using eDMS.Application.Documents.Commands.UpdateDocumentColumnValues;
 using eDMS.Application.Documents.Queries.GetDocumentMetadata;
@@ -12,7 +13,10 @@ namespace eDMS.Api.Controllers;
 [ApiController]
 [Route("api/v1")]
 [Authorize]
-public sealed class DocumentsController(IDocumentService documents, IMediator mediator) : ControllerBase
+public sealed class DocumentsController(
+    IDocumentService documents,
+    IMediator mediator,
+    IOfficeConversionService officeConversion) : ControllerBase
 {
     [HttpGet("libraries/{libraryId:guid}/items")]
     public async Task<IActionResult> ListLibraryItems(Guid libraryId, CancellationToken cancellationToken) =>
@@ -82,8 +86,23 @@ public sealed class DocumentsController(IDocumentService documents, IMediator me
     public async Task<IActionResult> Preview(Guid id, CancellationToken cancellationToken)
     {
         var (stream, fileName, contentType) = await documents.DownloadAsync(id, cancellationToken);
+        if (IsOfficeContentType(contentType))
+        {
+            var pdf = await officeConversion.ConvertToPdfAsync(fileName, stream, cancellationToken);
+            if (pdf is not null)
+            {
+                return File(pdf, "application/pdf", fileName, enableRangeProcessing: true);
+            }
+        }
+
         return File(stream, contentType, fileName, enableRangeProcessing: true);
     }
+
+    private static bool IsOfficeContentType(string contentType) =>
+        contentType.Equals("application/msword", StringComparison.OrdinalIgnoreCase)
+        || contentType.Equals("application/vnd.ms-excel", StringComparison.OrdinalIgnoreCase)
+        || contentType.Equals("application/vnd.ms-powerpoint", StringComparison.OrdinalIgnoreCase)
+        || contentType.StartsWith("application/vnd.openxmlformats-officedocument", StringComparison.OrdinalIgnoreCase);
 
     [HttpGet("documents/{id:guid}/metadata")]
     public async Task<IActionResult> Metadata(Guid id, CancellationToken cancellationToken) =>

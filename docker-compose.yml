@@ -16,11 +16,20 @@ services:
       - "8025:8025"
       - "1025:1025"
 
+  office-converter:
+    build: ./server/LibreOfficeServer
+    ports:
+      - "8100:8100"
+    environment:
+      # LibreOffice needs a writable HOME for its profile
+      HOME: /tmp
+
   api:
     build: ./server
     environment:
       Database__Provider: "Postgres"
       ConnectionStrings__Default: "Host=postgres;Port=5432;Database=edms;Username=postgres;Password=devonly"
+      OfficeConversion__BaseUrl: "http://office-converter:8100"
       Jwt__PrivateKey: ""
       Jwt__PublicKey: ""
       Seed__AdminEmail: "admin@edms.local"
@@ -32,6 +41,7 @@ services:
     depends_on:
       - postgres
       - mailhog
+      - office-converter
 
   web:
     build:
