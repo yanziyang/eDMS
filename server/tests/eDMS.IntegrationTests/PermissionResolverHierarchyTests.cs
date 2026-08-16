@@ -267,5 +267,7 @@ public sealed class PermissionResolverHierarchyTests : IDisposable
         public bool IsSystemAdmin => isSystemAdmin;
         public string? Email => null;
         public string? IpAddress => null;
+
+        public string? ShareToken => null;
     }
 }

@@ -169,6 +169,8 @@ public sealed class RecycleBinServiceTests : IDisposable
         public bool IsSystemAdmin => true;
         public string? Email => "admin@edms.test";
         public string? IpAddress => null;
+
+        public string? ShareToken => null;
     }
 
     private sealed class AllowAllResolver : IPermissionResolver

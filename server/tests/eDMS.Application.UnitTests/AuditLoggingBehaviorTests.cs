@@ -63,6 +63,8 @@ public sealed class AuditLoggingBehaviorTests
         public string? Email => "user@edms.local";
 
         public string? IpAddress => "1.2.3.4";
+
+        public string? ShareToken => null;
     }
 
     private sealed class RecordingAuditLogger : IAuditLogger

@@ -110,7 +110,7 @@ M12–M18 have no dependency on each other beyond M10 and may be worked in any o
 | [M13](#m13--office-preview) | In-browser Office preview | Opening a .docx/.xlsx/.pptx shows a PDF-converted preview, no download required | Not Started |
 | [M14](#m14--chunked-upload--minor-version-retention) | Large-file resilience + version hygiene | A >100MB upload resumes after a network interruption; a Library with a minor-version cap auto-trims old minors on check-in | Done |
 | [M15](#m15--notifications--alerts) | Notifications/alerts ("Follow") | Sharing a document emails + in-app-notifies the recipient; following a folder delivers a digest at the configured frequency | Not Started |
-| [M16](#m16--org-wide-share-links) | Non-anonymous org-wide links | A generated link opens for any authenticated internal user without an individual ACL entry; revoking it blocks further access | Not Started |
+| [M16](#m16--org-wide-share-links) | Non-anonymous org-wide links | A generated link opens for any authenticated internal user without an individual ACL entry; revoking it blocks further access | Done |
 | [M17](#m17--full-text-content-indexing) | Search inside PDF/Office content | A phrase that only appears in a PDF's body text (not name/title/description) is found by search | Not Started |
 | [M18](#m18--dark-theme) | Light/dark theme | Toggling dark mode re-themes the whole app and the choice persists across reloads | Done |
 | [M19](#m19--phase-2-hardening--sign-off) | Phase 2 sign-off | FS §15 Phase 2 checklist fully satisfied; same staging→production path M11 proved, re-run for Phase 2's additions | Not Started |
@@ -209,8 +209,8 @@ FS §8.2 already sketches `ShareLink` — use that shape.
 
 | Status | ID | Track | Task | Depends on | Size | Refs |
 |---|---|---|---|---|---|---|
-| Not Started | M16.1 | BE | `ShareLink` entity/migration per FS §8.2 + generate/revoke endpoints. `RequiresAuthentication` is always `true` — **no anonymous resolution path, ever** (guiding principle 10 above; FS §2.2/§16 assumption 4). | M10 (all) | M | FR-PERM-07, FS §8.2 |
-| Not Started | M16.2 | FE | "Get link" option inside the Share dialog (M10.9): generate/copy/revoke a `ShareLink` with optional expiry. | M16.1, M10.9 | S | FR-PERM-07, mirror `prototype(html)/library.html` share dialog |
+| Done | M16.1 | BE | `ShareLink` entity/migration per FS §8.2 + generate/revoke endpoints. `RequiresAuthentication` is always `true` — **no anonymous resolution path, ever** (guiding principle 10 above; FS §2.2/§16 assumption 4). | M10 (all) | M | FR-PERM-07, FS §8.2 |
+| Done | M16.2 | FE | "Get link" option inside the Share dialog (M10.9): generate/copy/revoke a `ShareLink` with optional expiry. | M16.1, M10.9 | S | FR-PERM-07, mirror `prototype(html)/library.html` share dialog |
 
 ### M17 — Full-text Content Indexing
 

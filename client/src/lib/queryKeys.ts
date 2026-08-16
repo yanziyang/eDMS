@@ -39,6 +39,11 @@ export const queryKeys = {
     forObject: (objectType: string, objectId: string) =>
       [...queryKeys.permissions.all, objectType, objectId] as const,
   },
+  shareLinks: {
+    all: ["share-links"] as const,
+    forObject: (objectType: string, objectId: string) =>
+      [...queryKeys.shareLinks.all, objectType, objectId] as const,
+  },
   recycleBin: {
     all: ["recycle-bin"] as const,
     list: (siteId: string) => [...queryKeys.recycleBin.all, "list", siteId] as const,

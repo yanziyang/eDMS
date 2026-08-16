@@ -72,6 +72,8 @@ public sealed class AuthorizationBehaviorTests
         public string? Email => null;
 
         public string? IpAddress => null;
+
+        public string? ShareToken => null;
     }
 
     private sealed class RecordingResolver(PermissionLevel level) : IPermissionResolver

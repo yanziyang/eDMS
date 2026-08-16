@@ -196,6 +196,7 @@ public sealed class DocumentServiceExtendedTests : IDisposable
         public bool IsAdmin { get; init; }
         public string? Email => "user@edms.local";
         public string? IpAddress => null;
+        public string? ShareToken => null;
     }
 
     private sealed class FakeStorage : IFileStorageProvider

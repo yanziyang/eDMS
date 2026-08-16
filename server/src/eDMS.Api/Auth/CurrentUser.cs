@@ -13,6 +13,10 @@ public sealed class CurrentUser(IHttpContextAccessor accessor) : ICurrentUser
 
     public string? IpAddress => accessor.HttpContext?.Connection.RemoteIpAddress?.ToString();
 
+    public string? ShareToken => accessor.HttpContext?.Request.Headers[ShareTokenHeader].ToString();
+
+    public const string ShareTokenHeader = "X-Share-Token";
+
     private Guid? TryGetGuid(string claimType)
     {
         var value = accessor.HttpContext?.User.FindFirstValue(claimType);

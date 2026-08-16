@@ -8,6 +8,7 @@ import { Profile } from "@/pages/profile";
 import { RecycleBin } from "@/pages/recycle-bin";
 import { ResetPassword } from "@/pages/reset-password";
 import { Search } from "@/pages/search";
+import { ShareLink } from "@/pages/share-link";
 import { SiteHome } from "@/pages/site-home";
 import { AdminGroups } from "@/pages/admin/groups";
 import { AdminSites } from "@/pages/admin/sites";
@@ -22,6 +23,7 @@ export const router = createBrowserRouter([
   { path: "/login", element: <Login /> },
   { path: "/forgot-password", element: <ForgotPassword /> },
   { path: "/reset-password", element: <ResetPassword /> },
+  { path: "/share/:token", element: <ShareLink /> },
   {
     element: <AppShell />,
     children: [

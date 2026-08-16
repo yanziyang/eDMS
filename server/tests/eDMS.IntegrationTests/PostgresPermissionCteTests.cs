@@ -186,5 +186,7 @@ public sealed class PostgresPermissionCteTests : IAsyncLifetime
         public bool IsSystemAdmin => false;
         public string? Email => null;
         public string? IpAddress => null;
+
+        public string? ShareToken => null;
     }
 }

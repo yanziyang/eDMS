@@ -102,6 +102,15 @@ export interface UploadSessionDto {
 
 export type PermissionLevel = "FullControl" | "Contribute" | "Read" | "NoAccess";
 
+export type ShareLinkLevel = "Read" | "Contribute";
+
+export interface ShareLinkDto {
+  id: string;
+  token: string;
+  level: ShareLinkLevel;
+  expiresAt: string | null;
+}
+
 export type PrincipalType = "User" | "Group";
 
 export interface DocumentDto {

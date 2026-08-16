@@ -139,5 +139,7 @@ public sealed class PermissionResolverTests : IDisposable
         public string? Email => null;
 
         public string? IpAddress => null;
+
+        public string? ShareToken => null;
     }
 }

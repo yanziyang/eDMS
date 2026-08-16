@@ -170,6 +170,7 @@ public sealed class AuthServiceExtendedTests : IDisposable
         public bool IsSystemAdmin => false;
         public string? Email { get; set; }
         public string? IpAddress => null;
+        public string? ShareToken => null;
     }
 
     private sealed class FakeTokenService : ITokenService

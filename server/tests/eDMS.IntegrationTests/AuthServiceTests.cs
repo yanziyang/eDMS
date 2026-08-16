@@ -225,6 +225,8 @@ public sealed class AuthServiceTests : IDisposable
         public string? Email => null;
 
         public string? IpAddress => null;
+
+        public string? ShareToken => null;
     }
 
     private sealed class FakeEmailSender : IEmailSender

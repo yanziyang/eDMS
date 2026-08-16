@@ -51,6 +51,8 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options)
 
     public DbSet<UploadSession> UploadSessions => Set<UploadSession>();
 
+    public DbSet<ShareLink> ShareLinks => Set<ShareLink>();
+
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
         // The SQLite provider has no DateTimeOffset support; store as UTC binary.
@@ -140,6 +142,14 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options)
             entity.Property(session => session.FileName).IsRequired().HasMaxLength(512);
             entity.Property(session => session.MetadataJson).HasMaxLength(4096);
             entity.HasIndex(session => session.ExpiresAt);
+        });
+
+        builder.Entity<ShareLink>(entity =>
+        {
+            entity.ToTable("share_links");
+            entity.Property(link => link.Token).IsRequired().HasMaxLength(64);
+            entity.HasIndex(link => link.Token).IsUnique();
+            entity.HasIndex(link => new { link.ObjectType, link.ObjectId });
         });
 
         ApplyProviderSpecificColumnTypes(builder);

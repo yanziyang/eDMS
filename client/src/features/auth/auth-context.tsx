@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { setAccessToken } from "@/lib/api-client";
+import { setShareToken } from "@/features/share-links/token";
 import type { CurrentUserDto } from "@/types/api";
 import * as authApi from "./api";
 
@@ -55,6 +56,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           // The local session is cleared regardless of whether the server call succeeded.
         } finally {
           setAccessToken(null);
+          setShareToken(null);
           setUser(null);
           setStatus("unauthenticated");
         }

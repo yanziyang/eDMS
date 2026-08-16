@@ -169,5 +169,7 @@ public sealed class PermissionCtePerformanceTests : IDisposable
         public bool IsSystemAdmin => false;
         public string? Email => null;
         public string? IpAddress => null;
+
+        public string? ShareToken => null;
     }
 }

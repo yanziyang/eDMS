@@ -34,7 +34,7 @@ public sealed class PermissionResolver(
             return PermissionLevel.FullControl;
         }
 
-        var key = $"perm:{userId}:{type}:{objectId}:{invalidator.Generation}";
+        var key = $"perm:{userId}:{type}:{objectId}:{invalidator.Generation}:{currentUser.ShareToken ?? string.Empty}";
         return await cache.GetOrCreateAsync(key, entry =>
         {
             entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromSeconds(30);
@@ -103,7 +103,43 @@ public sealed class PermissionResolver(
             }
         }
 
-        return await ResolveSiteLevelAsync(userId, siteRow.ObjectId, cancellationToken);
+        var siteLevel = await ResolveSiteLevelAsync(userId, siteRow.ObjectId, cancellationToken);
+        if (siteLevel != PermissionLevel.NoAccess)
+        {
+            return siteLevel;
+        }
+
+        // Org-wide share link (FR-PERM-07): a valid, unrevoked, unexpired token for
+        // the requested object grants its level without an individual ACL entry.
+        return await ResolveShareLinkLevelAsync(type, objectId, cancellationToken);
+    }
+
+    private async Task<PermissionLevel> ResolveShareLinkLevelAsync(
+        ObjectType type,
+        Guid objectId,
+        CancellationToken cancellationToken)
+    {
+        if (type is not (ObjectType.Folder or ObjectType.Document)
+            || string.IsNullOrWhiteSpace(currentUser.ShareToken))
+        {
+            return PermissionLevel.NoAccess;
+        }
+
+        var link = await db.ShareLinks.AsNoTracking()
+            .SingleOrDefaultAsync(item => item.Token == currentUser.ShareToken, cancellationToken);
+        if (link is null || link.IsRevoked)
+        {
+            return PermissionLevel.NoAccess;
+        }
+
+        if (link.ExpiresAt is { } expiresAt && expiresAt <= DateTimeOffset.UtcNow)
+        {
+            return PermissionLevel.NoAccess;
+        }
+
+        return link.ObjectType == type && link.ObjectId == objectId
+            ? link.Level
+            : PermissionLevel.NoAccess;
     }
 
     private async Task<List<PermissionChainRow>> LoadChainAsync(

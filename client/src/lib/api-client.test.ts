@@ -1,9 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { setShareToken } from "@/features/share-links/token";
 import { ApiError, request, requestBlob, requestRaw, setAccessToken } from "./api-client";
 
 describe("api-client", () => {
   beforeEach(() => {
     setAccessToken(null);
+    setShareToken(null);
   });
 
   afterEach(() => {
@@ -113,6 +115,59 @@ describe("api-client", () => {
 
     const headers = (captured?.headers ?? {}) as Record<string, string>;
     expect(headers.Authorization).toBe("Bearer tok-1");
+  });
+
+  it("attaches the X-Share-Token header when a share token is set", async () => {
+    setShareToken("share-tok-1");
+    let captured: RequestInit | undefined;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (_url: RequestInfo | URL, init?: RequestInit) => {
+        captured = init;
+        return jsonResponse({ ok: true });
+      }),
+    );
+
+    await request("/documents/1");
+
+    const headers = (captured?.headers ?? {}) as Record<string, string>;
+    expect(headers["X-Share-Token"]).toBe("share-tok-1");
+  });
+
+  it("does not attach the X-Share-Token header when no share token is set", async () => {
+    let captured: RequestInit | undefined;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (_url: RequestInfo | URL, init?: RequestInit) => {
+        captured = init;
+        return jsonResponse({ ok: true });
+      }),
+    );
+
+    await request("/documents/1");
+
+    const headers = (captured?.headers ?? {}) as Record<string, string>;
+    expect(headers["X-Share-Token"]).toBeUndefined();
+  });
+
+  it("attaches the X-Share-Token header to requestRaw and requestBlob", async () => {
+    setShareToken("share-tok-2");
+    const captured: RequestInit[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (_url: RequestInfo | URL, init?: RequestInit) => {
+        captured.push(init ?? {});
+        return jsonResponse({ uploadedBytes: 0 });
+      }),
+    );
+
+    await requestRaw("/uploads/s1/chunks?offset=0", { method: "PUT", body: new Blob(["x"]) });
+    await requestBlob("/documents/1/download");
+
+    for (const init of captured) {
+      const headers = (init.headers ?? {}) as Record<string, string>;
+      expect(headers["X-Share-Token"]).toBe("share-tok-2");
+    }
   });
 
   it("does not attempt a refresh for login-family endpoints", async () => {

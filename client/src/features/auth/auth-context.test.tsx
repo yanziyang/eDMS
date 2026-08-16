@@ -3,6 +3,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { setAccessToken } from "@/lib/api-client";
+import { getShareToken, setShareToken } from "@/features/share-links/token";
 import { AuthProvider, useAuth } from "./auth-context";
 import { login, logout, me } from "./api";
 
@@ -158,11 +159,13 @@ describe("auth-context", () => {
     renderProbe();
     await waitFor(() => expect(screen.getByTestId("status")).toHaveTextContent("authenticated"));
 
+    setShareToken("tok-share");
     await user.click(screen.getByRole("button", { name: "logout" }));
 
     await waitFor(() => expect(screen.getByTestId("status")).toHaveTextContent("unauthenticated"));
     expect(screen.getByTestId("user")).toHaveTextContent("none");
     expect(mockedSetAccessToken).toHaveBeenLastCalledWith(null);
+    expect(getShareToken()).toBeNull();
   });
 
   it("logout clears the session even when the API call fails", async () => {

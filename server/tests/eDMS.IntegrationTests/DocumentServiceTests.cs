@@ -115,6 +115,7 @@ public sealed class DocumentServiceTests : IDisposable
         public bool IsSystemAdmin => false;
         public string? Email => "user@edms.local";
         public string? IpAddress => null;
+        public string? ShareToken => null;
     }
 
     private sealed class AllowAllResolver : IPermissionResolver

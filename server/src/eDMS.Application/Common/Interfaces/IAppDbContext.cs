@@ -45,5 +45,7 @@ public interface IAppDbContext
 
     DbSet<UploadSession> UploadSessions { get; }
 
+    DbSet<ShareLink> ShareLinks { get; }
+
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

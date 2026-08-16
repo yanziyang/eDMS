@@ -1,3 +1,4 @@
+import { getShareToken } from "@/features/share-links/token";
 import type { ProblemDetails, RefreshResponse } from "@/types/api";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:5080/api/v1";
@@ -7,6 +8,11 @@ let refreshPromise: Promise<boolean> | null = null;
 
 export function setAccessToken(token: string | null) {
   accessToken = token;
+}
+
+function shareTokenHeaders(): Record<string, string> {
+  const token = getShareToken();
+  return token ? { "X-Share-Token": token } : {};
 }
 
 export class ApiError extends Error {
@@ -65,6 +71,7 @@ export async function request<T>(path: string, init: RequestInit = {}): Promise<
     headers: {
       ...(init.body instanceof FormData ? {} : { "Content-Type": "application/json" }),
       ...(init.headers ?? {}),
+      ...shareTokenHeaders(),
       ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
     },
   });
@@ -94,6 +101,7 @@ export async function requestRaw<T>(path: string, init: RequestInit = {}): Promi
     credentials: "include",
     headers: {
       ...(init.headers ?? {}),
+      ...shareTokenHeaders(),
       ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
     },
   });
@@ -116,7 +124,10 @@ export async function requestRaw<T>(path: string, init: RequestInit = {}): Promi
 export async function requestBlob(path: string): Promise<Blob> {
   let response = await fetch(`${API_BASE}${path}`, {
     credentials: "include",
-    headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
+    headers: {
+      ...shareTokenHeaders(),
+      ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+    },
   });
 
   if (response.status === 401) {
@@ -124,7 +135,10 @@ export async function requestBlob(path: string): Promise<Blob> {
     if (refreshed) {
       response = await fetch(`${API_BASE}${path}`, {
         credentials: "include",
-        headers: { Authorization: `Bearer ${accessToken!}` },
+        headers: {
+          ...shareTokenHeaders(),
+          Authorization: `Bearer ${accessToken!}`,
+        },
       });
     }
   }

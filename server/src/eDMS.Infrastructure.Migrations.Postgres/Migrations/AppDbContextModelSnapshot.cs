@@ -950,6 +950,64 @@ namespace eDMS.Infrastructure.Migrations.Postgres
                     b.ToTable("libraries", (string)null);
                 });
 
+            modelBuilder.Entity("eDMS.Domain.ShareLink", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("CreatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by");
+
+                    b.Property<DateTimeOffset?>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("expires_at");
+
+                    b.Property<bool>("IsRevoked")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_revoked");
+
+                    b.Property<int>("Level")
+                        .HasColumnType("integer")
+                        .HasColumnName("level");
+
+                    b.Property<Guid>("ObjectId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("object_id");
+
+                    b.Property<int>("ObjectType")
+                        .HasColumnType("integer")
+                        .HasColumnName("object_type");
+
+                    b.Property<bool>("RequiresAuthentication")
+                        .HasColumnType("boolean")
+                        .HasColumnName("requires_authentication");
+
+                    b.Property<string>("Token")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("token");
+
+                    b.HasKey("Id")
+                        .HasName("pk_share_links");
+
+                    b.HasIndex("Token")
+                        .IsUnique()
+                        .HasDatabaseName("ix_share_links_token");
+
+                    b.HasIndex("ObjectType", "ObjectId")
+                        .HasDatabaseName("ix_share_links_object_type_object_id");
+
+                    b.ToTable("share_links", (string)null);
+                });
+
             modelBuilder.Entity("eDMS.Domain.Site", b =>
                 {
                     b.Property<Guid>("Id")

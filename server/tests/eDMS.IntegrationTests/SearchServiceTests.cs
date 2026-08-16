@@ -162,6 +162,8 @@ public sealed class SearchServiceTests : IDisposable
         public bool IsSystemAdmin => false;
         public string? Email => null;
         public string? IpAddress => null;
+
+        public string? ShareToken => null;
     }
 
     private sealed class SelectiveResolver(Guid deniedDocumentId) : IPermissionResolver
