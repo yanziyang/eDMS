@@ -51,6 +51,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       logout: async () => {
         try {
           await authApi.logout();
+        } catch {
+          // The local session is cleared regardless of whether the server call succeeded.
         } finally {
           setAccessToken(null);
           setUser(null);

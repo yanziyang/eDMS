@@ -47,7 +47,7 @@ The system is for **internal organizational use only**. There is no concept of a
 | Design system | shadcn/ui |
 | Styling | Tailwind CSS 4 |
 | Backend | .NET 10, ASP.NET Core Web API, Entity Framework Core |
-| Database | PostgreSQL |
+| Database | EF Core, provider-selected via configuration (`Database:Provider`): PostgreSQL (production), SQL Server, MySQL, SQLite (local-development default) — TDS ADR-8 |
 | Authentication | Database (local) auth first; SAML2 and OIDC federation in a later phase |
 
 Recommended supporting libraries (not mandated by the user, flagged as **assumptions** — see §17):
@@ -55,7 +55,7 @@ Recommended supporting libraries (not mandated by the user, flagged as **assumpt
 | Concern | Recommendation |
 |---|---|
 | Backend auth | ASP.NET Core Identity (`ApplicationUser : IdentityUser<Guid>`) issuing JWT access + rotating refresh tokens |
-| DB provider | `Npgsql.EntityFrameworkCore.PostgreSQL` |
+| DB provider | `Npgsql.EntityFrameworkCore.PostgreSQL` (production); `Microsoft.EntityFrameworkCore.SqlServer` / `MySql.EntityFrameworkCore` / `Microsoft.EntityFrameworkCore.Sqlite` behind the same `Database:Provider` switch — TDS ADR-8 |
 | Naming convention | `EFCore.NamingConventions` (snake_case in Postgres, PascalCase in C#) |
 | Validation | FluentValidation |
 | Object mapping | Mapster or manual extension methods (avoid heavy AutoMapper conventions) |
@@ -752,6 +752,7 @@ Flagged explicitly since they were not specified by the user and were decided to
 5. No explicit `Deny` permission level in MVP — only additive grants plus `NoAccess` (absence of a grant), to avoid SharePoint's confusing deny-precedence rules.
 6. Default file size limit 250 MB, recycle bin retention 90 days, access token TTL 15 min, refresh token TTL 7 days — all configurable, not hardcoded.
 7. Site-creation rights default to any authenticated user; Admin can restrict this later via a settings flag if desired (not itemized as its own FR, covered by FR-ADMIN-04's general settings surface).
+8. Database choice is a configuration concern, not a code fork: PostgreSQL is the production database; SQL Server and MySQL are supported for enterprise deployments; SQLite is the local-development default (no DB install required). PostgreSQL-specific schema (e.g. `citext`, `tsvector`) is Postgres-only; other providers get equivalent portable behavior (TDS ADR-8).
 
 ## 17. Glossary
 

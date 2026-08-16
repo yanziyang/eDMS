@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using eDMS.Infrastructure.Persistence.Configurations;
 using eDMS.Application.Common.Interfaces;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace eDMS.Infrastructure.Persistence;
 
@@ -40,11 +41,27 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options)
 
     public DbSet<ItemPermission> ItemPermissions => Set<ItemPermission>();
 
+    protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
+    {
+        // The SQLite provider has no DateTimeOffset support; store as UTC binary.
+        if (Database.IsSqlite())
+        {
+            configurationBuilder.Properties<DateTimeOffset>()
+                .HaveConversion<DateTimeOffsetToBinaryConverter>();
+            configurationBuilder.Properties<DateTimeOffset?>()
+                .HaveConversion<DateTimeOffsetToBinaryConverter>();
+        }
+    }
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
 
-        builder.HasPostgresExtension("citext");
+        if (Database.IsNpgsql())
+        {
+            builder.HasPostgresExtension("citext");
+        }
+
         builder.ApplyConfiguration(new ApplicationUserConfiguration());
         builder.ApplyConfiguration(new RefreshTokenConfiguration());
         builder.ApplyConfiguration(new AuditLogEntryConfiguration());
@@ -59,5 +76,47 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options)
         builder.ApplyConfiguration(new TagConfiguration());
         builder.ApplyConfiguration(new DocumentTagConfiguration());
         builder.ApplyConfiguration(new ItemPermissionConfiguration());
+
+        ApplyProviderSpecificColumnTypes(builder);
     }
+
+    /// <summary>
+    /// Column types and database defaults that differ per provider (ADR-8).
+    /// Postgres keeps citext/jsonb/timestamptz and its <c>now()</c> defaults; SQLite
+    /// uses a NOCASE collation for the unique email index and app-set timestamps;
+    /// SqlServer/MySql rely on their default case-insensitive collations and use
+    /// their own UTC timestamp defaults.
+    /// </summary>
+    private void ApplyProviderSpecificColumnTypes(ModelBuilder builder)
+    {
+        var userEmail = builder.Entity<ApplicationUser>().Property(user => user.Email);
+        var userCreatedAt = builder.Entity<ApplicationUser>().Property(user => user.CreatedAt);
+        var auditTimestamp = builder.Entity<AuditLogEntry>().Property(entry => entry.Timestamp);
+        var auditDetails = builder.Entity<AuditLogEntry>().Property(entry => entry.Details);
+
+        if (Database.IsNpgsql())
+        {
+            userEmail.HasColumnType("citext");
+            userCreatedAt.HasDefaultValueSql("now()");
+            auditTimestamp.HasDefaultValueSql("now()");
+            auditDetails.HasColumnType("jsonb");
+        }
+        else if (Database.IsSqlite())
+        {
+            userEmail.UseCollation("NOCASE");
+        }
+        else if (Database.IsSqlServer())
+        {
+            userCreatedAt.HasDefaultValueSql("SYSDATETIMEOFFSET()");
+            auditTimestamp.HasDefaultValueSql("SYSDATETIMEOFFSET()");
+        }
+        else if (IsMySql())
+        {
+            userCreatedAt.HasDefaultValueSql("CURRENT_TIMESTAMP(6)");
+            auditTimestamp.HasDefaultValueSql("CURRENT_TIMESTAMP(6)");
+        }
+    }
+
+    private bool IsMySql() =>
+        Database.ProviderName?.StartsWith("MySql", StringComparison.OrdinalIgnoreCase) == true;
 }

@@ -4,6 +4,10 @@ WORKDIR /src
 COPY src/eDMS.Domain/eDMS.Domain.csproj src/eDMS.Domain/
 COPY src/eDMS.Application/eDMS.Application.csproj src/eDMS.Application/
 COPY src/eDMS.Infrastructure/eDMS.Infrastructure.csproj src/eDMS.Infrastructure/
+COPY src/eDMS.Infrastructure.Migrations.Postgres/eDMS.Infrastructure.Migrations.Postgres.csproj src/eDMS.Infrastructure.Migrations.Postgres/
+COPY src/eDMS.Infrastructure.Migrations.SqlServer/eDMS.Infrastructure.Migrations.SqlServer.csproj src/eDMS.Infrastructure.Migrations.SqlServer/
+COPY src/eDMS.Infrastructure.Migrations.MySql/eDMS.Infrastructure.Migrations.MySql.csproj src/eDMS.Infrastructure.Migrations.MySql/
+COPY src/eDMS.Infrastructure.Migrations.Sqlite/eDMS.Infrastructure.Migrations.Sqlite.csproj src/eDMS.Infrastructure.Migrations.Sqlite/
 COPY src/eDMS.Api/eDMS.Api.csproj src/eDMS.Api/
 RUN dotnet restore src/eDMS.Api/eDMS.Api.csproj
 

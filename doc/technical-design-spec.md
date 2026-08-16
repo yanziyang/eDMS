@@ -85,6 +85,16 @@ Dependency direction is enforced by project references, not convention: `Domain`
 | ADR-5 | PostgreSQL full-text search (`tsvector`/GIN), not Elasticsearch | Meets FR-SRCH-01…06 without an extra service to operate; revisit only if FR-SRCH-07 (content-text indexing) plus corpus size pushes past what GIN indexes handle well | Elasticsearch/OpenSearch — deferred, not justified at MVP scale |
 | ADR-6 | Local disk storage behind `IFileStorageProvider`, not S3/Blob from day one | Matches FS §13's on-prem, no-mandatory-cloud-dependency goal; the interface is the actual deliverable, not the local implementation | Direct S3 SDK calls — rejected, would leak a vendor dependency into Application layer |
 | ADR-7 | Mapster over AutoMapper | Comparable capability, materially faster, no runtime reflection-heavy convention magic to debug | AutoMapper — acceptable substitute if the team has stronger prior familiarity |
+| ADR-8 | EF Core supports four database providers behind the `Database:Provider` config key — PostgreSQL (production default), SQL Server, MySQL, SQLite (**default for local Development**) | PostgreSQL stays the production database, but no-install local dev should not require Docker/Postgres; enterprise deployments may sit on SQL Server/MySQL | Provider-locked to PostgreSQL — rejected: blocking a working dev loop on a local Postgres install; rejected *for now*: Pomelo for MySQL, because it lags EF Core 10 (official `MySql.EntityFrameworkCore` used instead — revisit if it blocks a needed feature) |
+
+**ADR-8 implementation rules** (normative, not prose):
+
+1. **One migrations assembly per provider** (`eDMS.Infrastructure.Migrations.Postgres|SqlServer|MySql|Sqlite`). EF applies *every* migration in a single assembly to any database, so mixing provider migrations in one assembly would apply the wrong set. The runtime selects the assembly via `MigrationsAssembly(...)`; `dotnet ef` selects it via `-p <project>` + `Database__Provider=<provider>` (see §6.4).
+2. **Provider-specific schema is quarantined in `AppDbContext.ApplyProviderSpecificColumnTypes`**: Postgres keeps `citext` (case-insensitive unique email) and `jsonb` (audit details) plus `now()` defaults; SQLite uses a `NOCASE` collation on `email` (its lack of citext) and app-set timestamps (no `now()`); SqlServer/MySQL rely on their default case-insensitive collations and use `SYSDATETIMEOFFSET()`/`CURRENT_TIMESTAMP(6)` defaults. Nothing else in the model may branch on provider.
+3. **SQLite has no `DateTimeOffset`** — `ConfigureConventions` applies `DateTimeOffsetToBinaryConverter` (UTC ticks) for SQLite only. Other providers map it natively.
+4. **No provider-specific LINQ in query code.** `EF.Functions.ILike` (Npgsql-only) was replaced by portable `ToLower().Contains()`; provider-agnostic LINQ only, else the other three providers break at runtime.
+5. **SQLite is a development convenience, not a production target.** Its file DB lives in the API content root (`edms-dev.db`, gitignored); the Postgres-specific `tsvector` full-text migration stays Postgres-only (search falls back to `ToLower().Contains()` elsewhere, per ADR-5's MVP scope).
+6. The dev default is applied by the host (`Program.cs`: no `Database:Provider` config + `Development` ⇒ Sqlite; otherwise Postgres), not by the parser, so infrastructure code stays environment-agnostic.
 
 ## 3. Solution & Repository Structure
 
@@ -108,7 +118,11 @@ server/
   src/
     eDMS.Domain/               # entities, enums, value objects, domain invariants — no package refs beyond BCL
     eDMS.Application/          # commands, queries, handlers, validators, DTOs, interfaces (IFileStorageProvider, IPermissionResolver, IEmailSender, ITokenService, ICurrentUser)
-    eDMS.Infrastructure/       # EF Core DbContext + migrations + entity configs, concrete implementations of Application interfaces, background services
+    eDMS.Infrastructure/       # EF Core DbContext + entity configs, concrete implementations of Application interfaces, background services
+    eDMS.Infrastructure.Migrations.Postgres/    # PostgreSQL migration set (ADR-8)
+    eDMS.Infrastructure.Migrations.SqlServer/   # SQL Server migration set (ADR-8)
+    eDMS.Infrastructure.Migrations.MySql/       # MySQL migration set (ADR-8)
+    eDMS.Infrastructure.Migrations.Sqlite/      # SQLite migration set — local dev default (ADR-8)
     eDMS.Api/                  # controllers, Program.cs, middleware, DI composition, appsettings*.json
   tests/
     eDMS.Domain.UnitTests/
@@ -159,7 +173,7 @@ These apply across both backend and frontend and are referenced rather than repe
 | Concern | Convention |
 |---|---|
 | IDs | `Guid` (PostgreSQL `uuid`) everywhere, generated application-side via `Guid.CreateVersion7()` (.NET 9+, time-ordered — keeps B-tree PK indexes append-friendly, avoiding the random-UUID index-fragmentation problem) |
-| Timestamps | UTC only, `timestamptz` in Postgres, ISO-8601 over the wire (FS §10.1); never store local time |
+| Timestamps | UTC only, `timestamptz` in Postgres, ISO-8601 over the wire (FS §10.1); never store local time. Other providers map this via their migration sets (SQLite stores UTC binary ticks — ADR-8) |
 | Soft delete | `IsDeleted` + `DeletedAt` + `DeletedBy` on every entity that appears in the Recycle Bin (Folder, Document per FS §6.8); enforced via an EF Core global query filter, never a manual `WHERE` clause per query |
 | Audit fields | `CreatedBy` / `CreatedAt` on every entity; `ModifiedBy` / `ModifiedAt` where the functional spec's data model (FS §8.2) lists them |
 | Nullability | C# nullable reference types **enabled** solution-wide (`<Nullable>enable</Nullable>`); TypeScript `strict: true` (already required by the user's stack choice) |
@@ -562,7 +576,17 @@ The resolver walks this result set in order, stopping at the first `object_type`
 
 ### 6.4 Migrations
 
-EF Core Code-First: `dotnet ef migrations add <Name> -p src/eDMS.Infrastructure -s src/eDMS.Api`. Migrations run automatically on API startup **only** in `Development`/`Testing`; in every other environment they run as an explicit CI/CD pipeline step before the new API version is deployed (§11.3) — auto-migrating a production database from application startup is exactly the kind of implicit, easy-to-get-wrong behavior this document exists to rule out explicitly.
+EF Core Code-First, **one migration set per database provider** (ADR-8), each in its own project so a database never sees another provider's migrations. Select the set with the `Database__Provider` environment variable and the matching `-p` project:
+
+```bash
+# bash — PostgreSQL (production):
+Database__Provider=Postgres dotnet ef migrations add <Name> -p server/src/eDMS.Infrastructure.Migrations.Postgres -s server/src/eDMS.Api
+# PowerShell:
+#   $env:Database__Provider='Postgres'; dotnet ef migrations add <Name> -p server/src/eDMS.Infrastructure.Migrations.Postgres -s server/src/eDMS.Api
+# SqlServer / MySql / Sqlite: swap the value and the project accordingly.
+```
+
+Every model change requires a migration **in all four sets** — verify nothing is missed with `dotnet ef migrations has-pending-model-changes -p <project> -s server/src/eDMS.Api` per provider. Migrations run automatically on API startup **only** in `Development`/`Testing`; in every other environment they run as an explicit CI/CD pipeline step before the new API version is deployed (§11.3) — auto-migrating a production database from application startup is exactly the kind of implicit, easy-to-get-wrong behavior this document exists to rule out explicitly.
 
 ### 6.5 Seed data
 
@@ -930,7 +954,7 @@ volumes:
   deploy-prod.yml    # on: manual approval after deploy-staging succeeds — same steps against production
 ```
 
-Migration step in each deploy workflow runs `dotnet ef database update` as its own job **before** the new API image is rolled out (§6.4) — never `EnsureCreated()`/auto-migrate-on-boot outside local dev.
+Migration step in each deploy workflow runs `dotnet ef database update` (with `Database__Provider` + `-p` matching the deployment's database, §6.4) as its own job **before** the new API image is rolled out — never `EnsureCreated()`/auto-migrate-on-boot outside local dev.
 
 ### 11.4 Configuration & secrets management
 
@@ -942,18 +966,18 @@ Migration step in each deploy workflow runs `dotnet ef database update` as its o
 
 | Layer | Tool | What's covered |
 |---|---|---|
-| `eDMS.Domain.UnitTests` | xUnit + FluentAssertions | Entity invariants (e.g. `Document.CheckOut` throws when already checked out by someone else) — no mocks needed, pure domain logic |
-| `eDMS.Application.UnitTests` | xUnit + FluentAssertions + NSubstitute | Handlers with `IAppDbContext`/`IPermissionResolver`/etc. mocked — one test class per command/query |
-| `eDMS.IntegrationTests` | xUnit + `WebApplicationFactory<Program>` + Testcontainers.PostgreSql | Full HTTP round-trip against a real, ephemeral Postgres container per test run — covers the permission-hierarchy CTE (§6.3), migrations actually applying cleanly, and the auth/refresh flow end-to-end |
+| `eDMS.Domain.UnitTests` | xUnit | Entity invariants (e.g. soft-delete idempotency, `SiteRoleExtensions` fallback) — no mocks needed, pure domain logic |
+| `eDMS.Application.UnitTests` | xUnit | Pipeline behaviors (authorization, audit logging, validation) with fakes |
+| `eDMS.IntegrationTests` | xUnit + `WebApplicationFactory<Program>` | Full HTTP round-trip per controller group, direct service tests (document/permission/recycle-bin/search/admin), auth/refresh flows, permission-hierarchy resolution, SQLite boot test, provider-specific model config |
 
-CI gate: unit + integration suites both green, plus a minimum line-coverage threshold on `Domain` + `Application` (not `Infrastructure`/`Api`, where integration tests are the more meaningful signal) enforced via `dotnet test /p:CollectCoverage=true` and a coverage-gate step in `ci.yml`.
+CI gate: unit + integration suites both green, plus a **90% minimum line-coverage threshold across the real-code assemblies** (`eDMS.Domain`, `eDMS.Application`, `eDMS.Infrastructure`, `eDMS.Api`) enforced by `coverlet.collector` via `server/coverlet.runsettings` (run with `--collect:"XPlat Code Coverage" --settings server/coverlet.runsettings`). Excluded from measurement: the four generated EF migrations assemblies (`eDMS.Infrastructure.Migrations.*`) and tool-generated files (`*.generated.cs`) — they are generated code, not hand-written logic.
 
 ### 12.2 Frontend
 
 | Layer | Tool | What's covered |
 |---|---|---|
-| Unit/component | Vitest + React Testing Library | Individual components, hooks, the `api-client.ts` refresh/retry logic (§7.3) with `msw` mocking HTTP |
-| E2E | Playwright | The flows enumerated in §9 driven through a real browser against a full docker-compose stack (§11.2): login → browse library → upload → check-out/check-in → share → search — this is the automated equivalent of the manual walkthrough the `prototype(html)` deliverable enables for stakeholders today |
+| Unit/component | Vitest + React Testing Library + MSW | Pages, feature API clients, auth context, `api-client.ts` refresh/retry logic — jsdom + msw mocking HTTP. **90% line/statement/function/branch thresholds** on `src` (excluding generated `components/ui`, wiring files, and `types`) enforced via `npm run test:coverage` (`vitest run --coverage --coverage.all`) |
+| E2E | Playwright | The flows enumerated in §9 driven through a real browser against a full docker-compose stack (§11.2): login → browse library → upload → check-out/check-in → share → search — this is the automated equivalent of the manual walkthrough the `prototype(html)` deliverable enables for stakeholders today. Database provider is selectable via `E2E_DATABASE_PROVIDER` (default `Postgres`, or `Sqlite` to run locally with no Postgres server — ADR-8); the harness resets the E2E database before each run |
 
 ### 12.3 Non-negotiable test cases
 

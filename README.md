@@ -12,8 +12,8 @@ Phase 1 (MVP, milestones M0-M9) is substantially built but not yet fully done. C
 |---|---|
 | Frontend | React, Vite, strict TypeScript, React Router, shadcn/ui, Tailwind CSS 4, TanStack Query |
 | Backend | .NET 10, ASP.NET Core Web API (controllers), MediatR, FluentValidation, Mapster, Serilog |
-| Data access | Entity Framework Core with Npgsql and `EFCore.NamingConventions` |
-| Database | PostgreSQL |
+| Data access | Entity Framework Core with provider packages for PostgreSQL, SQL Server, MySQL, and SQLite; `EFCore.NamingConventions` |
+| Database | Switched via `Database:Provider` — PostgreSQL (production), SQL Server, MySQL, SQLite (local dev default) |
 | Auth | Local database auth now; SAML2/OIDC federation planned later |
 
 ## Repository layout
@@ -23,7 +23,7 @@ Phase 1 (MVP, milestones M0-M9) is substantially built but not yet fully done. C
 | `doc/` | [Functional spec](doc/functional-spec.md), [technical design spec](doc/technical-design-spec.md), [implementation plan](doc/ImplementationPlan%20V1.1.md) |
 | `prototype(html)/` | Clickable vanilla HTML/CSS/JS prototype (reference only) |
 | `Prototype(React)/` | Clickable React prototype using the real stack |
-| `server/` | .NET solution (Domain, Application, Infrastructure, Api, tests) |
+| `server/` | .NET solution (Domain, Application, Infrastructure, one migrations project per database provider, Api, tests) |
 | `client/` | React/Vite app (auth, sites, libraries, documents, search) |
 | `.github/workflows/` | CI pipeline |
 | `docker-compose.yml` | Local Postgres + Mailhog + API + web stack |
@@ -36,7 +36,7 @@ Phase 1 (MVP, milestones M0-M9) is substantially built but not yet fully done. C
 docker compose up -d
 ```
 
-This starts PostgreSQL, Mailhog, the API (http://localhost:5080), and the web app (http://localhost:5173). A System Administrator is seeded from the Compose environment:
+This starts PostgreSQL, Mailhog, the API (http://localhost:5080), and the web app (http://localhost:5173). The Compose stack runs the API against PostgreSQL (`Database__Provider: Postgres`). A System Administrator is seeded from the Compose environment:
 
 - Email: `admin@edms.local`
 - Password: `ChangeMe123!`
@@ -45,9 +45,9 @@ The API migrates the database on startup in Development and forces a password re
 
 ### Bare metal
 
-Requirements: .NET 10 SDK, Node.js 20+, and a local PostgreSQL instance.
+Requirements: .NET 10 SDK, Node.js 20+. **No database install needed** — local Development defaults to SQLite (`edms-dev.db` is created in `server/src/eDMS.Api/`, gitignored).
 
-1. Set the connection string and seed credentials as environment variables (see [.env.example](.env.example)).
+1. Optionally set seed credentials and JWT keys as environment variables (see [.env.example](.env.example)).
 2. Run the API (migrates and seeds on startup):
 
    ```bash
@@ -66,7 +66,7 @@ Requirements: .NET 10 SDK, Node.js 20+, and a local PostgreSQL instance.
 
 4. Open the Vite URL (default http://localhost:5173) and sign in with the seeded administrator.
 
-`dotnet run` serves the API on port 5188, so point `VITE_API_BASE_URL` at it (the Compose path above uses 5080). The API reads `ConnectionStrings__Default`, `Seed__AdminEmail`, `Seed__AdminTempPassword`, `Jwt__PrivateKey`, `Jwt__PublicKey`, and `Smtp__*` from environment variables. No real secrets are committed.
+`dotnet run` serves the API on port 5188, so point `VITE_API_BASE_URL` at it (the Compose path above uses 5080). To use another database, set `Database__Provider` (`Postgres`, `SqlServer`, `MySql`, or `Sqlite`) and `ConnectionStrings__Default` for it. The API also reads `Seed__AdminEmail`, `Seed__AdminTempPassword`, `Jwt__PrivateKey`, `Jwt__PublicKey`, and `Smtp__*` from environment variables. No real secrets are committed.
 
 ## Testing
 
@@ -74,17 +74,25 @@ Requirements: .NET 10 SDK, Node.js 20+, and a local PostgreSQL instance.
 # Backend unit + integration tests
 dotnet test server/eDMS.sln
 
+# Backend coverage gate (fails below 90% real-code line coverage)
+dotnet test server/eDMS.sln --collect:"XPlat Code Coverage" --settings server/coverlet.runsettings
+
 # Frontend unit tests (Vitest)
 cd client && npm test
+
+# Frontend coverage gate (fails below 90% lines/statements/functions/branches)
+cd client && npm run test:coverage
 
 # Production build + typecheck
 cd client && npm run build
 
-# End-to-end tests (Playwright, headless Edge, real API + PostgreSQL)
+# End-to-end tests (Playwright, headless Edge, real API)
+# Defaults to PostgreSQL; set E2E_DATABASE_PROVIDER=Sqlite to run with no database server.
 cd client && npx playwright test
+cd client && E2E_DATABASE_PROVIDER=Sqlite npx playwright test   # PowerShell: $env:E2E_DATABASE_PROVIDER='Sqlite'; npx playwright test
 ```
 
-The Playwright suite resets a dedicated `edms_e2e` database, seeds a System Administrator, and covers login, browse, upload, download, check-out/in, share, and permission-filtered search.
+The Playwright suite resets the E2E database (a dedicated `edms_e2e` Postgres database, or a fresh `e2e.db` SQLite file), seeds a System Administrator, and covers login, browse, upload, download, check-out/in, share, and permission-filtered search.
 
 ## Documentation
 

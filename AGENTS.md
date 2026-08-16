@@ -49,7 +49,7 @@ Don't load the full specs into context speculatively. Look up the row that match
 | Design system | shadcn/ui |
 | Styling | Tailwind CSS 4 |
 | Backend | .NET 10, ASP.NET Core Web API (controllers, not Minimal APIs — ADR-3), Entity Framework Core |
-| Database | PostgreSQL |
+| Database | EF Core provider-switchable via `Database:Provider` (ADR-8): **PostgreSQL** (production), **SQL Server**, **MySQL**, **SQLite** (default for local Development) |
 | Auth | Database (local) auth now; SAML2/OIDC federation later (FR-AUTH-09/10) |
 
 Supporting libraries and the rationale for each are in FS §3 and TDS §2.4 (ADR table) — don't swap MediatR, Mapster, TanStack Query, Zustand, etc. for alternatives without a good reason recorded as a new ADR in TDS §2.4.
@@ -65,7 +65,8 @@ eDMS/
     src/eDMS.Domain/          # zero project references
     src/eDMS.Application/     # -> Domain only
     src/eDMS.Infrastructure/  # -> Application, Domain
-    src/eDMS.Api/             # -> all three
+    src/eDMS.Infrastructure.Migrations.Postgres|SqlServer|MySql|Sqlite/   # one migration set per provider (ADR-8) — -> Infrastructure
+    src/eDMS.Api/             # -> all of the above
     tests/eDMS.Domain.UnitTests/
     tests/eDMS.Application.UnitTests/
     tests/eDMS.IntegrationTests/
@@ -112,14 +113,21 @@ npm install react-router-dom @tanstack/react-query zustand react-hook-form zod
 # Backend
 dotnet build server/eDMS.sln
 dotnet test server/eDMS.sln
-dotnet ef migrations add <Name> -p server/src/eDMS.Infrastructure -s server/src/eDMS.Api   # TDS §6.4
-dotnet ef database update  -p server/src/eDMS.Infrastructure -s server/src/eDMS.Api
+# Coverage gate (90% threshold, TDS §12.1): fails the run when real-code line coverage drops below 90%.
+dotnet test server/eDMS.sln --collect:"XPlat Code Coverage" --settings server/coverlet.runsettings
+# Migrations: one set per provider (ADR-8). Pick the provider and its project together,
+# and add every model change to ALL four sets (PowerShell: $env:Database__Provider='Sqlite').
+Database__Provider=Postgres dotnet ef migrations add <Name> -p server/src/eDMS.Infrastructure.Migrations.Postgres -s server/src/eDMS.Api
+Database__Provider=Sqlite   dotnet ef migrations add <Name> -p server/src/eDMS.Infrastructure.Migrations.Sqlite   -s server/src/eDMS.Api   # dev default
+Database__Provider=SqlServer dotnet ef migrations add <Name> -p server/src/eDMS.Infrastructure.Migrations.SqlServer -s server/src/eDMS.Api
+Database__Provider=MySql     dotnet ef migrations add <Name> -p server/src/eDMS.Infrastructure.Migrations.MySql     -s server/src/eDMS.Api
+Database__Provider=Sqlite dotnet ef database update -p server/src/eDMS.Infrastructure.Migrations.Sqlite -s server/src/eDMS.Api   # TDS §6.4
 
 # Frontend
 cd client && npm run dev
 cd client && npm run build
-cd client && npm run lint
 cd client && npm test              # Vitest — TDS §12.2
+cd client && npm run test:coverage # Vitest coverage gate (90% thresholds) — TDS §12.2
 cd client && npx playwright test   # E2E — TDS §12.2
 
 # Full local stack (Postgres + API + Web + Mailhog) — TDS §11.2

@@ -12,9 +12,7 @@ public sealed class AuditLogEntryConfiguration : IEntityTypeConfiguration<AuditL
 
         builder.HasKey(entry => entry.Id);
 
-        builder.Property(entry => entry.Timestamp).HasDefaultValueSql("now()");
         builder.Property(entry => entry.ObjectName).IsRequired();
-        builder.Property(entry => entry.Details).HasColumnType("jsonb");
 
         builder.HasIndex(entry => entry.Timestamp).HasDatabaseName("ix_audit_log_timestamp").IsDescending();
         builder.HasIndex(entry => new { entry.SiteId, entry.Timestamp }).HasDatabaseName("ix_audit_log_site_timestamp");

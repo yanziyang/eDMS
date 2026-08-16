@@ -71,5 +71,13 @@ server/storage/
 server/storage-*/
 server/src/eDMS.Api/storage/
 server/src/eDMS.Api/e2e-storage/
+# SQLite local-dev databases (ADR-8)
+*.db
+*.db-wal
+*.db-shm
 client/playwright-report/
 client/test-results/
+# Local tooling + coverage artifacts
+.tools/
+coverage-results/
+e2e-api.cobertura.xml

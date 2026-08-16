@@ -8,13 +8,17 @@ export function Search() {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResultItem[]>([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(false);
 
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!query.trim()) return;
     setLoading(true);
+    setError(false);
     try {
       setResults(await search(query.trim()));
+    } catch {
+      setError(true);
     } finally {
       setLoading(false);
     }
@@ -37,6 +41,9 @@ export function Search() {
       </form>
 
       <div className="mt-6 flex flex-col gap-2">
+        {error && (
+          <p className="text-sm text-destructive">Search failed. Please try again.</p>
+        )}
         {results.map((result) => (
           <div key={result.documentId} className="rounded-lg border bg-card p-4">
             <div className="font-medium">{result.name}</div>

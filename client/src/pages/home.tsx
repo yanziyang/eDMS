@@ -11,6 +11,7 @@ export function Home() {
   useEffect(() => {
     listSites()
       .then(setSites)
+      .catch(() => setSites([]))
       .finally(() => setLoading(false));
   }, []);
 

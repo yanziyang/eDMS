@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Storage;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -26,6 +27,16 @@ public sealed class ApiFactory : WebApplicationFactory<eDMS.Api.Program>
             services.RemoveAll<IDatabaseProvider>();
             services.AddDbContext<AppDbContext>(options =>
                 options.UseInMemoryDatabase("edms-tests", _root));
+        });
+        builder.ConfigureAppConfiguration((_, config) =>
+        {
+            // Keep uploads out of the working directory: each test host gets its own
+            // temp storage root so parallel test classes never collide.
+            config.AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Storage:RootPath"] = Path.Combine(
+                    Path.GetTempPath(), "edms-test-storage", Guid.NewGuid().ToString("N")),
+            });
         });
     }
 }

@@ -16,7 +16,7 @@ jobs:
           dotnet-version: "10.0.x"
       - run: dotnet restore server/eDMS.sln
       - run: dotnet build server/eDMS.sln --no-restore --configuration Release
-      - run: dotnet test server/eDMS.sln --no-build --configuration Release
+      - run: dotnet test server/eDMS.sln --no-build --configuration Release --collect:"XPlat Code Coverage" --settings server/coverlet.runsettings
 
   frontend:
     name: Frontend build & test
@@ -33,4 +33,6 @@ jobs:
       - run: npm run build
         working-directory: client
       - run: npm test
+        working-directory: client
+      - run: npm run test:coverage
         working-directory: client

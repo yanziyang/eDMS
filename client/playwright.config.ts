@@ -5,8 +5,12 @@ import path from "node:path";
 const here = path.dirname(fileURLToPath(import.meta.url));
 const API_PORT = 5190;
 const WEB_PORT = 5273;
+const databaseProvider = (process.env.E2E_DATABASE_PROVIDER ?? "Postgres").trim().toLowerCase();
+const providerName = databaseProvider === "sqlite" ? "Sqlite" : "Postgres";
 const connectionString =
-  "Host=localhost;Port=5432;Database=edms_e2e;Username=postgres;Password=Password1";
+  providerName === "Sqlite"
+    ? "Data Source=e2e.db"
+    : "Host=localhost;Port=5432;Database=edms_e2e;Username=postgres;Password=Password1";
 
 export default defineConfig({
   testDir: "./e2e",
@@ -25,29 +29,32 @@ export default defineConfig({
     viewport: { width: 1440, height: 900 },
   },
   webServer: [
-    {
-      // Run the built DLL directly (not `dotnet run`) so the server process is the
-      // one Playwright manages and no orphaned apphost survives a stopped run.
-      command: "dotnet bin/Debug/net10.0/eDMS.Api.dll",
-      cwd: path.resolve(here, "..", "server", "src", "eDMS.Api"),
-      url: `http://localhost:${API_PORT}/health`,
-      reuseExistingServer: false,
-      timeout: 120_000,
-      stdout: "pipe",
-      stderr: "pipe",
-      gracefulShutdown: { signal: "SIGKILL", timeout: 5000 },
-      env: {
-        ASPNETCORE_URLS: `http://localhost:${API_PORT}`,
-        ASPNETCORE_ENVIRONMENT: "Development",
-        ConnectionStrings__Default: connectionString,
-        Seed__AdminEmail: "admin@e2e.local",
-        Seed__AdminTempPassword: "E2eAdmin123!",
-        Client__BaseUrl: `http://localhost:${WEB_PORT}`,
-        Storage__RootPath: "e2e-storage",
-        Smtp__Host: "localhost",
-        Smtp__Port: "1025",
-      },
-    },
+    ...(process.env.E2E_API_EXTERNAL === "1"
+      ? []
+      : [{
+        // Run the built DLL directly (not `dotnet run`) so the server process is the
+        // one Playwright manages and no orphaned apphost survives a stopped run.
+        command: "dotnet bin/Debug/net10.0/eDMS.Api.dll",
+        cwd: path.resolve(here, "..", "server", "src", "eDMS.Api"),
+        url: `http://localhost:${API_PORT}/health`,
+        reuseExistingServer: false,
+        timeout: 120_000,
+        stdout: "pipe",
+        stderr: "pipe",
+        gracefulShutdown: { signal: "SIGKILL", timeout: 5000 },
+        env: {
+          ASPNETCORE_URLS: `http://localhost:${API_PORT}`,
+          ASPNETCORE_ENVIRONMENT: "Development",
+          Database__Provider: providerName,
+          ConnectionStrings__Default: connectionString,
+          Seed__AdminEmail: "admin@e2e.local",
+          Seed__AdminTempPassword: "E2eAdmin123!",
+          Client__BaseUrl: `http://localhost:${WEB_PORT}`,
+          Storage__RootPath: "e2e-storage",
+          Smtp__Host: "localhost",
+          Smtp__Port: "1025",
+        },
+      }]),
     {
       command: `node node_modules/vite/bin/vite.js --port ${WEB_PORT} --strictPort`,
       cwd: here,

@@ -32,4 +32,17 @@ public sealed class AuditActionTests
         Assert.True(Enum.IsDefined(action));
         Assert.Equal(action, (AuditAction)Enum.Parse(typeof(AuditAction), action.ToString()));
     }
+
+    [Fact]
+    public void Audit_action_values_are_contiguous_and_stable()
+    {
+        var values = Enum.GetValues<AuditAction>();
+
+        Assert.Equal(16, values.Length);
+
+        for (var i = 0; i < values.Length; i++)
+        {
+            Assert.Equal(i, (int)values[i]);
+        }
+    }
 }

@@ -59,8 +59,13 @@ public class Program
             });
         });
 
+        // Database provider (ADR-8): explicit configuration wins; local development
+        // defaults to SQLite, everything else to PostgreSQL.
+        var databaseProvider = builder.Configuration["Database:Provider"]
+            ?? (builder.Environment.IsDevelopment() ? "Sqlite" : "Postgres");
+
         builder.Services.AddApplication();
-        builder.Services.AddInfrastructure(builder.Configuration);
+        builder.Services.AddInfrastructure(builder.Configuration, databaseProvider, builder.Environment.ContentRootPath);
 
         var jwtOptions = builder.Configuration.GetSection(JwtOptions.SectionName).Get<JwtOptions>()
             ?? new JwtOptions();

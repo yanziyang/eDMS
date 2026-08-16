@@ -19,6 +19,7 @@ services:
   api:
     build: ./server
     environment:
+      Database__Provider: "Postgres"
       ConnectionStrings__Default: "Host=postgres;Port=5432;Database=edms;Username=postgres;Password=devonly"
       Jwt__PrivateKey: ""
       Jwt__PublicKey: ""

@@ -23,11 +23,13 @@ public sealed class SearchService(
 
         if (!string.IsNullOrWhiteSpace(query))
         {
-            var pattern = $"%{query}%";
+            // Provider-portable case-insensitive containment (ADR-8): ILIKE is
+            // Npgsql-only. ToLower().Contains() translates on all four providers.
+            var lowered = query.ToLower();
             documents = documents.Where(document =>
-                EF.Functions.ILike(document.Name, pattern)
-                || (document.Title != null && EF.Functions.ILike(document.Title, pattern))
-                || (document.Description != null && EF.Functions.ILike(document.Description, pattern)));
+                document.Name.ToLower().Contains(lowered)
+                || (document.Title != null && document.Title.ToLower().Contains(lowered))
+                || (document.Description != null && document.Description.ToLower().Contains(lowered)));
         }
 
         if (libraryId is { } libId)

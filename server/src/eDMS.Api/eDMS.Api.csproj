@@ -20,6 +20,10 @@
   <ItemGroup>
     <ProjectReference Include="..\eDMS.Application\eDMS.Application.csproj" />
     <ProjectReference Include="..\eDMS.Infrastructure\eDMS.Infrastructure.csproj" />
+    <ProjectReference Include="..\eDMS.Infrastructure.Migrations.MySql\eDMS.Infrastructure.Migrations.MySql.csproj" />
+    <ProjectReference Include="..\eDMS.Infrastructure.Migrations.Postgres\eDMS.Infrastructure.Migrations.Postgres.csproj" />
+    <ProjectReference Include="..\eDMS.Infrastructure.Migrations.SqlServer\eDMS.Infrastructure.Migrations.SqlServer.csproj" />
+    <ProjectReference Include="..\eDMS.Infrastructure.Migrations.Sqlite\eDMS.Infrastructure.Migrations.Sqlite.csproj" />
     <ProjectReference Include="..\eDMS.Domain\eDMS.Domain.csproj" />
   </ItemGroup>
 

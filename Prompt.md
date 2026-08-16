@@ -115,3 +115,16 @@ PostgreSQL Login credential is in DEV-Credentials.md.
 Prompt:
 
 I will go away for several hours. You just proceed to finish all milestones, Commit and git push each milestone before proceed.
+
+-------------------------------------------------------
+Prompt:
+
+Entity framework can support different database. I still want the application able to support PostgreSQL. Suggest add application configuration of database type: PostgreSQL, SQL Database, MySQL or SQLite. For local DEV environment, the default database will be SQLite. 
+
+Conduct full unit test and end-to-end test to make sure no error due to database change to SQLite.
+
+--------------------------------------------------------
+Prompt:
+
+Current test coverage scope: backend code 40.8%, frendend ocde 6.5%. Need increase test coverage for both backend and frontend to above 90%.
+

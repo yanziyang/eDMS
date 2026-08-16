@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  coverlet.collector configuration (ADR-8 note + TDS 12.1).
+  Thresholds: 90 percent line coverage (total) across the measured code.
+  Excludes the four generated EF migrations assemblies and tool-generated files.
+  Pass this file to dotnet test via the settings argument.
+-->
+<RunSettings>
+  <DataCollectionRunSettings>
+    <DataCollectors>
+      <DataCollector friendlyName="XPlat Code Coverage">
+        <Configuration>
+          <Threshold>90</Threshold>
+          <ThresholdType>line</ThresholdType>
+          <ThresholdStat>total</ThresholdStat>
+          <Exclude>[eDMS.Infrastructure.Migrations.*]*</Exclude>
+          <ExcludeByFile>**/*.generated.cs</ExcludeByFile>
+        </Configuration>
+      </DataCollector>
+    </DataCollectors>
+  </DataCollectionRunSettings>
+</RunSettings>

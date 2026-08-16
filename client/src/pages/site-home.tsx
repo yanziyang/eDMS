@@ -29,6 +29,8 @@ export function SiteHome() {
           setGroups(groupResult);
           setLibraries(libraryResult);
         }
+      } catch {
+        // Leave the default state; the UI falls back to the "Site not found" view.
       } finally {
         setLoading(false);
       }

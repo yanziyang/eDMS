@@ -19,8 +19,8 @@ using eDMS.Application.RecycleBin;
 using eDMS.Infrastructure.RecycleBin;
 using eDMS.Infrastructure.Search;
 using eDMS.Application.Search;
-using eDMS.Infrastructure.Admin;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -30,14 +30,39 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddInfrastructure(
         this IServiceCollection services,
-        IConfiguration configuration)
+        IConfiguration configuration,
+        string databaseProvider,
+        string contentRoot)
     {
-        var connectionString = configuration.GetConnectionString("Default");
+        var provider = DatabaseProviderParser.Parse(databaseProvider);
+        var connectionString = ResolveConnectionString(configuration, provider, contentRoot);
 
         services.AddDbContext<AppDbContext>(options =>
-            options
-                .UseNpgsql(connectionString)
-                .UseSnakeCaseNamingConvention());
+        {
+            options.UseSnakeCaseNamingConvention();
+            switch (provider)
+            {
+                case DatabaseProvider.Postgres:
+                    options.UseNpgsql(connectionString, npgsql =>
+                        npgsql.MigrationsAssembly("eDMS.Infrastructure.Migrations.Postgres"));
+                    break;
+
+                case DatabaseProvider.SqlServer:
+                    options.UseSqlServer(connectionString, sqlServer =>
+                        sqlServer.MigrationsAssembly("eDMS.Infrastructure.Migrations.SqlServer"));
+                    break;
+
+                case DatabaseProvider.MySql:
+                    options.UseMySQL(connectionString, mySql =>
+                        mySql.MigrationsAssembly("eDMS.Infrastructure.Migrations.MySql"));
+                    break;
+
+                case DatabaseProvider.Sqlite:
+                    options.UseSqlite(connectionString, sqlite =>
+                        sqlite.MigrationsAssembly("eDMS.Infrastructure.Migrations.Sqlite"));
+                    break;
+            }
+        });
         services.AddScoped<IAppDbContext>(provider => provider.GetRequiredService<AppDbContext>());
 
         services.Configure<SeedOptions>(configuration.GetSection(SeedOptions.SectionName));
@@ -68,4 +93,36 @@ public static class DependencyInjection
 
         return services;
     }
+
+    private static string ResolveConnectionString(
+        IConfiguration configuration,
+        DatabaseProvider provider,
+        string contentRoot)
+    {
+        var connectionString = configuration.GetConnectionString("Default") ?? string.Empty;
+        if (provider != DatabaseProvider.Sqlite)
+        {
+            return connectionString;
+        }
+
+        // SQLite is the local-development provider: default to a file in the API
+        // content root, and anchor bare relative file names there too so the dev
+        // database location does not depend on the process working directory.
+        var builder = new SqliteConnectionStringBuilder(connectionString);
+        if (string.IsNullOrWhiteSpace(builder.DataSource))
+        {
+            builder.DataSource = Path.Combine(contentRoot, "edms-dev.db");
+        }
+        else if (IsBareFileName(builder.DataSource))
+        {
+            builder.DataSource = Path.Combine(contentRoot, builder.DataSource);
+        }
+
+        return builder.ToString();
+    }
+
+    private static bool IsBareFileName(string dataSource) =>
+        dataSource != ":memory:"
+        && !dataSource.StartsWith("file:", StringComparison.OrdinalIgnoreCase)
+        && (Path.GetDirectoryName(dataSource) is null or "");
 }

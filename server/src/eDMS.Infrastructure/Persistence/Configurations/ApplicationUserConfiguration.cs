@@ -8,9 +8,9 @@ public sealed class ApplicationUserConfiguration : IEntityTypeConfiguration<Appl
 {
     public void Configure(EntityTypeBuilder<ApplicationUser> builder)
     {
-        // citext gives case-insensitive comparison and uniqueness on email,
-        // matching the FS §8.2 recommendation.
-        builder.Property(user => user.Email).HasColumnType("citext");
+        // Case-insensitive comparison and uniqueness on email (FS §8.2): citext on
+        // Postgres, NOCASE collation on SQLite, and the default case-insensitive
+        // collations on SqlServer/MySql. Applied in AppDbContext.ApplyProviderSpecificColumnTypes.
         builder.HasIndex(user => user.Email).IsUnique();
 
         builder.Property(user => user.DisplayName).IsRequired().HasMaxLength(256);
@@ -21,6 +21,5 @@ public sealed class ApplicationUserConfiguration : IEntityTypeConfiguration<Appl
         builder.Property(user => user.IsSystemAdmin).HasDefaultValue(false);
         builder.Property(user => user.MustChangePassword).HasDefaultValue(false);
         builder.Property(user => user.AuthProvider).HasDefaultValue(AuthProvider.Local);
-        builder.Property(user => user.CreatedAt).HasDefaultValueSql("now()");
     }
 }

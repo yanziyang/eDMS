@@ -140,6 +140,8 @@ Columns match V1.0: **Track** — `BE` backend, `FE` frontend, `INF` infra/tooli
 | Not Started | M10.15 | FE | Admin Audit Log page (`pages/admin/audit-log.tsx` + route — neither exists yet): filters, CSV export. Backend already works (`GET /sites/{id}/audit-log`). | M10.5 | M | mirror `prototype(html)/admin-audit-log.html` |
 | Not Started | M10.16 | FE | Admin Storage Report page (`pages/admin/storage.tsx` + route — neither exists yet). Backend already works (`GET /admin/storage`). | M10.5 | M | FR-ADMIN-06, mirror `prototype(html)/admin-storage.html` |
 | Not Started | M10.17 | FE | Migrate the pages no other M10 task already touches — `search.tsx`, `profile.tsx`, `admin/users.tsx`, `admin/sites.tsx` — to TanStack Query, closing out the drift noted in §3.2. | M10.5 | S | TDS §7.4 |
+| Done | M10.18 | INF | Multi-provider database support (**user-requested new scope, not a V1.0 leftover**): `Database:Provider` config key (Postgres/SqlServer/MySql/Sqlite), **SQLite as the local-Development default**, one migrations assembly per provider (`eDMS.Infrastructure.Migrations.*`), provider-conditional schema (citext/jsonb Postgres-only, NOCASE email + `DateTimeOffsetToBinaryConverter` on SQLite), ILIKE → portable `ToLower().Contains()`, dev SQLite file anchored to API content root. Recorded as **ADR-8** (TDS §2.4). | — | L | ADR-8, TDS §6.4 |
+| Done | M10.19 | Both | **Coverage enforcement (user-requested new scope)**: ≥90% line coverage on backend real-code assemblies (coverlet `server/coverlet.runsettings`, migrations/generated files excluded; currently 96.9%) and on frontend `src` (Vitest thresholds; currently 100%), enforced in CI (`ci.yml`). Added 130+ backend tests (per-controller endpoint suites, direct service tests, resolver hierarchy, seeder/JWT edge paths) and 120 frontend component/API tests. The push also exposed and fixed 5 real production bugs — unhandled promise rejections on failed API calls in `search.tsx`, `home.tsx`, `forgot-password.tsx`, `site-home.tsx`, and `auth-context.tsx` logout. | M10.18 | L | TDS §12 |
 
 > **M10.1 carries the same risk profile V1.0 flagged for its M2.5.** It backs every authorization decision the system makes. Don't mark it `Done` without the specific tests TDS §12.1/§12.3 call for, run against a real Postgres container, not `UseInMemoryDatabase`.
 
@@ -166,7 +168,7 @@ FS §8.2 already sketches `ContentType`/`ColumnDefinition` — use those shapes 
 | Status | ID | Track | Task | Depends on | Size | Refs |
 |---|---|---|---|---|---|---|
 | Not Started | M12.1 | BE | `ContentType` + `ColumnDefinition` entities/migration per FS §8.2's sketch. | M10 (all) | M | FR-META-03, FS §8.2 |
-| Not Started | M12.2 | BE | Content Type CRUD (admin, per-Library) + a column-value storage design for `Document` (e.g. a `jsonb` bag vs. a separate values table) — **this is a real design decision FS doesn't make for you; record it as ADR-8 in TDS §2.4 before implementing.** | M12.1 | L | FR-META-03 |
+| Not Started | M12.2 | BE | Content Type CRUD (admin, per-Library) + a column-value storage design for `Document` (e.g. a `jsonb` bag vs. a separate values table) — **this is a real design decision FS doesn't make for you; record it as ADR-9 in TDS §2.4 before implementing.** | M12.1 | L | FR-META-03 |
 | Not Started | M12.3 | BE | Enforce required columns: block upload/check-in completion until required columns are filled. | M12.2 | M | FR-META-04 |
 | Not Started | M12.4 | FE | Admin UI to define Content Types/Columns per Library (no prototype reference — follow shadcn conventions per `AGENTS.md` §12 and match the visual language of the other admin pages). | M12.2, M10.5 | M | FR-META-03 |
 | Not Started | M12.5 | FE | Content Type column editor as a new section in the Document Details Sheet's Properties tab, with required-field validation surfaced at upload time. | M12.3, M10.6 | M | FR-META-04 |
@@ -176,14 +178,14 @@ FS §8.2 already sketches `ContentType`/`ColumnDefinition` — use those shapes 
 | Status | ID | Track | Task | Depends on | Size | Refs |
 |---|---|---|---|---|---|---|
 | Not Started | M13.1 | INF | Add a LibreOffice-headless (or equivalent) conversion service to `docker-compose.yml` as its own container — this is a heavyweight native dependency, not a NuGet package; don't shell out to a binary installed ad hoc inside the API container. | M10 (all) | M | FR-DOC-10 |
-| Not Started | M13.2 | BE | `IOfficeConversionService` behind an interface, mirroring the `IFileStorageProvider` abstraction pattern (ADR-6) — implementation calls the M13.1 container to convert docx/xlsx/pptx → PDF; extend the existing preview endpoint (V1.0's M3.7) to use it for Office content types. Record the conversion approach as **ADR-9** in TDS §2.4. | M13.1 | L | FR-DOC-10, TDS §5.4 |
+| Not Started | M13.2 | BE | `IOfficeConversionService` behind an interface, mirroring the `IFileStorageProvider` abstraction pattern (ADR-6) — implementation calls the M13.1 container to convert docx/xlsx/pptx → PDF; extend the existing preview endpoint (V1.0's M3.7) to use it for Office content types. Record the conversion approach as **ADR-10** in TDS §2.4. | M13.1 | L | FR-DOC-10, TDS §5.4 |
 | Not Started | M13.3 | FE | Wire Office file types into the existing preview UI path inside the Document Details Sheet. | M13.2, M10.6 | S | FR-DOC-10 |
 
 ### M14 — Chunked Upload & Minor-Version Retention
 
 | Status | ID | Track | Task | Depends on | Size | Refs |
 |---|---|---|---|---|---|---|
-| Not Started | M14.1 | BE | Chunked/resumable upload for files >100MB, alongside (not replacing) the existing single-stream path for smaller files. Record the protocol choice (custom session-based endpoint vs. an existing standard like the tus protocol) as **ADR-10** in TDS §2.4. | M10 (all) | L | FR-DOC-12 |
+| Not Started | M14.1 | BE | Chunked/resumable upload for files >100MB, alongside (not replacing) the existing single-stream path for smaller files. Record the protocol choice (custom session-based endpoint vs. an existing standard like the tus protocol) as **ADR-11** in TDS §2.4. | M10 (all) | L | FR-DOC-12 |
 | Not Started | M14.2 | FE | Upload dialog support for resumable progress against M14.1. | M14.1, M10.5 | M | FR-DOC-12 |
 | Not Started | M14.3 | BE | Minor-version retention cap: optional per-Library setting that auto-trims oldest minor versions on check-in (majors never auto-trimmed). | M4.1 (done) | S | FR-VER-09 |
 | Not Started | M14.4 | FE | Expose the minor-version-cap setting in Library settings UI. | M14.3 | S | FR-VER-09 |
@@ -195,7 +197,7 @@ FS §8.2 sketches `AlertSubscription` (the "Follow" record) but not a delivered-
 | Status | ID | Track | Task | Depends on | Size | Refs |
 |---|---|---|---|---|---|---|
 | Not Started | M15.1 | BE | `AlertSubscription` entity/migration per FS §8.2 + Follow/Unfollow endpoints (Folder/Document). | M10 (all) | M | FR-NOTIF-02 |
-| Not Started | M15.2 | BE | A persisted notification/inbox entity (not in FS §8.2 — design it) generated when a followed item changes or an item is shared with a user. Record the schema and the fan-out approach (on-write vs. on-read) as **ADR-11** in TDS §2.4. | M15.1, M5.3 (done) | M | FR-NOTIF-04 |
+| Not Started | M15.2 | BE | A persisted notification/inbox entity (not in FS §8.2 — design it) generated when a followed item changes or an item is shared with a user. Record the schema and the fan-out approach (on-write vs. on-read) as **ADR-12** in TDS §2.4. | M15.1, M5.3 (done) | M | FR-NOTIF-04 |
 | Not Started | M15.3 | BE | Email notification on share (FR-NOTIF-01) — extend the existing `IEmailSender` usage from V1.0's M5.3, don't build a second email path. | M5.3 (done) | S | FR-NOTIF-01 |
 | Not Started | M15.4 | BE | Digest scheduling background service (Immediate/Daily/Weekly per subscription), mirroring `RecycleBinPurgeService`'s existing background-job pattern. | M15.2 | M | FR-NOTIF-03, TDS §5.8 |
 | Not Started | M15.5 | FE | Notification bell in the AppShell topbar + notification list. | M15.2, M10.5 | M | FR-NOTIF-04 |
@@ -214,7 +216,7 @@ FS §8.2 already sketches `ShareLink` — use that shape.
 
 | Status | ID | Track | Task | Depends on | Size | Refs |
 |---|---|---|---|---|---|---|
-| Not Started | M17.1 | BE | Text-extraction for PDF/Office content (Apache Tika or iText — pick one and record it, plus the sync-inline-vs-background-async choice, as **ADR-12** in TDS §2.4), feeding into `search_vector` alongside the existing name/title/description indexing (V1.0's M7.1). If the tool needs its own server process (e.g. `tika-server`), add it to `docker-compose.yml` as its own container, same pattern as M13.1 — don't shell out from inside the API process. | M10 (all), M7.1 (done) | L | FR-SRCH-07 |
+| Not Started | M17.1 | BE | Text-extraction for PDF/Office content (Apache Tika or iText — pick one and record it, plus the sync-inline-vs-background-async choice, as **ADR-13** in TDS §2.4), feeding into `search_vector` alongside the existing name/title/description indexing (V1.0's M7.1). If the tool needs its own server process (e.g. `tika-server`), add it to `docker-compose.yml` as its own container, same pattern as M13.1 — don't shell out from inside the API process. | M10 (all), M7.1 (done) | L | FR-SRCH-07 |
 | Not Started | M17.2 | BE | Background re-index job so large-file extraction doesn't block the upload request, mirroring `RecycleBinPurgeService`'s existing pattern. | M17.1 | M | TDS §5.8 |
 
 ### M18 — Dark Theme

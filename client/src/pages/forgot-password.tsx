@@ -17,6 +17,8 @@ export function ForgotPassword() {
     setSubmitting(true);
     try {
       await forgotPassword(email.trim());
+    } catch {
+      // Show the same confirmation regardless, to avoid account enumeration.
     } finally {
       setSubmitting(false);
       setSent(true);
