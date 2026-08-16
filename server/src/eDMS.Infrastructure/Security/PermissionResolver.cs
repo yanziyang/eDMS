@@ -150,36 +150,41 @@ public sealed class PermissionResolver(
         // WITH RECURSIVE works on Postgres/SQLite/MySQL; SQL Server uses plain WITH.
         // The keyword is a compile-time constant baked into the format string (it
         // cannot be a SQL parameter); the object type/id are parameterized.
+        // Single recursive branch with LEFT JOINs + CASE: Postgres rejects multiple
+        // recursive UNION branches when the anchor detection gets ambiguous.
         const string body = """
             chain AS (
                 SELECT {0} AS ObjectType, {1} AS ObjectId, 0 AS Depth
                 UNION ALL
-                SELECT 2, f.parent_folder_id, c.Depth + 1
+                SELECT
+                    CASE
+                        WHEN c.ObjectType = 2 AND f.id IS NOT NULL AND f.parent_folder_id IS NOT NULL THEN 2
+                        WHEN c.ObjectType = 2 AND f.id IS NOT NULL THEN 1
+                        WHEN c.ObjectType = 2 THEN -1
+                        WHEN c.ObjectType = 1 AND l.id IS NOT NULL THEN 0
+                        WHEN c.ObjectType = 1 THEN -1
+                        WHEN c.ObjectType = 3 AND d.id IS NOT NULL AND d.folder_id IS NOT NULL THEN 2
+                        WHEN c.ObjectType = 3 AND d.id IS NOT NULL THEN 1
+                        WHEN c.ObjectType = 3 THEN -1
+                        ELSE -1
+                    END,
+                    CASE
+                        WHEN c.ObjectType = 2 AND f.id IS NOT NULL AND f.parent_folder_id IS NOT NULL THEN f.parent_folder_id
+                        WHEN c.ObjectType = 2 AND f.id IS NOT NULL THEN f.library_id
+                        WHEN c.ObjectType = 1 AND l.id IS NOT NULL THEN l.site_id
+                        WHEN c.ObjectType = 3 AND d.id IS NOT NULL AND d.folder_id IS NOT NULL THEN d.folder_id
+                        WHEN c.ObjectType = 3 AND d.id IS NOT NULL THEN d.library_id
+                        ELSE NULL
+                    END,
+                    c.Depth + 1
                 FROM chain c
-                JOIN folders f ON c.ObjectType = 2 AND f.id = c.ObjectId AND f.parent_folder_id IS NOT NULL
-                WHERE c.Depth < 25
-                UNION ALL
-                SELECT 1, f.library_id, c.Depth + 1
-                FROM chain c
-                JOIN folders f ON c.ObjectType = 2 AND f.id = c.ObjectId AND f.parent_folder_id IS NULL
-                WHERE c.Depth < 25
-                UNION ALL
-                SELECT 0, l.site_id, c.Depth + 1
-                FROM chain c
-                JOIN libraries l ON c.ObjectType = 1 AND l.id = c.ObjectId
-                WHERE c.Depth < 25
-                UNION ALL
-                SELECT 2, d.folder_id, c.Depth + 1
-                FROM chain c
-                JOIN documents d ON c.ObjectType = 3 AND d.id = c.ObjectId AND d.folder_id IS NOT NULL
-                WHERE c.Depth < 25
-                UNION ALL
-                SELECT 1, d.library_id, c.Depth + 1
-                FROM chain c
-                JOIN documents d ON c.ObjectType = 3 AND d.id = c.ObjectId AND d.folder_id IS NULL
-                WHERE c.Depth < 25
+                LEFT JOIN folders f ON c.ObjectType = 2 AND f.id = c.ObjectId
+                LEFT JOIN libraries l ON c.ObjectType = 1 AND l.id = c.ObjectId
+                LEFT JOIN documents d ON c.ObjectType = 3 AND d.id = c.ObjectId
+                WHERE c.Depth < 25 AND c.ObjectType IN (1, 2, 3)
             )
-            SELECT ObjectType AS object_type, ObjectId AS object_id, Depth AS depth FROM chain ORDER BY Depth
+            SELECT ObjectType AS object_type, ObjectId AS object_id, Depth AS depth
+            FROM chain WHERE ObjectType >= 0 ORDER BY Depth
             """;
 
         var keyword = db.Database.IsSqlServer() ? string.Empty : "RECURSIVE ";
