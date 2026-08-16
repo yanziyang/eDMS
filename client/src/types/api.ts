@@ -169,3 +169,43 @@ export interface AuditLogDto {
   siteId: string;
   ipAddress: string;
 }
+
+export type MetadataDataType = "Text" | "Number" | "Date" | "Choice" | "Boolean" | "User" | "Lookup";
+
+export interface ContentTypeColumnDto {
+  id: string;
+  name: string;
+  dataType: MetadataDataType;
+  isRequired: boolean;
+  choiceOptions: string | null;
+  defaultValue: string | null;
+}
+
+export interface ContentTypeDto {
+  id: string;
+  libraryId: string | null;
+  name: string;
+  description: string | null;
+  columns: ContentTypeColumnDto[];
+}
+
+export interface DocumentMetadataDto {
+  contentTypeId: string | null;
+  contentTypeName: string | null;
+  columns: DocumentMetadataColumnDto[];
+}
+
+export interface DocumentMetadataColumnDto {
+  columnDefinitionId: string;
+  name: string;
+  dataType: MetadataDataType;
+  isRequired: boolean;
+  choiceOptions: string | null;
+  defaultValue: string | null;
+  value: string | null;
+}
+
+export interface MetadataValueInput {
+  columnDefinitionId: string;
+  value: string | null;
+}

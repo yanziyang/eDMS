@@ -401,6 +401,98 @@ namespace eDMS.Infrastructure.Migrations.Postgres
                     b.ToTable("audit_log_entries", (string)null);
                 });
 
+            modelBuilder.Entity("eDMS.Domain.ColumnDefinition", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("ChoiceOptions")
+                        .HasMaxLength(4096)
+                        .HasColumnType("character varying(4096)")
+                        .HasColumnName("choice_options");
+
+                    b.Property<Guid>("ContentTypeId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("content_type_id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("CreatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by");
+
+                    b.Property<int>("DataType")
+                        .HasColumnType("integer")
+                        .HasColumnName("data_type");
+
+                    b.Property<string>("DefaultValue")
+                        .HasMaxLength(2048)
+                        .HasColumnType("character varying(2048)")
+                        .HasColumnName("default_value");
+
+                    b.Property<bool>("IsRequired")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_required");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)")
+                        .HasColumnName("name");
+
+                    b.HasKey("Id")
+                        .HasName("pk_column_definitions");
+
+                    b.HasIndex("ContentTypeId", "Name")
+                        .IsUnique()
+                        .HasDatabaseName("ix_column_definitions_content_type_id_name");
+
+                    b.ToTable("column_definitions", (string)null);
+                });
+
+            modelBuilder.Entity("eDMS.Domain.ContentType", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("CreatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(1024)
+                        .HasColumnType("character varying(1024)")
+                        .HasColumnName("description");
+
+                    b.Property<Guid?>("LibraryId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("library_id");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)")
+                        .HasColumnName("name");
+
+                    b.HasKey("Id")
+                        .HasName("pk_content_types");
+
+                    b.HasIndex("LibraryId")
+                        .HasDatabaseName("ix_content_types_library_id");
+
+                    b.ToTable("content_types", (string)null);
+                });
+
             modelBuilder.Entity("eDMS.Domain.Document", b =>
                 {
                     b.Property<Guid>("Id")
@@ -421,6 +513,10 @@ namespace eDMS.Infrastructure.Migrations.Postgres
                         .HasMaxLength(128)
                         .HasColumnType("character varying(128)")
                         .HasColumnName("content_type");
+
+                    b.Property<Guid?>("ContentTypeId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("content_type_id");
 
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
@@ -480,6 +576,9 @@ namespace eDMS.Infrastructure.Migrations.Postgres
                     b.HasKey("Id")
                         .HasName("pk_documents");
 
+                    b.HasIndex("ContentTypeId")
+                        .HasDatabaseName("ix_documents_content_type_id");
+
                     b.HasIndex("FolderId")
                         .HasDatabaseName("ix_documents_folder_id");
 
@@ -487,6 +586,31 @@ namespace eDMS.Infrastructure.Migrations.Postgres
                         .HasDatabaseName("ix_documents_folder");
 
                     b.ToTable("documents", (string)null);
+                });
+
+            modelBuilder.Entity("eDMS.Domain.DocumentColumnValue", b =>
+                {
+                    b.Property<Guid>("DocumentId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("document_id");
+
+                    b.Property<Guid>("ColumnDefinitionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("column_definition_id");
+
+                    b.Property<string>("Value")
+                        .IsRequired()
+                        .HasMaxLength(4096)
+                        .HasColumnType("character varying(4096)")
+                        .HasColumnName("value");
+
+                    b.HasKey("DocumentId", "ColumnDefinitionId")
+                        .HasName("pk_document_column_values");
+
+                    b.HasIndex("ColumnDefinitionId")
+                        .HasDatabaseName("ix_document_column_values_column_definition_id");
+
+                    b.ToTable("document_column_values", (string)null);
                 });
 
             modelBuilder.Entity("eDMS.Domain.DocumentTag", b =>
@@ -1077,8 +1201,33 @@ namespace eDMS.Infrastructure.Migrations.Postgres
                         .HasConstraintName("fk_audit_log_entries_asp_net_users_user_id");
                 });
 
+            modelBuilder.Entity("eDMS.Domain.ColumnDefinition", b =>
+                {
+                    b.HasOne("eDMS.Domain.ContentType", null)
+                        .WithMany()
+                        .HasForeignKey("ContentTypeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_column_definitions_content_types_content_type_id");
+                });
+
+            modelBuilder.Entity("eDMS.Domain.ContentType", b =>
+                {
+                    b.HasOne("eDMS.Domain.Library", null)
+                        .WithMany()
+                        .HasForeignKey("LibraryId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .HasConstraintName("fk_content_types_libraries_library_id");
+                });
+
             modelBuilder.Entity("eDMS.Domain.Document", b =>
                 {
+                    b.HasOne("eDMS.Domain.ContentType", null)
+                        .WithMany()
+                        .HasForeignKey("ContentTypeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_documents_content_types_content_type_id");
+
                     b.HasOne("eDMS.Domain.Folder", null)
                         .WithMany()
                         .HasForeignKey("FolderId")
@@ -1091,6 +1240,23 @@ namespace eDMS.Infrastructure.Migrations.Postgres
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("fk_documents_libraries_library_id");
+                });
+
+            modelBuilder.Entity("eDMS.Domain.DocumentColumnValue", b =>
+                {
+                    b.HasOne("eDMS.Domain.ColumnDefinition", null)
+                        .WithMany()
+                        .HasForeignKey("ColumnDefinitionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_document_column_values_column_definitions_column_definition");
+
+                    b.HasOne("eDMS.Domain.Document", null)
+                        .WithMany()
+                        .HasForeignKey("DocumentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_document_column_values_documents_document_id");
                 });
 
             modelBuilder.Entity("eDMS.Domain.DocumentTag", b =>

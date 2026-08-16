@@ -1,4 +1,6 @@
 using System.Security.Cryptography;
+using System.Text.Json;
+using eDMS.Application.Admin;
 using eDMS.Application.Common.Exceptions;
 using eDMS.Application.Common.Interfaces;
 using eDMS.Application.Documents;
@@ -80,6 +82,28 @@ public sealed class DocumentService(
         Stream content,
         CancellationToken cancellationToken = default)
     {
+        return await UploadCoreAsync(libraryId, folderId, fileName, content, null, cancellationToken);
+    }
+
+    public async Task<UploadResult> UploadAsync(
+        Guid libraryId,
+        Guid? folderId,
+        string fileName,
+        Stream content,
+        IReadOnlyList<ColumnValueInput>? metadata,
+        CancellationToken cancellationToken = default)
+    {
+        return await UploadCoreAsync(libraryId, folderId, fileName, content, metadata, cancellationToken);
+    }
+
+    private async Task<UploadResult> UploadCoreAsync(
+        Guid libraryId,
+        Guid? folderId,
+        string fileName,
+        Stream content,
+        IReadOnlyList<ColumnValueInput>? metadata,
+        CancellationToken cancellationToken)
+    {
         var userId = currentUser.UserId ?? throw new ForbiddenException();
         await permissions.RequireAsync(userId, ObjectType.Library, libraryId, PermissionLevel.Contribute, cancellationToken);
 
@@ -139,6 +163,7 @@ public sealed class DocumentService(
 
             Document document;
             DocumentVersion version;
+            var contentTypeEntity = await ResolveContentTypeForLibraryAsync(libraryId, cancellationToken);
 
             if (existing is not null)
             {
@@ -170,6 +195,7 @@ public sealed class DocumentService(
                     FolderId = folderId,
                     Name = fileName,
                     ContentType = contentType,
+                    ContentTypeId = contentTypeEntity?.Id,
                 };
                 document.SetCreator(userId);
                 version = new DocumentVersion
@@ -183,6 +209,50 @@ public sealed class DocumentService(
                 };
                 version.SetCreator(userId);
                 db.Documents.Add(document);
+            }
+
+            if (contentTypeEntity is not null && metadata is { Count: > 0 })
+            {
+                foreach (var input in metadata)
+                {
+                    db.DocumentColumnValues.Add(new DocumentColumnValue
+                    {
+                        DocumentId = document.Id,
+                        ColumnDefinitionId = input.ColumnDefinitionId,
+                        Value = input.Value ?? string.Empty,
+                    });
+                }
+            }
+
+            // Required-column enforcement at upload time evaluates the metadata
+            // provided in this request plus any values already persisted for the
+            // document (the new rows are not yet saved, so the DB cannot see them).
+            if (contentTypeEntity is not null)
+            {
+                var requiredColumns = await db.ColumnDefinitions.AsNoTracking()
+                    .Where(column => column.ContentTypeId == contentTypeEntity.Id && column.IsRequired)
+                    .ToListAsync(cancellationToken);
+                if (requiredColumns.Count != 0)
+                {
+                    var provided = (metadata ?? [])
+                        .ToDictionary(input => input.ColumnDefinitionId, input => input.Value ?? string.Empty);
+                    var existingValues = existing is null
+                        ? new Dictionary<Guid, string>()
+                        : await db.DocumentColumnValues
+                            .Where(value => value.DocumentId == document.Id)
+                            .ToDictionaryAsync(value => value.ColumnDefinitionId, value => value.Value, cancellationToken);
+
+                    var missing = requiredColumns
+                        .Where(column =>
+                            !HasValue(provided, column.Id) && !HasValue(existingValues, column.Id))
+                        .Select(column => column.Name)
+                        .ToList();
+                    if (missing.Count != 0)
+                    {
+                        throw new ConflictException(
+                            $"Missing required metadata: {string.Join(", ", missing)}.");
+                    }
+                }
             }
 
             var storageKey = $"{library.SiteId}/{libraryId}/{document.Id}/{version.Id}/{fileName}";
@@ -470,6 +540,7 @@ public sealed class DocumentService(
             Title = document.Title,
             Description = document.Description,
             ContentType = document.ContentType,
+            ContentTypeId = document.ContentTypeId,
         };
         copy.SetCreator(userId);
 
@@ -503,8 +574,60 @@ public sealed class DocumentService(
         return copy.Id;
     }
 
-    private async Task ValidateDestinationAsync(
-        Guid sourceLibraryId,
+    private async Task<ContentType?> ResolveContentTypeForLibraryAsync(
+        Guid libraryId,
+        CancellationToken cancellationToken)
+    {
+        var libraryType = await db.ContentTypes.AsNoTracking()
+            .Where(contentType => contentType.LibraryId == libraryId)
+            .OrderBy(contentType => contentType.Name)
+            .FirstOrDefaultAsync(cancellationToken);
+        if (libraryType is not null)
+        {
+            return libraryType;
+        }
+
+        // Fall back to the org-wide reusable type only when there is exactly one.
+        var orgWide = await db.ContentTypes.AsNoTracking()
+            .Where(contentType => contentType.LibraryId == null)
+            .ToListAsync(cancellationToken);
+        return orgWide.Count == 1 ? orgWide[0] : null;
+    }
+
+    private static bool HasValue(IReadOnlyDictionary<Guid, string> values, Guid columnId) =>
+        values.TryGetValue(columnId, out var value) && !string.IsNullOrWhiteSpace(value);
+
+    private async Task<List<string>> MissingRequiredColumnsAsync(
+        Guid? contentTypeId,
+        Guid documentId,
+        CancellationToken cancellationToken)
+    {
+        if (contentTypeId is not { } id)
+        {
+            return [];
+        }
+
+        var required = await db.ColumnDefinitions.AsNoTracking()
+            .Where(column => column.ContentTypeId == id && column.IsRequired)
+            .Select(column => column.Id)
+            .ToListAsync(cancellationToken);
+        if (required.Count == 0)
+        {
+            return [];
+        }
+
+        var values = await db.DocumentColumnValues
+            .Where(value => value.DocumentId == documentId)
+            .ToDictionaryAsync(value => value.ColumnDefinitionId, value => value.Value, cancellationToken);
+
+        return required
+            .Where(columnId => !values.TryGetValue(columnId, out var value) || string.IsNullOrWhiteSpace(value))
+            .Select(columnId => db.ColumnDefinitions.AsNoTracking()
+                .First(column => column.Id == columnId).Name)
+            .ToList();
+    }
+
+    private async Task ValidateDestinationAsync(        Guid sourceLibraryId,
         Guid destinationLibraryId,
         Guid? destinationFolderId,
         CancellationToken cancellationToken)
@@ -569,6 +692,13 @@ public sealed class DocumentService(
         if (checkedOutBy != userId && !currentUser.IsSystemAdmin)
         {
             throw new ForbiddenException();
+        }
+
+        var missingColumns = await MissingRequiredColumnsAsync(document.ContentTypeId, document.Id, cancellationToken);
+        if (missingColumns.Count != 0)
+        {
+            throw new ConflictException(
+                $"Missing required metadata: {string.Join(", ", missingColumns)}.");
         }
 
         document.CheckedOutBy = null;

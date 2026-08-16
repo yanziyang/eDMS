@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { server } from "@/test/server";
 import { toast } from "sonner";
@@ -24,6 +24,7 @@ vi.mock("@/features/auth/auth-context", () => ({
 const mockedToast = vi.mocked(toast);
 const base = "http://localhost:5080/api/v1";
 const permissionsUrl = `${base}/Document/objects/d1/permissions`;
+const metadataUrl = `${base}/documents/d1/metadata`;
 
 function documentDto(overrides: Record<string, unknown> = {}) {
   return {
@@ -87,6 +88,14 @@ async function openTab(name: "Versions" | "Permissions") {
 }
 
 describe("DocumentDetailsSheet", () => {
+  beforeEach(() => {
+    server.use(
+      http.get(metadataUrl, () =>
+        HttpResponse.json({ contentTypeId: null, contentTypeName: null, columns: [] }),
+      ),
+    );
+  });
+
   afterEach(() => {
     vi.clearAllMocks();
     vi.restoreAllMocks();
@@ -811,5 +820,291 @@ describe("DocumentDetailsSheet", () => {
     await user.click(screen.getByRole("button", { name: "Close" }));
 
     expect(onOpenChange).toHaveBeenCalledWith(false);
+  });
+
+  it("renders metadata values from the metadata endpoint", async () => {
+    server.use(
+      http.get(`${base}/documents/d1`, () => HttpResponse.json(documentDto())),
+      http.get(metadataUrl, () =>
+        HttpResponse.json({
+          contentTypeId: "ct1",
+          contentTypeName: "Invoice",
+          columns: [
+            {
+              columnDefinitionId: "col1",
+              name: "Vendor",
+              dataType: "Choice",
+              isRequired: true,
+              choiceOptions: '["Acme","Globex"]',
+              defaultValue: null,
+              value: "Acme",
+            },
+            {
+              columnDefinitionId: "col2",
+              name: "Amount",
+              dataType: "Number",
+              isRequired: false,
+              choiceOptions: null,
+              defaultValue: null,
+              value: "42",
+            },
+            {
+              columnDefinitionId: "col3",
+              name: "Approved",
+              dataType: "Boolean",
+              isRequired: false,
+              choiceOptions: null,
+              defaultValue: null,
+              value: "true",
+            },
+            {
+              columnDefinitionId: "col4",
+              name: "Due date",
+              dataType: "Date",
+              isRequired: true,
+              choiceOptions: null,
+              defaultValue: null,
+              value: null,
+            },
+          ],
+        }),
+      ),
+    );
+
+    renderSheet();
+
+    expect(await screen.findByText("Metadata")).toBeInTheDocument();
+    expect(screen.getByText("Invoice")).toBeInTheDocument();
+    expect(screen.getByText("Vendor *")).toBeInTheDocument();
+    expect(screen.getByText("Acme")).toBeInTheDocument();
+    expect(screen.getByText("Amount")).toBeInTheDocument();
+    expect(screen.getByText("42")).toBeInTheDocument();
+    expect(screen.getByText("Yes")).toBeInTheDocument();
+    expect(screen.getByText("Due date *")).toBeInTheDocument();
+    expect(screen.getByText("—")).toBeInTheDocument();
+  });
+
+  it("shows the no-metadata state when the document has no content type", async () => {
+    server.use(
+      http.get(`${base}/documents/d1`, () => HttpResponse.json(documentDto())),
+    );
+
+    renderSheet();
+
+    expect(await screen.findByText("No custom metadata fields.")).toBeInTheDocument();
+  });
+
+  it("renders nothing when metadata fails to load", async () => {
+    server.use(
+      http.get(`${base}/documents/d1`, () => HttpResponse.json(documentDto())),
+      http.get(metadataUrl, () => new HttpResponse(null, { status: 500 })),
+    );
+
+    renderSheet();
+    await screen.findByText("contract.pdf");
+
+    expect(screen.queryByText("Metadata")).not.toBeInTheDocument();
+  });
+
+  it("edits and saves metadata values", async () => {
+    const columns: Array<Record<string, unknown>> = [
+      {
+        columnDefinitionId: "col1",
+        name: "Vendor",
+        dataType: "Choice",
+        isRequired: true,
+        choiceOptions: '["Acme","Globex"]',
+        defaultValue: null,
+        value: "Acme",
+      },
+      {
+        columnDefinitionId: "col2",
+        name: "Amount",
+        dataType: "Number",
+        isRequired: false,
+        choiceOptions: null,
+        defaultValue: null,
+        value: "42",
+      },
+      {
+        columnDefinitionId: "col3",
+        name: "Approved",
+        dataType: "Boolean",
+        isRequired: false,
+        choiceOptions: null,
+        defaultValue: null,
+        value: "true",
+      },
+      {
+        columnDefinitionId: "col4",
+        name: "Due date",
+        dataType: "Date",
+        isRequired: false,
+        choiceOptions: null,
+        defaultValue: null,
+        value: null,
+      },
+    ];
+    const requests: Request[] = [];
+    server.use(
+      http.get(`${base}/documents/d1`, () => HttpResponse.json(documentDto())),
+      http.get(metadataUrl, () => HttpResponse.json({ contentTypeId: "ct1", contentTypeName: "Invoice", columns })),
+      http.put(`${base}/documents/d1/metadata-values`, async ({ request }) => {
+        requests.push(request);
+        (columns[0] as Record<string, unknown>).value = "Globex";
+        (columns[1] as Record<string, unknown>).value = "100";
+        (columns[2] as Record<string, unknown>).value = "false";
+        (columns[3] as Record<string, unknown>).value = "2026-06-01";
+        return new HttpResponse(null, { status: 204 });
+      }),
+    );
+
+    const { queryClient } = renderSheet();
+    const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
+    await screen.findByText("Metadata");
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "Edit" }));
+
+    await user.click(screen.getByRole("combobox", { name: "Vendor *" }));
+    await user.click(await screen.findByRole("option", { name: "Globex" }));
+
+    await user.clear(screen.getByLabelText("Amount"));
+    await user.type(screen.getByLabelText("Amount"), "100");
+
+    await user.click(screen.getByRole("checkbox", { name: "Approved" }));
+
+    fireEvent.change(screen.getByLabelText("Due date"), {
+      target: { value: "2026-06-01" },
+    });
+
+    await user.click(screen.getByRole("button", { name: "Save metadata" }));
+
+    await waitFor(() => expect(requests).toHaveLength(1));
+    await expect(requests[0].json()).resolves.toEqual({
+      values: [
+        { columnDefinitionId: "col1", value: "Globex" },
+        { columnDefinitionId: "col2", value: "100" },
+        { columnDefinitionId: "col4", value: "2026-06-01" },
+      ],
+    });
+    await waitFor(() => expect(mockedToast.success).toHaveBeenCalledWith("Metadata updated"));
+    expect(invalidateSpy).toHaveBeenCalledWith({
+      queryKey: queryKeys.documents.metadata("d1"),
+    });
+    expect(await screen.findByText("Globex")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Save metadata" })).not.toBeInTheDocument();
+  });
+
+  it("blocks saving when a required field is empty", async () => {
+    const requests: Request[] = [];
+    server.use(
+      http.get(`${base}/documents/d1`, () => HttpResponse.json(documentDto())),
+      http.get(metadataUrl, () =>
+        HttpResponse.json({
+          contentTypeId: "ct1",
+          contentTypeName: "Invoice",
+          columns: [
+            {
+              columnDefinitionId: "col1",
+              name: "Vendor",
+              dataType: "Text",
+              isRequired: true,
+              choiceOptions: null,
+              defaultValue: null,
+              value: null,
+            },
+          ],
+        }),
+      ),
+      http.put(`${base}/documents/d1/metadata-values`, async ({ request }) => {
+        requests.push(request);
+        return new HttpResponse(null, { status: 204 });
+      }),
+    );
+
+    const user = userEvent.setup();
+    renderSheet();
+    await screen.findByText("Metadata");
+
+    await user.click(screen.getByRole("button", { name: "Edit" }));
+    await user.click(screen.getByRole("button", { name: "Save metadata" }));
+
+    await waitFor(() =>
+      expect(mockedToast.error).toHaveBeenCalledWith("Missing required metadata: Vendor"),
+    );
+    expect(requests).toHaveLength(0);
+  });
+
+  it("cancels the metadata edit form", async () => {
+    server.use(
+      http.get(`${base}/documents/d1`, () => HttpResponse.json(documentDto())),
+      http.get(metadataUrl, () =>
+        HttpResponse.json({
+          contentTypeId: "ct1",
+          contentTypeName: "Invoice",
+          columns: [
+            {
+              columnDefinitionId: "col1",
+              name: "Vendor",
+              dataType: "Text",
+              isRequired: true,
+              choiceOptions: null,
+              defaultValue: null,
+              value: "Acme",
+            },
+          ],
+        }),
+      ),
+    );
+
+    const user = userEvent.setup();
+    renderSheet();
+    await screen.findByText("Metadata");
+
+    await user.click(screen.getByRole("button", { name: "Edit" }));
+    expect(screen.getByLabelText("Vendor *")).toHaveValue("Acme");
+    await user.clear(screen.getByLabelText("Vendor *"));
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+
+    expect(screen.queryByRole("button", { name: "Save metadata" })).not.toBeInTheDocument();
+    expect(screen.getByText("Acme")).toBeInTheDocument();
+  });
+
+  it("shows an error toast when saving metadata fails", async () => {
+    server.use(
+      http.get(`${base}/documents/d1`, () => HttpResponse.json(documentDto())),
+      http.get(metadataUrl, () =>
+        HttpResponse.json({
+          contentTypeId: "ct1",
+          contentTypeName: "Invoice",
+          columns: [
+            {
+              columnDefinitionId: "col1",
+              name: "Vendor",
+              dataType: "Text",
+              isRequired: false,
+              choiceOptions: null,
+              defaultValue: null,
+              value: "Acme",
+            },
+          ],
+        }),
+      ),
+      http.put(`${base}/documents/d1/metadata-values`, () =>
+        new HttpResponse(null, { status: 500 }),
+      ),
+    );
+
+    const user = userEvent.setup();
+    renderSheet();
+    await screen.findByText("Metadata");
+
+    await user.click(screen.getByRole("button", { name: "Edit" }));
+    await user.click(screen.getByRole("button", { name: "Save metadata" }));
+
+    await waitFor(() =>
+      expect(mockedToast.error).toHaveBeenCalledWith("Failed to update metadata"),
+    );
   });
 });

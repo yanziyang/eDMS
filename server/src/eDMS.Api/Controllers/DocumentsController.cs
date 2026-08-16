@@ -1,4 +1,9 @@
+using System.Text.Json;
+using eDMS.Application.Admin;
 using eDMS.Application.Documents;
+using eDMS.Application.Documents.Commands.UpdateDocumentColumnValues;
+using eDMS.Application.Documents.Queries.GetDocumentMetadata;
+using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -7,7 +12,7 @@ namespace eDMS.Api.Controllers;
 [ApiController]
 [Route("api/v1")]
 [Authorize]
-public sealed class DocumentsController(IDocumentService documents) : ControllerBase
+public sealed class DocumentsController(IDocumentService documents, IMediator mediator) : ControllerBase
 {
     [HttpGet("libraries/{libraryId:guid}/items")]
     public async Task<IActionResult> ListLibraryItems(Guid libraryId, CancellationToken cancellationToken) =>
@@ -18,7 +23,13 @@ public sealed class DocumentsController(IDocumentService documents) : Controller
     public async Task<IActionResult> UploadToLibrary(Guid libraryId, IFormFile file, CancellationToken cancellationToken)
     {
         await using var stream = file.OpenReadStream();
-        var result = await documents.UploadAsync(libraryId, null, file.FileName, stream, cancellationToken);
+        var result = await documents.UploadAsync(
+            libraryId,
+            null,
+            file.FileName,
+            stream,
+            ParseMetadata(Request),
+            cancellationToken);
         return Ok(result);
     }
 
@@ -29,6 +40,31 @@ public sealed class DocumentsController(IDocumentService documents) : Controller
         await using var stream = file.OpenReadStream();
         var result = await documents.UploadToFolderAsync(folderId, file.FileName, stream, cancellationToken);
         return Ok(result);
+    }
+
+    private static IReadOnlyList<ColumnValueInput>? ParseMetadata(HttpRequest request)
+    {
+        if (!request.HasFormContentType || !request.Form.TryGetValue("metadata", out var raw))
+        {
+            return null;
+        }
+
+        var value = raw.ToString();
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return null;
+        }
+
+        try
+        {
+            return JsonSerializer.Deserialize<List<ColumnValueInput>>(
+                value,
+                JsonSerializerOptions.Web);
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
     }
 
     [HttpGet("documents/{id:guid}")]
@@ -47,6 +83,20 @@ public sealed class DocumentsController(IDocumentService documents) : Controller
     {
         var (stream, fileName, contentType) = await documents.DownloadAsync(id, cancellationToken);
         return File(stream, contentType, fileName, enableRangeProcessing: true);
+    }
+
+    [HttpGet("documents/{id:guid}/metadata")]
+    public async Task<IActionResult> Metadata(Guid id, CancellationToken cancellationToken) =>
+        Ok(await mediator.Send(new GetDocumentMetadataQuery(id), cancellationToken));
+
+    [HttpPut("documents/{id:guid}/metadata-values")]
+    public async Task<IActionResult> UpdateMetadataValues(
+        Guid id,
+        [FromBody] UpdateMetadataValuesRequest request,
+        CancellationToken cancellationToken)
+    {
+        await mediator.Send(new UpdateDocumentColumnValuesCommand(id, request.Values), cancellationToken);
+        return NoContent();
     }
 
     [HttpDelete("documents/{id:guid}")]
@@ -130,5 +180,7 @@ public sealed class DocumentsController(IDocumentService documents) : Controller
 public sealed record UpdateDocumentRequest(string? Name, string? Title, string? Description);
 
 public sealed record MoveCopyRequest(Guid DestinationLibraryId, Guid? DestinationFolderId);
+
+public sealed record UpdateMetadataValuesRequest(IReadOnlyList<ColumnValueInput> Values);
 
 public sealed record CheckinRequest(string? Comment);

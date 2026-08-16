@@ -403,6 +403,98 @@ namespace eDMS.Infrastructure.Migrations.SqlServer.Migrations
                     b.ToTable("audit_log_entries", (string)null);
                 });
 
+            modelBuilder.Entity("eDMS.Domain.ColumnDefinition", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("id");
+
+                    b.Property<string>("ChoiceOptions")
+                        .HasMaxLength(4096)
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("choice_options");
+
+                    b.Property<Guid>("ContentTypeId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("content_type_id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("CreatedBy")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("created_by");
+
+                    b.Property<int>("DataType")
+                        .HasColumnType("int")
+                        .HasColumnName("data_type");
+
+                    b.Property<string>("DefaultValue")
+                        .HasMaxLength(2048)
+                        .HasColumnType("nvarchar(2048)")
+                        .HasColumnName("default_value");
+
+                    b.Property<bool>("IsRequired")
+                        .HasColumnType("bit")
+                        .HasColumnName("is_required");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)")
+                        .HasColumnName("name");
+
+                    b.HasKey("Id")
+                        .HasName("pk_column_definitions");
+
+                    b.HasIndex("ContentTypeId", "Name")
+                        .IsUnique()
+                        .HasDatabaseName("ix_column_definitions_content_type_id_name");
+
+                    b.ToTable("column_definitions", (string)null);
+                });
+
+            modelBuilder.Entity("eDMS.Domain.ContentType", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("CreatedBy")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("created_by");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(1024)
+                        .HasColumnType("nvarchar(1024)")
+                        .HasColumnName("description");
+
+                    b.Property<Guid?>("LibraryId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("library_id");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)")
+                        .HasColumnName("name");
+
+                    b.HasKey("Id")
+                        .HasName("pk_content_types");
+
+                    b.HasIndex("LibraryId")
+                        .HasDatabaseName("ix_content_types_library_id");
+
+                    b.ToTable("content_types", (string)null);
+                });
+
             modelBuilder.Entity("eDMS.Domain.Document", b =>
                 {
                     b.Property<Guid>("Id")
@@ -423,6 +515,10 @@ namespace eDMS.Infrastructure.Migrations.SqlServer.Migrations
                         .HasMaxLength(128)
                         .HasColumnType("nvarchar(128)")
                         .HasColumnName("content_type");
+
+                    b.Property<Guid?>("ContentTypeId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("content_type_id");
 
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("datetimeoffset")
@@ -482,6 +578,9 @@ namespace eDMS.Infrastructure.Migrations.SqlServer.Migrations
                     b.HasKey("Id")
                         .HasName("pk_documents");
 
+                    b.HasIndex("ContentTypeId")
+                        .HasDatabaseName("ix_documents_content_type_id");
+
                     b.HasIndex("FolderId")
                         .HasDatabaseName("ix_documents_folder_id");
 
@@ -489,6 +588,31 @@ namespace eDMS.Infrastructure.Migrations.SqlServer.Migrations
                         .HasDatabaseName("ix_documents_folder");
 
                     b.ToTable("documents", (string)null);
+                });
+
+            modelBuilder.Entity("eDMS.Domain.DocumentColumnValue", b =>
+                {
+                    b.Property<Guid>("DocumentId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("document_id");
+
+                    b.Property<Guid>("ColumnDefinitionId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("column_definition_id");
+
+                    b.Property<string>("Value")
+                        .IsRequired()
+                        .HasMaxLength(4096)
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("value");
+
+                    b.HasKey("DocumentId", "ColumnDefinitionId")
+                        .HasName("pk_document_column_values");
+
+                    b.HasIndex("ColumnDefinitionId")
+                        .HasDatabaseName("ix_document_column_values_column_definition_id");
+
+                    b.ToTable("document_column_values", (string)null);
                 });
 
             modelBuilder.Entity("eDMS.Domain.DocumentTag", b =>
@@ -1079,8 +1203,33 @@ namespace eDMS.Infrastructure.Migrations.SqlServer.Migrations
                         .HasConstraintName("fk_audit_log_entries_asp_net_users_user_id");
                 });
 
+            modelBuilder.Entity("eDMS.Domain.ColumnDefinition", b =>
+                {
+                    b.HasOne("eDMS.Domain.ContentType", null)
+                        .WithMany()
+                        .HasForeignKey("ContentTypeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_column_definitions_content_types_content_type_id");
+                });
+
+            modelBuilder.Entity("eDMS.Domain.ContentType", b =>
+                {
+                    b.HasOne("eDMS.Domain.Library", null)
+                        .WithMany()
+                        .HasForeignKey("LibraryId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .HasConstraintName("fk_content_types_libraries_library_id");
+                });
+
             modelBuilder.Entity("eDMS.Domain.Document", b =>
                 {
+                    b.HasOne("eDMS.Domain.ContentType", null)
+                        .WithMany()
+                        .HasForeignKey("ContentTypeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_documents_content_types_content_type_id");
+
                     b.HasOne("eDMS.Domain.Folder", null)
                         .WithMany()
                         .HasForeignKey("FolderId")
@@ -1093,6 +1242,23 @@ namespace eDMS.Infrastructure.Migrations.SqlServer.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("fk_documents_libraries_library_id");
+                });
+
+            modelBuilder.Entity("eDMS.Domain.DocumentColumnValue", b =>
+                {
+                    b.HasOne("eDMS.Domain.ColumnDefinition", null)
+                        .WithMany()
+                        .HasForeignKey("ColumnDefinitionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_document_column_values_column_definitions_column_definition_id");
+
+                    b.HasOne("eDMS.Domain.Document", null)
+                        .WithMany()
+                        .HasForeignKey("DocumentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_document_column_values_documents_document_id");
                 });
 
             modelBuilder.Entity("eDMS.Domain.DocumentTag", b =>

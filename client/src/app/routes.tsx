@@ -15,6 +15,7 @@ import { AdminUsers } from "@/pages/admin/users";
 import { AdminAuditLog } from "@/pages/admin/audit-log";
 import { AdminSettings } from "@/pages/admin/settings";
 import { AdminStorage } from "@/pages/admin/storage";
+import { AdminContentTypes } from "@/pages/admin/content-types";
 import { LibraryBrowser } from "@/pages/library";
 
 export const router = createBrowserRouter([
@@ -40,6 +41,7 @@ export const router = createBrowserRouter([
           { path: "groups", element: <AdminGroups /> },
           { path: "sites", element: <AdminSites /> },
           { path: "storage", element: <AdminStorage /> },
+          { path: "content-types", element: <AdminContentTypes /> },
           { path: "audit-log", element: <AdminAuditLog /> },
           { path: "settings", element: <AdminSettings /> },
         ],

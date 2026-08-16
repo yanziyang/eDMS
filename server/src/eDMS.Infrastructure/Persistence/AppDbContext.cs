@@ -43,6 +43,12 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options)
 
     public DbSet<AppSetting> AppSettings => Set<AppSetting>();
 
+    public DbSet<ContentType> ContentTypes => Set<ContentType>();
+
+    public DbSet<ColumnDefinition> ColumnDefinitions => Set<ColumnDefinition>();
+
+    public DbSet<DocumentColumnValue> DocumentColumnValues => Set<DocumentColumnValue>();
+
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
         // The SQLite provider has no DateTimeOffset support; store as UTC binary.
@@ -85,6 +91,45 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options)
             entity.HasKey(setting => setting.Key);
             entity.Property(setting => setting.Key).HasMaxLength(128);
             entity.Property(setting => setting.Value).HasMaxLength(2048);
+        });
+
+        builder.Entity<ContentType>(entity =>
+        {
+            entity.ToTable("content_types");
+            entity.Property(contentType => contentType.Name).IsRequired().HasMaxLength(256);
+            entity.Property(contentType => contentType.Description).HasMaxLength(1024);
+            entity.HasOne<Library>()
+                .WithMany()
+                .HasForeignKey(contentType => contentType.LibraryId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<ColumnDefinition>(entity =>
+        {
+            entity.ToTable("column_definitions");
+            entity.Property(column => column.Name).IsRequired().HasMaxLength(256);
+            entity.Property(column => column.ChoiceOptions).HasMaxLength(4096);
+            entity.Property(column => column.DefaultValue).HasMaxLength(2048);
+            entity.HasOne<ContentType>()
+                .WithMany()
+                .HasForeignKey(column => column.ContentTypeId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasIndex(column => new { column.ContentTypeId, column.Name }).IsUnique();
+        });
+
+        builder.Entity<DocumentColumnValue>(entity =>
+        {
+            entity.ToTable("document_column_values");
+            entity.HasKey(value => new { value.DocumentId, value.ColumnDefinitionId });
+            entity.Property(value => value.Value).IsRequired().HasMaxLength(4096);
+            entity.HasOne<Document>()
+                .WithMany()
+                .HasForeignKey(value => value.DocumentId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne<ColumnDefinition>()
+                .WithMany()
+                .HasForeignKey(value => value.ColumnDefinitionId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
         ApplyProviderSpecificColumnTypes(builder);

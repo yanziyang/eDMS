@@ -84,6 +84,48 @@ describe("documents api", () => {
     expect(headers["Content-Type"]).toBeUndefined();
   });
 
+  it("uploadToLibrary attaches metadata as a JSON form field", async () => {
+    let captured: RequestInit | undefined;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (_url: RequestInfo | URL, init?: RequestInit) => {
+        captured = init;
+        return new Response(JSON.stringify({ documentId: "d1", name: "a.txt", versionId: "v1", versionLabel: "1.0", sizeBytes: 3, status: "ok" }), {
+          status: 201,
+          headers: { "Content-Type": "application/json" },
+        });
+      }),
+    );
+
+    const file = new File(["abc"], "a.txt", { type: "text/plain" });
+    await uploadToLibrary("l1", file, [
+      { columnDefinitionId: "col1", value: "Acme" },
+      { columnDefinitionId: "col2", value: null },
+    ]);
+
+    const form = captured?.body as FormData;
+    expect(form.get("metadata")).toBe('[{"columnDefinitionId":"col1","value":"Acme"},{"columnDefinitionId":"col2","value":null}]');
+  });
+
+  it("uploadToLibrary skips the metadata field when empty", async () => {
+    let captured: RequestInit | undefined;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (_url: RequestInfo | URL, init?: RequestInit) => {
+        captured = init;
+        return new Response(JSON.stringify({ documentId: "d1", name: "a.txt", versionId: "v1", versionLabel: "1.0", sizeBytes: 3, status: "ok" }), {
+          status: 201,
+          headers: { "Content-Type": "application/json" },
+        });
+      }),
+    );
+
+    const file = new File(["abc"], "a.txt", { type: "text/plain" });
+    await uploadToLibrary("l1", file, []);
+
+    expect((captured?.body as FormData).has("metadata")).toBe(false);
+  });
+
   it("uploadToFolder posts to the folder endpoint", async () => {
     const urls: string[] = [];
     let captured: RequestInit | undefined;

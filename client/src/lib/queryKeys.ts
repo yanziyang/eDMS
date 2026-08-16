@@ -24,6 +24,15 @@ export const queryKeys = {
     libraryItems: (libraryId: string) => [...queryKeys.documents.all, "library-items", libraryId] as const,
     detail: (documentId: string) => [...queryKeys.documents.all, "detail", documentId] as const,
     versions: (documentId: string) => [...queryKeys.documents.all, "versions", documentId] as const,
+    metadata: (documentId: string) => [...queryKeys.documents.all, "metadata", documentId] as const,
+  },
+  contentTypes: {
+    all: ["content-types"] as const,
+    list: (libraryId?: string) =>
+      libraryId
+        ? ([...queryKeys.contentTypes.all, "list", libraryId] as const)
+        : ([...queryKeys.contentTypes.all, "list"] as const),
+    detail: (contentTypeId: string) => [...queryKeys.contentTypes.all, "detail", contentTypeId] as const,
   },
   permissions: {
     all: ["permissions"] as const,

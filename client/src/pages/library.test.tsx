@@ -70,6 +70,7 @@ function mockNav(overrides: { sites?: unknown; libraries?: unknown } = {}) {
     http.get(`${base}/sites/s1/libraries`, () =>
       HttpResponse.json(overrides.libraries ?? [library(), library({ id: "l2", name: "Finance" })]),
     ),
+    http.get(`${base}/admin/content-types`, () => HttpResponse.json([])),
   );
 }
 
@@ -108,7 +109,9 @@ function stubUploadFetch(
   libraryItems: unknown[],
   folderItems: unknown[],
   uploaded: string[],
-  postHandler: (path: string, file: File) => Response,
+  postHandler: (path: string, file: File, metadata: unknown) => Response,
+  contentType: unknown = null,
+  contentTypesStatus = 200,
 ) {
   vi.stubGlobal(
     "fetch",
@@ -121,12 +124,21 @@ function stubUploadFetch(
         }
         if (path.includes("/libraries/l1/items")) return jsonResponse(libraryItems);
         if (path.includes("/folders/f3/items")) return jsonResponse(folderItems);
+        if (path.includes("/admin/content-types")) {
+          if (contentTypesStatus === 403) return new Response(null, { status: 403 });
+          return jsonResponse(contentType ? [contentType] : []);
+        }
         return jsonResponse([]);
       }
       const body = init?.body as FormData;
       const file = body.get("file") as File;
+      let metadata: unknown = null;
+      const rawMetadata = body.get("metadata");
+      if (typeof rawMetadata === "string" && rawMetadata !== "") {
+        metadata = JSON.parse(rawMetadata);
+      }
       uploaded.push(file.name);
-      return postHandler(path, file);
+      return postHandler(path, file, metadata);
     }),
   );
 }
@@ -495,6 +507,185 @@ describe("LibraryBrowser", () => {
     await waitFor(() => expect(screen.queryByText("Upload files")).not.toBeInTheDocument());
   });
 
+  it("shows required metadata fields and sends them with the upload", async () => {
+    const items: unknown[] = [];
+    const postedMetadata: unknown[] = [];
+    const contentType = {
+      id: "ct1",
+      libraryId: "l1",
+      name: "Invoice",
+      description: null,
+      columns: [
+        {
+          id: "col1",
+          name: "Vendor",
+          dataType: "Text",
+          isRequired: true,
+          choiceOptions: null,
+          defaultValue: null,
+        },
+        {
+          id: "col2",
+          name: "Approved",
+          dataType: "Boolean",
+          isRequired: false,
+          choiceOptions: null,
+          defaultValue: null,
+        },
+      ],
+    };
+    stubUploadFetch(items, [], [], (_path, file, metadata) => {
+      postedMetadata.push(metadata);
+      items.push(item({ id: `d-${file.name}`, name: file.name, documentId: `d-${file.name}` }));
+      return jsonResponse(
+        { documentId: "x", name: file.name, versionId: "v1", versionLabel: "1.0", sizeBytes: 3, status: "ok" },
+        201,
+      );
+    }, contentType);
+
+    const user = userEvent.setup();
+    renderLibrary();
+    await screen.findByText("This folder is empty");
+
+    await user.click(screen.getByRole("button", { name: "Upload" }));
+    await screen.findByText("Upload files");
+
+    expect(screen.getByText("Metadata")).toBeInTheDocument();
+    await user.type(screen.getByLabelText("Vendor *"), "Acme");
+    await user.click(screen.getByRole("checkbox", { name: "Approved" }));
+
+    fireEvent.change(fileInput(), { target: { files: [new File(["a"], "a.txt")] } });
+
+    await waitFor(() => expect(postedMetadata).toHaveLength(1));
+    expect(postedMetadata[0]).toEqual([
+      { columnDefinitionId: "col1", value: "Acme" },
+      { columnDefinitionId: "col2", value: "true" },
+    ]);
+    expect(mockedToast.success).toHaveBeenCalledWith("Uploaded a.txt (v1.0)");
+  });
+
+  it("prefills metadata defaults and hides inputs when the fetch fails with 403", async () => {
+    const items: unknown[] = [];
+    const postedMetadata: unknown[] = [];
+    const contentType = {
+      id: "ct1",
+      libraryId: "l1",
+      name: "Invoice",
+      description: null,
+      columns: [
+        {
+          id: "col1",
+          name: "Vendor",
+          dataType: "Text",
+          isRequired: true,
+          choiceOptions: null,
+          defaultValue: "Acme",
+        },
+      ],
+    };
+    stubUploadFetch(items, [], [], (_path, file, metadata) => {
+      postedMetadata.push(metadata);
+      items.push(item({ id: `d-${file.name}`, name: file.name, documentId: `d-${file.name}` }));
+      return jsonResponse(
+        { documentId: "x", name: file.name, versionId: "v1", versionLabel: "1.0", sizeBytes: 3, status: "ok" },
+        201,
+      );
+    }, contentType, 403);
+
+    renderLibrary();
+    await screen.findByText("This folder is empty");
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "Upload" }));
+    await screen.findByText("Upload files");
+
+    expect(screen.queryByText("Metadata")).not.toBeInTheDocument();
+
+    fireEvent.change(fileInput(), { target: { files: [new File(["a"], "a.txt")] } });
+
+    await waitFor(() => expect(postedMetadata).toHaveLength(1));
+    expect(postedMetadata[0]).toBeNull();
+    expect(mockedToast.success).toHaveBeenCalledWith("Uploaded a.txt (v1.0)");
+  });
+
+  it("sends prefilled metadata defaults on upload", async () => {
+    const items: unknown[] = [];
+    const postedMetadata: unknown[] = [];
+    const contentType = {
+      id: "ct1",
+      libraryId: "l1",
+      name: "Invoice",
+      description: null,
+      columns: [
+        {
+          id: "col1",
+          name: "Vendor",
+          dataType: "Text",
+          isRequired: true,
+          choiceOptions: null,
+          defaultValue: "Acme",
+        },
+        {
+          id: "col2",
+          name: "Approved",
+          dataType: "Boolean",
+          isRequired: false,
+          choiceOptions: null,
+          defaultValue: "true",
+        },
+      ],
+    };
+    stubUploadFetch(items, [], [], (_path, file, metadata) => {
+      postedMetadata.push(metadata);
+      items.push(item({ id: `d-${file.name}`, name: file.name, documentId: `d-${file.name}` }));
+      return jsonResponse(
+        { documentId: "x", name: file.name, versionId: "v1", versionLabel: "1.0", sizeBytes: 3, status: "ok" },
+        201,
+      );
+    }, contentType);
+
+    renderLibrary();
+    await screen.findByText("This folder is empty");
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "Upload" }));
+    await screen.findByText("Upload files");
+
+    expect(screen.getByLabelText("Vendor *")).toHaveValue("Acme");
+    expect(screen.getByRole("checkbox", { name: "Approved" })).toBeChecked();
+
+    fireEvent.change(fileInput(), { target: { files: [new File(["a"], "a.txt")] } });
+
+    await waitFor(() => expect(postedMetadata).toHaveLength(1));
+    expect(postedMetadata[0]).toEqual([
+      { columnDefinitionId: "col1", value: "Acme" },
+      { columnDefinitionId: "col2", value: "true" },
+    ]);
+  });
+
+  it("shows the server's 409 detail message in the upload error toast", async () => {
+    const uploaded: string[] = [];
+    stubUploadFetch([], [], uploaded, () =>
+      new Response(
+        JSON.stringify({ title: "Missing metadata", detail: "Vendor is required for this library." }),
+        { status: 409, headers: { "Content-Type": "application/json" } },
+      ),
+    );
+
+    renderLibrary();
+    await screen.findByText("This folder is empty");
+    await openUploadDialog();
+
+    fireEvent.change(fileInput(), { target: { files: [new File(["x"], "bad.txt")] } });
+
+    await waitFor(() =>
+      expect(mockedToast.error).toHaveBeenCalledWith(
+        "Failed to upload bad.txt: Vendor is required for this library.",
+      ),
+    );
+    expect(uploaded).toEqual(["bad.txt"]);
+  });
+
   it("renders gigabyte sizes", async () => {
     mockNav();
     server.use(
@@ -604,6 +795,9 @@ describe("LibraryBrowser", () => {
           modifiedAt: "2026-03-01T10:00:00Z",
           versionLabel: "1.0",
         }),
+      ),
+      http.get(`${base}/documents/d1/metadata`, () =>
+        HttpResponse.json({ contentTypeId: null, contentTypeName: null, columns: [] }),
       ),
     );
 
@@ -1114,6 +1308,9 @@ describe("LibraryBrowser", () => {
           modifiedAt: "2026-03-01T10:00:00Z",
           versionLabel: "1.0",
         }),
+      ),
+      http.get(`${base}/documents/d1/metadata`, () =>
+        HttpResponse.json({ contentTypeId: null, contentTypeName: null, columns: [] }),
       ),
     );
 

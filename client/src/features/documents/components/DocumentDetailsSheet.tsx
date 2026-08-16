@@ -39,9 +39,16 @@ import {
   restoreVersion,
   updateDocument,
 } from "@/features/documents/api";
+import { getDocumentMetadata, updateDocumentMetadata } from "@/features/content-types/api";
+import {
+  buildMetadataValues,
+  MetadataFields,
+  missingRequiredColumns,
+  type MetadataFieldColumn,
+} from "@/features/content-types/components/MetadataFields";
 import { grantPermission, getPermissions, resetPermissions, revokePermission } from "@/features/permissions/api";
 import { queryKeys } from "@/lib/queryKeys";
-import type { DocumentDto, PermissionLevel, PermissionsStateDto, PrincipalType } from "@/types/api";
+import type { DocumentDto, DocumentMetadataColumnDto, PermissionLevel, PermissionsStateDto, PrincipalType } from "@/types/api";
 import { ShareDialog } from "./ShareDialog";
 
 interface DocumentDetailsSheetProps {
@@ -207,8 +214,142 @@ function PropertiesTab({ document }: { document: DocumentDto }) {
           </div>
         ))}
       </div>
+
+      <MetadataSection documentId={document.id} />
     </div>
   );
+}
+
+function MetadataSection({ documentId }: { documentId: string }) {
+  const queryClient = useQueryClient();
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState<Record<string, string> | null>(null);
+
+  const metadata = useQuery({
+    queryKey: queryKeys.documents.metadata(documentId),
+    queryFn: () => getDocumentMetadata(documentId),
+  });
+
+  const save = useMutation({
+    mutationFn: () =>
+      updateDocumentMetadata(
+        documentId,
+        buildMetadataValues(metadataColumns(metadata.data?.columns ?? []), draft ?? {}),
+      ),
+    onSuccess: () => {
+      toast.success("Metadata updated");
+      setEditing(false);
+      setDraft(null);
+      queryClient.invalidateQueries({ queryKey: queryKeys.documents.metadata(documentId) });
+    },
+    onError: () => toast.error("Failed to update metadata"),
+  });
+
+  const startEditing = () => {
+    const next: Record<string, string> = {};
+    for (const column of metadata.data?.columns ?? []) {
+      next[column.columnDefinitionId] = column.value ?? column.defaultValue ?? "";
+    }
+    setDraft(next);
+    setEditing(true);
+  };
+
+  if (metadata.isLoading || !metadata.data) {
+    return null;
+  }
+
+  if (metadata.data.columns.length === 0) {
+    return (
+      <div className="rounded-lg border bg-muted/50 p-3">
+        <div className="text-sm font-medium">Metadata</div>
+        <div className="mt-1 text-sm text-muted-foreground">No custom metadata fields.</div>
+      </div>
+    );
+  }
+
+  const submit = () => {
+    const missing = missingRequiredColumns(metadataColumns(metadata.data.columns), draft ?? {});
+    if (missing.length > 0) {
+      toast.error(`Missing required metadata: ${missing.join(", ")}`);
+      return;
+    }
+    save.mutate();
+  };
+
+  return (
+    <div className="rounded-lg border bg-muted/50 p-3">
+      <div className="flex items-center justify-between gap-2">
+        <div className="text-sm font-medium">Metadata</div>
+        {!editing && (
+          <Button variant="ghost" size="sm" onClick={startEditing}>
+            Edit
+          </Button>
+        )}
+      </div>
+      {metadata.data.contentTypeName && (
+        <div className="mt-0.5 text-xs text-muted-foreground">{metadata.data.contentTypeName}</div>
+      )}
+      {!editing ? (
+        <dl className="mt-2 grid grid-cols-2 gap-2 text-sm">
+          {metadata.data.columns.map((column) => (
+            <div key={column.columnDefinitionId}>
+              <dt className="text-xs text-foreground/70">
+                {column.name}
+                {column.isRequired ? " *" : ""}
+              </dt>
+              <dd className="mt-0.5 font-medium">{formatMetadataValue(column)}</dd>
+            </div>
+          ))}
+        </dl>
+      ) : (
+        <div className="mt-2 flex flex-col gap-2">
+          <MetadataFields
+            columns={metadataColumns(metadata.data.columns)}
+            draft={draft ?? {}}
+            onChange={(columnId, value) =>
+              setDraft((current) => ({ ...(current ?? {}), [columnId]: value }))
+            }
+          />
+          <div className="flex items-center gap-2">
+            <Button size="sm" onClick={submit} disabled={save.isPending}>
+              {save.isPending && <LoaderCircle className="size-4 animate-spin" />}
+              Save metadata
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setEditing(false);
+                setDraft(null);
+              }}
+            >
+              Cancel
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function metadataColumns(columns: DocumentMetadataColumnDto[]): MetadataFieldColumn[] {
+  return columns.map((column) => ({
+    id: column.columnDefinitionId,
+    name: column.name,
+    dataType: column.dataType,
+    isRequired: column.isRequired,
+    choiceOptions: column.choiceOptions,
+  }));
+}
+
+function formatMetadataValue(column: DocumentMetadataColumnDto): string {
+  if (column.dataType === "Boolean") {
+    if (column.value === null) {
+      return "—";
+    }
+    return column.value === "true" ? "Yes" : "No";
+  }
+  return column.value ?? "—";
 }
 
 function VersionsTab({ document }: { document: DocumentDto }) {

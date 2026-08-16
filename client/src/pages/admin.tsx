@@ -7,6 +7,7 @@ export function Admin() {
     { to: "/admin/groups", label: "Groups" },
     { to: "/admin/sites", label: "Sites" },
     { to: "/admin/storage", label: "Storage" },
+    { to: "/admin/content-types", label: "Content Types" },
     { to: "/admin/audit-log", label: "Audit Log" },
     { to: "/admin/settings", label: "Settings" },
   ];

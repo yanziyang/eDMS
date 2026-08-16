@@ -16,6 +16,12 @@ public sealed class Document : SoftDeletableEntity
 
     public string ContentType { get; set; } = string.Empty;
 
+    /// <summary>
+    /// The metadata template applied to this document (FR-META-03). Null until a
+    /// content type is assigned to the document's library.
+    /// </summary>
+    public Guid? ContentTypeId { get; set; }
+
     public Guid? CurrentVersionId { get; set; }
 
     public Guid? CheckedOutBy { get; set; }

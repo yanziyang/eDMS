@@ -27,5 +27,10 @@ public sealed class DocumentConfiguration : IEntityTypeConfiguration<Document>
             .WithMany()
             .HasForeignKey(document => document.FolderId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne<ContentType>()
+            .WithMany()
+            .HasForeignKey(document => document.ContentTypeId)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }

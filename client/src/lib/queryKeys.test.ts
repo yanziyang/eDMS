@@ -12,6 +12,10 @@ describe("queryKeys", () => {
     expect(queryKeys.documents.libraryItems("l1")).toEqual(["documents", "library-items", "l1"]);
     expect(queryKeys.documents.detail("d1")).toEqual(["documents", "detail", "d1"]);
     expect(queryKeys.documents.versions("d1")).toEqual(["documents", "versions", "d1"]);
+    expect(queryKeys.documents.metadata("d1")).toEqual(["documents", "metadata", "d1"]);
+    expect(queryKeys.contentTypes.list()).toEqual(["content-types", "list"]);
+    expect(queryKeys.contentTypes.list("l1")).toEqual(["content-types", "list", "l1"]);
+    expect(queryKeys.contentTypes.detail("ct1")).toEqual(["content-types", "detail", "ct1"]);
   });
 
   it("builds permission, recycle-bin, search, admin and me keys", () => {

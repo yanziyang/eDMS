@@ -53,9 +53,12 @@ import {
   uploadToFolder,
   uploadToLibrary,
 } from "@/features/documents/api";
+import { listContentTypes } from "@/features/content-types/api";
+import { buildMetadataValues, MetadataFields } from "@/features/content-types/components/MetadataFields";
 import { listSites } from "@/features/sites/api";
+import { ApiError } from "@/lib/api-client";
 import { queryKeys } from "@/lib/queryKeys";
-import type { ItemDto, LibraryDto } from "@/types/api";
+import type { ContentTypeColumnDto, ItemDto, LibraryDto, MetadataValueInput } from "@/types/api";
 
 type SortKey = "name" | "size" | "modifiedAt";
 type ViewMode = "list" | "grid";
@@ -101,6 +104,14 @@ export function LibraryBrowser() {
     queryFn: () => (folderId ? listFolderItems(folderId) : listItems(libraryId!)),
     enabled: libraryId !== undefined,
   });
+
+  const contentTypesQuery = useQuery({
+    queryKey: queryKeys.contentTypes.list(libraryId ?? "unknown"),
+    queryFn: () => listContentTypes(libraryId!),
+    enabled: libraryId !== undefined,
+    retry: false,
+  });
+  const uploadContentType = contentTypesQuery.data?.[0] ?? null;
 
   const itemsKey = folderId
     ? queryKeys.folders.items(folderId)
@@ -185,15 +196,15 @@ export function LibraryBrowser() {
   });
 
   const upload = useMutation({
-    mutationFn: async (files: File[]) => {
+    mutationFn: async ({ files, metadata }: { files: File[]; metadata: MetadataValueInput[] }) => {
       for (const file of files) {
         try {
           const result = folderId
             ? await uploadToFolder(folderId, file)
-            : await uploadToLibrary(libraryId!, file);
+            : await uploadToLibrary(libraryId!, file, metadata);
           toast.success(`Uploaded ${result.name} (v${result.versionLabel})`);
-        } catch {
-          toast.error(`Failed to upload ${file.name}`);
+        } catch (error) {
+          toast.error(uploadErrorText(error, file.name));
         }
       }
     },
@@ -532,7 +543,9 @@ export function LibraryBrowser() {
         open={uploadOpen}
         onOpenChange={setUploadOpen}
         pending={upload.isPending}
-        onUpload={(files) => upload.mutate(files)}
+        showMetadata={folderId === null && uploadContentType !== null && uploadContentType.columns.length > 0}
+        metadataColumns={uploadContentType?.columns ?? []}
+        onUpload={(files, metadata) => upload.mutate({ files, metadata })}
       />
 
       {singleSelectedDocument && (
@@ -665,10 +678,29 @@ interface UploadDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   pending: boolean;
-  onUpload: (files: File[]) => void;
+  showMetadata: boolean;
+  metadataColumns: ContentTypeColumnDto[];
+  onUpload: (files: File[], metadata: MetadataValueInput[]) => void;
 }
 
-function UploadDialog({ open, onOpenChange, pending, onUpload }: UploadDialogProps) {
+function UploadDialog({
+  open,
+  onOpenChange,
+  pending,
+  showMetadata,
+  metadataColumns,
+  onUpload,
+}: UploadDialogProps) {
+  const [draft, setDraft] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    const next: Record<string, string> = {};
+    for (const column of metadataColumns) {
+      next[column.id] = column.defaultValue ?? "";
+    }
+    setDraft(next);
+  }, [metadataColumns, open]);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
@@ -680,6 +712,23 @@ function UploadDialog({ open, onOpenChange, pending, onUpload }: UploadDialogPro
           </DialogDescription>
         </DialogHeader>
         <div className="flex flex-col gap-4">
+          {showMetadata && (
+            <div className="rounded-lg border bg-muted/50 p-3">
+              <div className="text-sm font-medium">Metadata</div>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                Required fields are marked with *. Values apply to all uploaded files.
+              </p>
+              <div className="mt-3">
+                <MetadataFields
+                  columns={metadataColumns}
+                  draft={draft}
+                  onChange={(columnId, value) =>
+                    setDraft((current) => ({ ...current, [columnId]: value }))
+                  }
+                />
+              </div>
+            </div>
+          )}
           <Label
             htmlFor="upload-files"
             className="flex cursor-pointer flex-col items-center gap-2 rounded-lg border border-dashed p-8 text-center"
@@ -699,7 +748,7 @@ function UploadDialog({ open, onOpenChange, pending, onUpload }: UploadDialogPro
             onChange={(event) => {
               const files = Array.from(event.target.files ?? []);
               if (files.length > 0) {
-                onUpload(files);
+                onUpload(files, buildMetadataValues(metadataColumns, draft));
               }
               event.target.value = "";
             }}
@@ -843,6 +892,11 @@ function MoveCopyDialog({
       </DialogContent>
     </Dialog>
   );
+}
+
+function uploadErrorText(error: unknown, fileName: string): string {
+  const detail = error instanceof ApiError ? error.problem.detail : null;
+  return detail ? `Failed to upload ${fileName}: ${detail}` : `Failed to upload ${fileName}`;
 }
 
 function formatBytes(bytes: number): string {

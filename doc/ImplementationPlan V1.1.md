@@ -167,11 +167,11 @@ FS §8.2 already sketches `ContentType`/`ColumnDefinition` — use those shapes 
 
 | Status | ID | Track | Task | Depends on | Size | Refs |
 |---|---|---|---|---|---|---|
-| Not Started | M12.1 | BE | `ContentType` + `ColumnDefinition` entities/migration per FS §8.2's sketch. | M10 (all) | M | FR-META-03, FS §8.2 |
-| Not Started | M12.2 | BE | Content Type CRUD (admin, per-Library) + a column-value storage design for `Document` (e.g. a `jsonb` bag vs. a separate values table) — **this is a real design decision FS doesn't make for you; record it as ADR-9 in TDS §2.4 before implementing.** | M12.1 | L | FR-META-03 |
-| Not Started | M12.3 | BE | Enforce required columns: block upload/check-in completion until required columns are filled. | M12.2 | M | FR-META-04 |
-| Not Started | M12.4 | FE | Admin UI to define Content Types/Columns per Library (no prototype reference — follow shadcn conventions per `AGENTS.md` §12 and match the visual language of the other admin pages). | M12.2, M10.5 | M | FR-META-03 |
-| Not Started | M12.5 | FE | Content Type column editor as a new section in the Document Details Sheet's Properties tab, with required-field validation surfaced at upload time. | M12.3, M10.6 | M | FR-META-04 |
+| Done | M12.1 | BE | `ContentType` + `ColumnDefinition` entities/migration per FS §8.2's sketch. | M10 (all) | M | FR-META-03, FS §8.2 |
+| Done | M12.2 | BE | Content Type CRUD (admin, per-Library) + a column-value storage design for `Document` (e.g. a `jsonb` bag vs. a separate values table) — **this is a real design decision FS doesn't make for you; record it as ADR-9 in TDS §2.4 before implementing.** | M12.1 | L | FR-META-03 |
+| Done | M12.3 | BE | Enforce required columns: block upload/check-in completion until required columns are filled. | M12.2 | M | FR-META-04 |
+| Done | M12.4 | FE | Admin UI to define Content Types/Columns per Library (no prototype reference — follow shadcn conventions per `AGENTS.md` §12 and match the visual language of the other admin pages). | M12.2, M10.5 | M | FR-META-03 |
+| Done | M12.5 | FE | Content Type column editor as a new section in the Document Details Sheet's Properties tab, with required-field validation surfaced at upload time. | M12.3, M10.6 | M | FR-META-04 |
 
 ### M13 — Office Preview
 

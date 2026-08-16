@@ -1,5 +1,5 @@
 import { request, requestBlob } from "@/lib/api-client";
-import type { DocumentDto, DocumentVersionDto, ItemDto, LibraryDto, UploadResult } from "@/types/api";
+import type { DocumentDto, DocumentVersionDto, ItemDto, LibraryDto, MetadataValueInput, UploadResult } from "@/types/api";
 
 export function listLibraries(siteId: string): Promise<LibraryDto[]> {
   return request<LibraryDto[]>(`/sites/${siteId}/libraries`);
@@ -13,9 +13,16 @@ export function listFolderItems(folderId: string): Promise<ItemDto[]> {
   return request<ItemDto[]>(`/folders/${folderId}/items`);
 }
 
-export function uploadToLibrary(libraryId: string, file: File): Promise<UploadResult> {
+export function uploadToLibrary(
+  libraryId: string,
+  file: File,
+  metadata?: MetadataValueInput[],
+): Promise<UploadResult> {
   const form = new FormData();
   form.append("file", file);
+  if (metadata && metadata.length > 0) {
+    form.append("metadata", JSON.stringify(metadata));
+  }
   return request<UploadResult>(`/libraries/${libraryId}/documents`, { method: "POST", body: form });
 }
 

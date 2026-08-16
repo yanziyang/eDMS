@@ -1,3 +1,5 @@
+using eDMS.Application.Admin;
+
 namespace eDMS.Application.Documents;
 
 public interface IDocumentService
@@ -14,6 +16,14 @@ public interface IDocumentService
         Guid? folderId,
         string fileName,
         Stream content,
+        CancellationToken cancellationToken = default);
+
+    Task<UploadResult> UploadAsync(
+        Guid libraryId,
+        Guid? folderId,
+        string fileName,
+        Stream content,
+        IReadOnlyList<ColumnValueInput>? metadata,
         CancellationToken cancellationToken = default);
 
     Task<UploadResult> UploadToFolderAsync(

@@ -13,6 +13,7 @@ function renderAdmin(initialPath = "/admin/users") {
           <Route path="groups" element={<div>GROUPS_PANEL</div>} />
           <Route path="sites" element={<div>SITES_PANEL</div>} />
           <Route path="storage" element={<div>STORAGE_PANEL</div>} />
+          <Route path="content-types" element={<div>CONTENT_TYPES_PANEL</div>} />
           <Route path="audit-log" element={<div>AUDIT_LOG_PANEL</div>} />
           <Route path="settings" element={<div>SETTINGS_PANEL</div>} />
         </Route>
@@ -31,6 +32,7 @@ describe("Admin", () => {
     expect(screen.getByRole("link", { name: "Groups" })).toHaveAttribute("href", "/admin/groups");
     expect(screen.getByRole("link", { name: "Sites" })).toHaveAttribute("href", "/admin/sites");
     expect(screen.getByRole("link", { name: "Storage" })).toHaveAttribute("href", "/admin/storage");
+    expect(screen.getByRole("link", { name: "Content Types" })).toHaveAttribute("href", "/admin/content-types");
     expect(screen.getByRole("link", { name: "Audit Log" })).toHaveAttribute("href", "/admin/audit-log");
     expect(screen.getByRole("link", { name: "Settings" })).toHaveAttribute("href", "/admin/settings");
   });
@@ -69,5 +71,16 @@ describe("Admin", () => {
     await user.click(screen.getByRole("link", { name: "Sites" }));
 
     expect(screen.getByText("SITES_PANEL")).toBeInTheDocument();
+  });
+
+  it("renders the content types tab content", async () => {
+    const user = userEvent.setup();
+    renderAdmin("/admin/content-types");
+
+    expect(screen.getByText("CONTENT_TYPES_PANEL")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Content Types" }).className).toContain("border-primary");
+
+    await user.click(screen.getByRole("link", { name: "Users" }));
+    expect(screen.getByText("USERS_PANEL")).toBeInTheDocument();
   });
 });

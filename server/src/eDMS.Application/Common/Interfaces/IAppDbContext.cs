@@ -37,5 +37,11 @@ public interface IAppDbContext
 
     DbSet<AppSetting> AppSettings { get; }
 
+    DbSet<ContentType> ContentTypes { get; }
+
+    DbSet<ColumnDefinition> ColumnDefinitions { get; }
+
+    DbSet<DocumentColumnValue> DocumentColumnValues { get; }
+
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }
