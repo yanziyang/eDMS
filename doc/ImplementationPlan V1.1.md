@@ -178,14 +178,14 @@ FS §8.2 already sketches `ContentType`/`ColumnDefinition` — use those shapes 
 | Status | ID | Track | Task | Depends on | Size | Refs |
 |---|---|---|---|---|---|---|
 | Done | M13.1 | INF | Add a LibreOffice-headless (or equivalent) conversion service to `docker-compose.yml` as its own container — this is a heavyweight native dependency, not a NuGet package; don't shell out to a binary installed ad hoc inside the API container. | M10 (all) | M | FR-DOC-10 |
-| Done | M13.2 | BE | `IOfficeConversionService` behind an interface, mirroring the `IFileStorageProvider` abstraction pattern (ADR-6) — implementation calls the M13.1 container to convert docx/xlsx/pptx → PDF; extend the existing preview endpoint (V1.0's M3.7) to use it for Office content types. Record the conversion approach as **ADR-10** in TDS §2.4. | M13.1 | L | FR-DOC-10, TDS §5.4 |
+| Done | M13.2 | BE | `IOfficeConversionService` behind an interface, mirroring the `IFileStorageProvider` abstraction pattern (ADR-6) — implementation calls the M13.1 container to convert docx/xlsx/pptx → PDF; extend the existing preview endpoint (V1.0's M3.7) to use it for Office content types. Record the conversion approach as **ADR-11** in TDS §2.4. | M13.1 | L | FR-DOC-10, TDS §5.4 |
 | Done | M13.3 | FE | Wire Office file types into the existing preview UI path inside the Document Details Sheet. | M13.2, M10.6 | S | FR-DOC-10 |
 
 ### M14 — Chunked Upload & Minor-Version Retention
 
 | Status | ID | Track | Task | Depends on | Size | Refs |
 |---|---|---|---|---|---|---|
-| Done | M14.1 | BE | Chunked/resumable upload for files >100MB, alongside (not replacing) the existing single-stream path for smaller files. Record the protocol choice (custom session-based endpoint vs. an existing standard like the tus protocol) as **ADR-11** in TDS §2.4. | M10 (all) | L | FR-DOC-12 |
+| Done | M14.1 | BE | Chunked/resumable upload for files >100MB, alongside (not replacing) the existing single-stream path for smaller files. Record the protocol choice (custom session-based endpoint vs. an existing standard like the tus protocol) as **ADR-10** in TDS §2.4. | M10 (all) | L | FR-DOC-12 |
 | Done | M14.2 | FE | Upload dialog support for resumable progress against M14.1. | M14.1, M10.5 | M | FR-DOC-12 |
 | Done | M14.3 | BE | Minor-version retention cap: optional per-Library setting that auto-trims oldest minor versions on check-in (majors never auto-trimmed). | M4.1 (done) | S | FR-VER-09 |
 | Done | M14.4 | FE | Expose the minor-version-cap setting in Library settings UI. | M14.3 | S | FR-VER-09 |
