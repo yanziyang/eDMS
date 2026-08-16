@@ -37,6 +37,7 @@ public sealed class PostgresPermissionCteTests : IAsyncLifetime
 
         _available = true;
         var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseSnakeCaseNamingConvention()
             .UseNpgsql(
                 _container.GetConnectionString(),
                 npgsql => npgsql.MigrationsAssembly("eDMS.Infrastructure.Migrations.Postgres"))

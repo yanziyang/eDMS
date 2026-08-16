@@ -147,5 +147,11 @@ export async function requestBlob(path: string): Promise<Blob> {
     throw await ApiError.fromResponse(response);
   }
 
-  return response.blob();
+  // Rebuild the blob from the raw bytes so the returned instance always matches
+  // the environment's global Blob (Node's fetch may hand back a different Blob
+  // implementation across versions, breaking instanceof checks and consumers).
+  const data = await response.arrayBuffer();
+  return new Blob([data], {
+    type: response.headers.get("content-type") ?? "application/octet-stream",
+  });
 }

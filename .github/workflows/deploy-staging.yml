@@ -3,6 +3,8 @@ name: Deploy Staging
 # On push to main: build images, run EF Core migrations against the staging DB as
 # their own job BEFORE the new API image is rolled out (TDS §11.3 — never
 # auto-migrate on boot outside local dev), then deploy, then smoke test.
+# All staging-specific steps skip gracefully when the secrets aren't configured,
+# so the workflow stays green until staging is provisioned.
 on:
   push:
     branches: [main]
@@ -64,9 +66,6 @@ jobs:
     name: Migrate staging database
     needs: build
     runs-on: ubuntu-latest
-    # The migration job runs BEFORE deploy and must complete before the new API
-    # image is rolled out. Skipped (not failed) when the staging DB isn't
-    # configured, so the workflow remains usable before staging is provisioned.
     env:
       Database__Provider: ${{ secrets.STAGING_DB_PROVIDER }}
       ConnectionStrings__Default: ${{ secrets.STAGING_CONNECTION_STRING }}
@@ -96,17 +95,21 @@ jobs:
     needs: [build, migrate]
     runs-on: ubuntu-latest
     environment: staging
+    env:
+      STAGING_SSH_HOST: ${{ secrets.STAGING_SSH_HOST }}
+      STAGING_SSH_USER: ${{ secrets.STAGING_SSH_USER }}
+      STAGING_SSH_KEY: ${{ secrets.STAGING_SSH_KEY }}
     steps:
       - name: Skip when no deploy target is configured
-        if: secrets.STAGING_SSH_HOST == ''
+        if: env.STAGING_SSH_HOST == ''
         run: echo "::warning::No staging target configured; deploy job skipped."
       - name: Deploy via SSH
-        if: secrets.STAGING_SSH_HOST != ''
+        if: env.STAGING_SSH_HOST != ''
         uses: appleboy/ssh-action@v1
         with:
-          host: ${{ secrets.STAGING_SSH_HOST }}
-          username: ${{ secrets.STAGING_SSH_USER }}
-          key: ${{ secrets.STAGING_SSH_KEY }}
+          host: ${{ env.STAGING_SSH_HOST }}
+          username: ${{ env.STAGING_SSH_USER }}
+          key: ${{ env.STAGING_SSH_KEY }}
           script: |
             docker pull ghcr.io/yanziyang/edms-api:staging
             docker pull ghcr.io/yanziyang/edms-web:staging
@@ -116,15 +119,17 @@ jobs:
     name: Smoke test staging
     needs: deploy
     runs-on: ubuntu-latest
+    env:
+      STAGING_URL: ${{ secrets.STAGING_URL }}
     steps:
       - name: Skip when no staging URL is configured
-        if: secrets.STAGING_URL == ''
+        if: env.STAGING_URL == ''
         run: echo "::warning::No staging URL configured; smoke test skipped."
       - name: Check API health
-        if: secrets.STAGING_URL != ''
+        if: env.STAGING_URL != ''
         run: |
           for i in $(seq 1 30); do
-            if curl -fsS "${{ secrets.STAGING_URL }}/health"; then
+            if curl -fsS "${{ env.STAGING_URL }}/health"; then
               echo "API healthy."
               exit 0
             fi
