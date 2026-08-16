@@ -34,6 +34,7 @@ export function Search() {
           value={input}
           onChange={(event) => setInput(event.target.value)}
           placeholder="Search documents…"
+          aria-label="Search documents"
           className="max-w-md"
         />
         <Button type="submit" disabled={loading}>

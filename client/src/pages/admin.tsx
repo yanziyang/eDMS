@@ -14,7 +14,7 @@ export function Admin() {
   return (
     <div>
       <h1 className="text-2xl font-semibold">Admin Center</h1>
-      <div className="mt-4 flex gap-1 border-b">
+      <div className="mt-4 flex gap-1 overflow-x-auto border-b">
         {links.map((link) => (
           <NavLink
             key={link.to}

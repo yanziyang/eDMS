@@ -101,6 +101,7 @@ export function AdminAuditLog() {
             value={actionFilter}
             onChange={(event) => setActionFilter(event.target.value)}
             placeholder="Filter by action…"
+            aria-label="Filter by action"
             className="w-56"
           />
           <Button

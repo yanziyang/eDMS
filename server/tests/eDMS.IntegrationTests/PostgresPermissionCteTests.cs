@@ -25,8 +25,7 @@ public sealed class PostgresPermissionCteTests : IAsyncLifetime
     {
         try
         {
-            _container = new PostgreSqlBuilder()
-                .WithImage("postgres:17-alpine")
+            _container = new PostgreSqlBuilder("postgres:17-alpine")
                 .Build();
             await _container.StartAsync();
         }

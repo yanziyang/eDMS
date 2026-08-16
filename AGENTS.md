@@ -6,17 +6,17 @@ Instructions for AI coding agents (OpenCode, Claude Code, Cursor, or any other a
 
 **eDMS** is an internal enterprise document management system — SharePoint Online's key functions (sites, libraries, folders, documents, versioning, check-out/check-in, permissions, search, recycle bin, audit trail), for internal use only, no anonymous/external sharing. Full context: [`doc/functional-spec.md`](doc/functional-spec.md) §1–§2.
 
-**Repository state — read before doing anything else:** the production `server/` (.NET 10) and `client/` (React/Vite) now exist. Phase 1 (M0–M9) is substantially built but **not fully done** — several BE endpoints and a number of FE detail-panels/dialogs/admin pages are still open. Pick up at the first remaining `Not Started`/`In Progress` task in **`doc/ImplementationPlan V1.1.md`** (the active plan — it starts with an M10/M11 close-out of everything Phase 1 left unfinished, then Phase 2). `doc/ImplementationPlan V1.0.md` is the archived original Phase 1 plan — historical reference only, do not work from it.
+**Repository state — read before doing anything else:** the production `server/` (.NET 10) and `client/` (React/Vite) now exist. **Phase 1 (M0–M11) is done** — sites, libraries, folders, documents, versioning, check-out/in, permissions (recursive-CTE resolver), search, recycle bin, audit trail, admin center (users/groups/sites/settings/audit-log/storage), document details sheet (Properties/Versions/Permissions), share dialog, and multi-provider database support are all complete and covered by the 90%+ coverage gates. The next task is the first `Not Started` item in **`doc/ImplementationPlan V1.1.md`** (Phase 2, M12+). `doc/ImplementationPlan V1.0.md` is the archived original Phase 1 plan — historical reference only, do not work from it.
 
 | Path | What it is | Status |
 |---|---|---|
 | `doc/functional-spec.md` / `.html` | Requirements, data model, API surface, roadmap | Source of truth — done |
 | `doc/technical-design-spec.md` / `.html` | Architecture, schema DDL, class-level design, deployment | Source of truth — done |
-| `doc/ImplementationPlan V1.1.md` | **Active** sequenced, dependency-ordered task list (M10+: Phase 1 close-out, then Phase 2) with a live Status column | **Read this to find your next task** |
+| `doc/ImplementationPlan V1.1.md` | **Active** sequenced, dependency-ordered task list (M10/M11 Phase 1 close-out — done; M12+ Phase 2) with a live Status column | **Read this to find your next task** |
 | `doc/ImplementationPlan V1.0.md` | Archived Phase 1 (M0–M9) plan, frozen at handoff | Historical reference only — superseded |
 | `prototype(html)/` | Clickable UX/IA reference (vanilla HTML/CSS/JS mimicking shadcn) | Reference only — **see §8, do not port its code** |
-| `server/` | .NET solution (Domain/Application/Infrastructure/Api + tests) | Exists — EF Core migrations apply against local Postgres |
-| `client/` | React/Vite app | Exists — auth, sites, libraries, documents, search wired to the real API |
+| `server/` | .NET solution (Domain/Application/Infrastructure + one migrations project per database provider, Api, tests) | Done — Phase 1; Postgres in prod, SQLite dev default (ADR-8) |
+| `client/` | React/Vite app (TanStack Query throughout) | Done — Phase 1; full UI incl. details sheet, share dialog, admin center |
 
 **Your very next action, every session:** open `doc/ImplementationPlan V1.1.md`, find the first task whose Status isn't `Done` and whose dependencies are, and do that.
 

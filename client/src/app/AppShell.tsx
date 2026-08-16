@@ -81,6 +81,7 @@ export function AppShell() {
               variant="ghost"
               size="icon"
               className="md:hidden"
+              aria-label="Open navigation menu"
               onClick={() => setMobileOpen(true)}
             >
               <Menu className="size-4" />

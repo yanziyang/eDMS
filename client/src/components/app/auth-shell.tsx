@@ -12,7 +12,7 @@ export function AuthShell({
   features: string[];
 }) {
   return (
-    <div className="grid min-h-screen grid-cols-1 md:grid-cols-2">
+    <main className="grid min-h-screen grid-cols-1 md:grid-cols-2">
       <div className="flex items-center justify-center p-8">
         <div className="w-full max-w-[380px]">{children}</div>
       </div>
@@ -40,7 +40,7 @@ export function AuthShell({
           © 2026 eDMS — Internal enterprise prototype
         </div>
       </div>
-    </div>
+    </main>
   );
 }
 

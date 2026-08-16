@@ -104,7 +104,8 @@ M12–M18 have no dependency on each other beyond M10 and may be worked in any o
 
 | Milestone | Goal | Demo-able outcome | Status |
 |---|---|---|---|
-| [M10](#m10--phase-1-close-out-core-gaps) | Finish everything V1.0 left open | Every document has a working details panel (Properties/Versions/Permissions tabs) and share dialog; admin has working Settings/Audit Log/Storage Report pages; recycle bin actually restores/purges from the UI — all via TanStack Query, not placeholders | Done || [M11](#m11--phase-1-hardening--sign-off-close-out) | Actually satisfy FS §15's Phase 1 checklist | Validator coverage is complete, the permission CTE has a documented perf profile at 20-level nesting, an accessibility + responsive pass is done, and a staging deploy has been run at least once | Not Started |
+| [M10](#m10--phase-1-close-out-core-gaps) | Finish everything V1.0 left open | Every document has a working details panel (Properties/Versions/Permissions tabs) and share dialog; admin has working Settings/Audit Log/Storage Report pages; recycle bin actually restores/purges from the UI — all via TanStack Query, not placeholders | Done |
+| [M11](#m11--phase-1-hardening--sign-off-close-out) | Actually satisfy FS §15's Phase 1 checklist | Validator coverage is complete, the permission CTE has a documented perf profile at 20-level nesting, an accessibility + responsive pass is done, and a staging deploy has been run at least once | Done |
 | [M12](#m12--content-types--custom-metadata-columns) | Content Types & typed columns | Admin defines a Content Type with a required column on a Library; upload/check-in in that Library blocks completion until it's filled | Not Started |
 | [M13](#m13--office-preview) | In-browser Office preview | Opening a .docx/.xlsx/.pptx shows a PDF-converted preview, no download required | Not Started |
 | [M14](#m14--chunked-upload--minor-version-retention) | Large-file resilience + version hygiene | A >100MB upload resumes after a network interruption; a Library with a minor-version cap auto-trims old minors on check-in | Not Started |
@@ -148,13 +149,13 @@ Columns match V1.0: **Track** — `BE` backend, `FE` frontend, `INF` infra/tooli
 
 | Status | ID | Track | Task | Depends on | Size | Refs |
 |---|---|---|---|---|---|---|
-| Not Started | M11.1 | BE | Validator-coverage audit: a test asserting every MediatR command/query has a registered FluentValidation validator (none exists today — zero hits for `Validator` under `server/tests/`), covering M10's new commands too. | M10.1, M10.2, M10.3, M10.4 | M | TDS §5.2, §10.2 |
-| Not Started | M11.2 | BE | Load/perf check on the permission CTE at FR-FLD-06's 20-level nesting cap with realistic group sizes; record the result (numbers, not just "passed") somewhere durable (e.g. a short note in TDS §14.1 or a perf-test report checked into the repo). | M10.1 | M | TDS §14.1 (open risk) |
-| Not Started | M11.3 | Both | Extend the Playwright E2E suite (V1.0's M9.3 covered login→browse→upload→download→check-out/in→share→search, written before M10's UI existed) to also cover: move/copy, the Versions/Permissions tabs, the share dialog, recycle-bin restore, and the three new admin pages. | M10.6–M10.16 | M | TDS §12.2 |
-| Not Started | M11.4 | FE | Accessibility pass — keyboard navigation, contrast, ARIA on icon-only controls (WCAG 2.1 AA). No tooling exists yet (no `axe`/`pa11y`/`jest-axe`); add one and fix what it finds across all pages, including M10's new ones. | M10.6–M10.16 | M | FS §7 NFR |
-| Not Started | M11.5 | FE | Responsive/mobile verification against the breakpoints already proven in `prototype(html)`, across all pages including M10's new ones. | M10.6–M10.16 | S | FS §7 NFR |
-| Not Started | M11.6 | INF | Staging deploy dry run: author `deploy-staging.yml` per TDS §11.3 (migration step as its own job, before the new API image rolls out — never auto-migrate on boot), and actually run it once against a real or ephemeral staging target. | M9.1 (done) | M | TDS §11.1, §11.3 |
-| Not Started | M11.7 | DOC | Update `AGENTS.md`'s repository-state table and `README.md` to reflect true Phase 1 completion; this is the point where Phase 1 is actually, verifiably done. | M11.1–M11.6 | S | — |
+| Done | M11.1 | BE | Validator-coverage audit: a test asserting every MediatR command/query has a registered FluentValidation validator (none exists today — zero hits for `Validator` under `server/tests/`), covering M10's new commands too. | M10.1, M10.2, M10.3, M10.4 | M | TDS §5.2, §10.2 |
+| Done | M11.2 | BE | Load/perf check on the permission CTE at FR-FLD-06's 20-level nesting cap with realistic group sizes; record the result (numbers, not just "passed") somewhere durable (e.g. a short note in TDS §14.1 or a perf-test report checked into the repo). | M10.1 | M | TDS §14.1 (open risk) |
+| Done | M11.3 | Both | Extend the Playwright E2E suite (V1.0's M9.3 covered login→browse→upload→download→check-out/in→share→search, written before M10's UI existed) to also cover: move/copy, the Versions/Permissions tabs, the share dialog, recycle-bin restore, and the three new admin pages. | M10.6–M10.16 | M | TDS §12.2 |
+| Done | M11.4 | FE | Accessibility pass — keyboard navigation, contrast, ARIA on icon-only controls (WCAG 2.1 AA). No tooling exists yet (no `axe`/`pa11y`/`jest-axe`); add one and fix what it finds across all pages, including M10's new ones. | M10.6–M10.16 | M | FS §7 NFR |
+| Done | M11.5 | FE | Responsive/mobile verification against the breakpoints already proven in `prototype(html)`, across all pages including M10's new ones. | M10.6–M10.16 | S | FS §7 NFR |
+| Done | M11.6 | INF | Staging deploy dry run: author `deploy-staging.yml` per TDS §11.3 (migration step as its own job, before the new API image rolls out — never auto-migrate on boot), and actually run it once against a real or ephemeral staging target. | M9.1 (done) | M | TDS §11.1, §11.3 |
+| Done | M11.7 | DOC | Update `AGENTS.md`'s repository-state table and `README.md` to reflect true Phase 1 completion; this is the point where Phase 1 is actually, verifiably done. | M11.1–M11.6 | S | — |
 
 ## 7. Detailed Milestones — Phase 2 (FS §15)
 

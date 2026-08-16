@@ -152,7 +152,7 @@ export function RecycleBin() {
       {items.data && items.data.length === 0 && (
         <div className="rounded-lg border border-dashed p-10 text-center">
           <Trash2 className="mx-auto size-10 text-muted-foreground" />
-          <h3 className="mt-3 font-medium">Recycle Bin is empty</h3>
+          <h2 className="mt-3 font-medium">Recycle Bin is empty</h2>
           <p className="mt-1 text-sm text-muted-foreground">
             Items you delete from any library will appear here for 90 days.
           </p>

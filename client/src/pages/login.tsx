@@ -58,12 +58,13 @@ export function Login() {
 
       <form onSubmit={submit} noValidate className="flex flex-col gap-4">
         <div>
-          <Label className="text-[13px]">Email address</Label>
+          <Label htmlFor="login-email" className="text-[13px]">Email address</Label>
           <InputGroup className="mt-1.5">
             <InputGroupAddon>
               <Mail />
             </InputGroupAddon>
             <InputGroupInput
+              id="login-email"
               type="email"
               placeholder="you@company.com"
               value={email}
@@ -75,7 +76,7 @@ export function Login() {
 
         <div>
           <div className="flex items-center justify-between">
-            <Label className="text-[13px]">Password</Label>
+            <Label htmlFor="login-password" className="text-[13px]">Password</Label>
             <Link to="/forgot-password" className="text-xs font-medium text-primary">
               Forgot password?
             </Link>
@@ -85,6 +86,7 @@ export function Login() {
               <Lock />
             </InputGroupAddon>
             <InputGroupInput
+              id="login-password"
               type={showPassword ? "text" : "password"}
               placeholder="Enter your password"
               value={password}

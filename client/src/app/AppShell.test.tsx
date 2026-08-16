@@ -144,7 +144,7 @@ describe("AppShell", () => {
     const user = userEvent.setup();
     renderShell();
 
-    const menuButton = screen.getByRole("button", { name: "" });
+    const menuButton = screen.getByRole("button", { name: "Open navigation menu" });
     await user.click(menuButton);
 
     const mobileNavLinks = screen.getAllByRole("link", { name: "Search" });

@@ -121,27 +121,27 @@ public sealed class PermissionResolver(
                 SELECT 2, f.parent_folder_id, c.Depth + 1
                 FROM chain c
                 JOIN folders f ON c.ObjectType = 2 AND f.id = c.ObjectId AND f.parent_folder_id IS NOT NULL
-                WHERE c.Depth < 20
+                WHERE c.Depth < 25
                 UNION ALL
                 SELECT 1, f.library_id, c.Depth + 1
                 FROM chain c
                 JOIN folders f ON c.ObjectType = 2 AND f.id = c.ObjectId AND f.parent_folder_id IS NULL
-                WHERE c.Depth < 20
+                WHERE c.Depth < 25
                 UNION ALL
                 SELECT 0, l.site_id, c.Depth + 1
                 FROM chain c
                 JOIN libraries l ON c.ObjectType = 1 AND l.id = c.ObjectId
-                WHERE c.Depth < 20
+                WHERE c.Depth < 25
                 UNION ALL
                 SELECT 2, d.folder_id, c.Depth + 1
                 FROM chain c
                 JOIN documents d ON c.ObjectType = 3 AND d.id = c.ObjectId AND d.folder_id IS NOT NULL
-                WHERE c.Depth < 20
+                WHERE c.Depth < 25
                 UNION ALL
                 SELECT 1, d.library_id, c.Depth + 1
                 FROM chain c
                 JOIN documents d ON c.ObjectType = 3 AND d.id = c.ObjectId AND d.folder_id IS NULL
-                WHERE c.Depth < 20
+                WHERE c.Depth < 25
             )
             SELECT ObjectType AS object_type, ObjectId AS object_id, Depth AS depth FROM chain ORDER BY Depth
             """;

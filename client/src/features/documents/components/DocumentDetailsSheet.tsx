@@ -61,7 +61,7 @@ export function DocumentDetailsSheet({ documentId, open, onOpenChange }: Documen
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full sm:max-w-lg">
+      <SheetContent className="w-full sm:max-w-lg max-sm:!w-full">
         {detail.isLoading && (
           <div className="p-4 text-sm text-muted-foreground">Loading…</div>
         )}
@@ -91,9 +91,15 @@ export function DocumentDetailsSheet({ documentId, open, onOpenChange }: Documen
 
             <Tabs defaultValue="properties" className="min-h-0 flex-1">
               <TabsList>
-                <TabsTrigger value="properties">Properties</TabsTrigger>
-                <TabsTrigger value="versions">Versions</TabsTrigger>
-                <TabsTrigger value="permissions">Permissions</TabsTrigger>
+                <TabsTrigger value="properties" className="text-foreground/70">
+                  Properties
+                </TabsTrigger>
+                <TabsTrigger value="versions" className="text-foreground/70">
+                  Versions
+                </TabsTrigger>
+                <TabsTrigger value="permissions" className="text-foreground/70">
+                  Permissions
+                </TabsTrigger>
               </TabsList>
               <TabsContent value="properties" className="mt-4">
                 <PropertiesTab document={detail.data} />
@@ -196,7 +202,7 @@ function PropertiesTab({ document }: { document: DocumentDto }) {
       <div className="grid grid-cols-2 gap-3 text-sm">
         {meta.map(([key, value]) => (
           <div key={key}>
-            <div className="text-xs text-muted-foreground">{key}</div>
+            <div className="text-xs text-foreground/70">{key}</div>
             <div className="mt-0.5 font-medium">{value}</div>
           </div>
         ))}
@@ -328,7 +334,7 @@ function VersionsTab({ document }: { document: DocumentDto }) {
       {versionsQuery.data && versionsQuery.data.length > 0 && (
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b text-left text-xs text-muted-foreground">
+            <tr className="border-b text-left text-xs text-foreground/70">
               <th className="py-2 pr-2 font-medium">Version</th>
               <th className="py-2 pr-2 font-medium">Size</th>
               <th className="py-2 pr-2 font-medium">Comment</th>
@@ -446,10 +452,10 @@ function PermissionsTab({ documentId }: { documentId: string }) {
             <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-muted">
               {entry.principalType === "User" ? <UserPlus className="size-4" /> : <Users className="size-4" />}
             </div>
-            <div className="min-w-0 flex-1">
-              <div className="truncate text-sm font-medium">{entry.principalName}</div>
-              <div className="text-xs text-muted-foreground">{entry.principalType}</div>
-            </div>
+              <div className="min-w-0 flex-1">
+                <div className="truncate text-sm font-medium">{entry.principalName}</div>
+                <div className="text-xs text-foreground/70">{entry.principalType}</div>
+              </div>
             <Badge variant="secondary">{levelLabel(entry.level)}</Badge>
             <Badge variant="outline">{entry.source}</Badge>
             {data.hasUniqueAcl && (

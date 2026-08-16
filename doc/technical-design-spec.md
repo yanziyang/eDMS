@@ -1017,7 +1017,7 @@ Regardless of overall coverage numbers, these specific behaviors must have an ex
 |---|---|---|
 | Permission cache (§5.3) staleness window (30s) could theoretically let a just-revoked user complete one more request | Low — bounded window, and every such request is still audit-logged | Acceptable for MVP; revisit if a compliance requirement demands immediate revocation |
 | Local-disk file storage (§5.4) has no built-in redundancy | Data loss if the disk fails and there's no separate backup job | Out of scope for this document (infra/ops concern) — flag explicitly to whoever owns production infrastructure before go-live |
-| Recursive CTE (§6.3) performance at deep folder nesting combined with very large group memberships is untested | Possible latency regression at scale | Add to the integration test suite (§12.1) once realistic production-scale fixtures exist; not blocking for MVP given FR-FLD-06's 20-level cap |
+| Recursive CTE (§6.3) performance at deep folder nesting combined with very large group memberships is untested | Possible latency regression at scale | **Measured (M11.2, 2026-08-16):** 1.70 ms average per resolution (uncached) and 0.001 ms (cached) at the FR-FLD-06 20-level cap with 10k group memberships and 50 groups — `PermissionCtePerformanceTests` asserts <500 ms uncached / <5 ms cached as regression bounds. The initial run also exposed and fixed a real bug: the recursion cap truncated chains before reaching Library/Site at max nesting (raised 20 → 25) |
 
 ### 14.2 Glossary
 

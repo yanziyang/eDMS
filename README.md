@@ -4,7 +4,7 @@
 
 ## Status
 
-Phase 1 (MVP, milestones M0-M9) is substantially built but not yet fully done. Core backend and frontend flows (auth, sites, libraries, folders, documents, versioning, check-out/in, permissions, recycle bin, search) work end-to-end and the test suite is green, but several backend endpoints (document move/copy, admin settings update) and a number of frontend panels/dialogs/admin pages (document details/versions/permissions tabs, share dialog, recycle bin UI, admin settings/audit-log/storage pages) are still open, along with the M9 hardening tasks (validator-coverage audit, load test, accessibility pass, responsive verification, staging dry run). The live checklist — Phase 1 close-out followed by Phase 2 — is in [doc/ImplementationPlan V1.1.md](doc/ImplementationPlan%20V1.1.md). [doc/ImplementationPlan V1.0.md](doc/ImplementationPlan%20V1.0.md) is the archived original Phase 1 plan.
+**Phase 1 (M0–M11) is complete.** All core SharePoint-style functions work end-to-end: sites, libraries, folders, documents, versioning, check-out/check-in, move/copy, granular permissions (recursive-CTE resolver), search, recycle bin, immutable audit trail, and the admin center (users, groups, sites, settings, audit log, storage) — with the full UI (document details sheet with Properties/Versions/Permissions tabs, share dialog, manage-access, library browser with bulk actions, admin pages). Quality gates: 90%+ line coverage on backend real code and frontend `src` (enforced in CI), axe-clean accessibility, responsive verified, 33 Playwright E2E scenarios against the real API. Phase 2 (content types, Office preview, chunked upload, notifications, org-wide share links, content indexing, dark theme) is the active work — see [doc/ImplementationPlan V1.1.md](doc/ImplementationPlan%20V1.1.md). [doc/ImplementationPlan V1.0.md](doc/ImplementationPlan%20V1.0.md) is the archived original Phase 1 plan.
 
 ## Tech stack
 
@@ -92,7 +92,7 @@ cd client && npx playwright test
 cd client && E2E_DATABASE_PROVIDER=Sqlite npx playwright test   # PowerShell: $env:E2E_DATABASE_PROVIDER='Sqlite'; npx playwright test
 ```
 
-The Playwright suite resets the E2E database (a dedicated `edms_e2e` Postgres database, or a fresh `e2e.db` SQLite file), seeds a System Administrator, and covers login, browse, upload, download, check-out/in, share, and permission-filtered search.
+The Playwright suite resets the E2E database (a dedicated `edms_e2e` Postgres database, or a fresh `e2e.db` SQLite file), seeds a System Administrator, and covers 33 scenarios: login, browse, upload, download, check-out/in, move/copy, share, permission-filtered search, document details (rename/versions/restore), recycle-bin restore, admin pages, accessibility (axe), and responsive layouts.
 
 ## Documentation
 

@@ -64,7 +64,7 @@ public sealed class FoldersAndDocumentsApiTests : IClassFixture<ApiFactory>
 
         var childOfUnknown = await client.PostAsJsonAsync(
             $"/api/v1/folders/{Guid.NewGuid()}/folders",
-            new { name = "X" });
+            new { name = "X", libraryId });
         await TestSupport.AssertProblemAsync(childOfUnknown, HttpStatusCode.NotFound);
     }
 

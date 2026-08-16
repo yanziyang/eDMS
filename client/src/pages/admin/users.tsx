@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { createUser, listUsers, setUserActive } from "@/features/admin/api";
 import { queryKeys } from "@/lib/queryKeys";
 import type { UserDto } from "@/types/api";
@@ -53,16 +54,16 @@ export function AdminUsers() {
     <div className="flex flex-col gap-6">
       <form onSubmit={submit} className="flex flex-wrap items-end gap-3 rounded-lg border bg-card p-4">
         <div className="flex flex-col gap-1">
-          <span className="text-xs text-muted-foreground">Email</span>
-          <Input value={email} onChange={(event) => setEmail(event.target.value)} required />
+          <Label htmlFor="user-email" className="text-xs text-muted-foreground">Email</Label>
+          <Input id="user-email" value={email} onChange={(event) => setEmail(event.target.value)} required />
         </div>
         <div className="flex flex-col gap-1">
-          <span className="text-xs text-muted-foreground">Display name</span>
-          <Input value={displayName} onChange={(event) => setDisplayName(event.target.value)} required />
+          <Label htmlFor="user-display-name" className="text-xs text-muted-foreground">Display name</Label>
+          <Input id="user-display-name" value={displayName} onChange={(event) => setDisplayName(event.target.value)} required />
         </div>
         <div className="flex flex-col gap-1">
-          <span className="text-xs text-muted-foreground">Temporary password</span>
-          <Input value={tempPassword} onChange={(event) => setTempPassword(event.target.value)} required />
+          <Label htmlFor="user-temp-password" className="text-xs text-muted-foreground">Temporary password</Label>
+          <Input id="user-temp-password" value={tempPassword} onChange={(event) => setTempPassword(event.target.value)} required />
         </div>
         <label className="flex items-center gap-2 text-sm">
           <input

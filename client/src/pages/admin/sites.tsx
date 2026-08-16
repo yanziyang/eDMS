@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { createSite, deleteSite, listSites } from "@/features/sites/api";
 import { queryKeys } from "@/lib/queryKeys";
 import type { SiteDto } from "@/types/api";
@@ -48,12 +49,12 @@ export function AdminSites() {
     <div className="flex flex-col gap-6">
       <form onSubmit={submit} className="flex flex-wrap items-end gap-3 rounded-lg border bg-card p-4">
         <div className="flex flex-col gap-1">
-          <span className="text-xs text-muted-foreground">Name</span>
-          <Input value={name} onChange={(event) => setName(event.target.value)} required />
+          <Label htmlFor="site-name" className="text-xs text-muted-foreground">Name</Label>
+          <Input id="site-name" value={name} onChange={(event) => setName(event.target.value)} required />
         </div>
         <div className="flex flex-col gap-1">
-          <span className="text-xs text-muted-foreground">URL slug</span>
-          <Input value={urlSlug} onChange={(event) => setUrlSlug(event.target.value)} required />
+          <Label htmlFor="site-slug" className="text-xs text-muted-foreground">URL slug</Label>
+          <Input id="site-slug" value={urlSlug} onChange={(event) => setUrlSlug(event.target.value)} required />
         </div>
         <Button type="submit" disabled={create.isPending}>Create site</Button>
       </form>

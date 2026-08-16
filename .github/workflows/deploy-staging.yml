@@ -1,0 +1,134 @@
+name: Deploy Staging
+
+# On push to main: build images, run EF Core migrations against the staging DB as
+# their own job BEFORE the new API image is rolled out (TDS §11.3 — never
+# auto-migrate on boot outside local dev), then deploy, then smoke test.
+on:
+  push:
+    branches: [main]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAMESPACE: yanziyang/edms
+
+jobs:
+  build:
+    name: Build images
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      api-image: ${{ steps.meta-api.outputs.tags }}
+      web-image: ${{ steps.meta-web.outputs.tags }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/metadata-action@v5
+        id: meta-api
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAMESPACE }}-api
+          tags: |
+            type=sha,format=long
+            type=raw,value=staging
+      - uses: docker/metadata-action@v5
+        id: meta-web
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAMESPACE }}-web
+          tags: |
+            type=sha,format=long
+            type=raw,value=staging
+      - uses: docker/build-push-action@v6
+        with:
+          context: ./server
+          push: true
+          tags: ${{ steps.meta-api.outputs.tags }}
+          labels: ${{ steps.meta-api.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - uses: docker/build-push-action@v6
+        with:
+          context: ./client
+          push: true
+          tags: ${{ steps.meta-web.outputs.tags }}
+          labels: ${{ steps.meta-web.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  migrate:
+    name: Migrate staging database
+    needs: build
+    runs-on: ubuntu-latest
+    # The migration job runs BEFORE deploy and must complete before the new API
+    # image is rolled out. Skipped (not failed) when the staging DB isn't
+    # configured, so the workflow remains usable before staging is provisioned.
+    env:
+      Database__Provider: ${{ secrets.STAGING_DB_PROVIDER }}
+      ConnectionStrings__Default: ${{ secrets.STAGING_CONNECTION_STRING }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+      - name: Skip when staging DB is not configured
+        if: env.ConnectionStrings__Default == ''
+        run: echo "::warning::Staging DB not configured; migration job skipped."
+      - name: Run EF Core migrations
+        if: env.ConnectionStrings__Default != ''
+        run: |
+          PROVIDER="${Database__Provider:-Postgres}"
+          case "$PROVIDER" in
+            Postgres)  PROJECT=server/src/eDMS.Infrastructure.Migrations.Postgres ;;
+            SqlServer) PROJECT=server/src/eDMS.Infrastructure.Migrations.SqlServer ;;
+            MySql)     PROJECT=server/src/eDMS.Infrastructure.Migrations.MySql ;;
+            Sqlite)    PROJECT=server/src/eDMS.Infrastructure.Migrations.Sqlite ;;
+            *) echo "::error::Unknown Database__Provider '$PROVIDER'"; exit 1 ;;
+          esac
+          dotnet ef database update -p "$PROJECT" -s server/src/eDMS.Api
+
+  deploy:
+    name: Deploy staging
+    needs: [build, migrate]
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - name: Skip when no deploy target is configured
+        if: secrets.STAGING_SSH_HOST == ''
+        run: echo "::warning::No staging target configured; deploy job skipped."
+      - name: Deploy via SSH
+        if: secrets.STAGING_SSH_HOST != ''
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.STAGING_SSH_HOST }}
+          username: ${{ secrets.STAGING_SSH_USER }}
+          key: ${{ secrets.STAGING_SSH_KEY }}
+          script: |
+            docker pull ghcr.io/yanziyang/edms-api:staging
+            docker pull ghcr.io/yanziyang/edms-web:staging
+            docker compose -f /opt/edms/docker-compose.yml up -d --force-recreate api web
+
+  smoke:
+    name: Smoke test staging
+    needs: deploy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Skip when no staging URL is configured
+        if: secrets.STAGING_URL == ''
+        run: echo "::warning::No staging URL configured; smoke test skipped."
+      - name: Check API health
+        if: secrets.STAGING_URL != ''
+        run: |
+          for i in $(seq 1 30); do
+            if curl -fsS "${{ secrets.STAGING_URL }}/health"; then
+              echo "API healthy."
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "::error::API did not become healthy within 150s."
+          exit 1

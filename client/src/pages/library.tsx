@@ -352,7 +352,7 @@ export function LibraryBrowser() {
       {itemsQuery.data && items.length === 0 && (
         <div className="rounded-lg border border-dashed p-10 text-center">
           <Folder className="mx-auto size-10 text-muted-foreground" />
-          <h3 className="mt-3 font-medium">This folder is empty</h3>
+          <h2 className="mt-3 font-medium">This folder is empty</h2>
           <p className="mt-1 text-sm text-muted-foreground">
             Upload files or create a subfolder to get started.
           </p>
