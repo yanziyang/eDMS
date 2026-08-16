@@ -175,15 +175,18 @@ public sealed class DocumentService(
                 document = existing;
                 var current = await db.DocumentVersions
                     .SingleAsync(item => item.Id == document.CurrentVersionId, cancellationToken);
-                var nextMajor = current.VersionMajor + 1;
+
+                // Minor versioning (FR-VER-09): a checked-out upload completes the
+                // check-in cycle, so it bumps the minor number instead of the major.
+                var isMinor = library.EnableMinorVersions && existing.CheckedOutBy is not null;
                 version = new DocumentVersion
                 {
                     DocumentId = document.Id,
-                    VersionMajor = nextMajor,
-                    VersionMinor = 0,
+                    VersionMajor = isMinor ? current.VersionMajor : current.VersionMajor + 1,
+                    VersionMinor = isMinor ? current.VersionMinor + 1 : 0,
                     SizeBytes = sizeBytes,
                     Checksum = checksum,
-                    IsMajor = true,
+                    IsMajor = !isMinor,
                 };
                 version.SetCreator(userId);
             }
@@ -265,6 +268,8 @@ public sealed class DocumentService(
             document.ModifiedAt = DateTimeOffset.UtcNow;
 
             await db.SaveChangesAsync(cancellationToken);
+
+            await TrimMinorVersionsAsync(document.Id, library.MinorVersionsRetained, cancellationToken);
 
             await using var fileStream = File.OpenRead(tempPath);
             await storage.SaveAsync(fileStream, storageKey, cancellationToken);
@@ -625,6 +630,42 @@ public sealed class DocumentService(
             .Select(columnId => db.ColumnDefinitions.AsNoTracking()
                 .First(column => column.Id == columnId).Name)
             .ToList();
+    }
+
+    private async Task TrimMinorVersionsAsync(
+        Guid documentId,
+        int? cap,
+        CancellationToken cancellationToken)
+    {
+        if (cap is not { } retained || retained <= 0)
+        {
+            return;
+        }
+
+        // Keep the newest `retained` minor versions; majors are never trimmed.
+        var minors = await db.DocumentVersions.AsNoTracking()
+            .Where(version => version.DocumentId == documentId && !version.IsMajor)
+            .OrderByDescending(version => version.VersionMajor)
+            .ThenByDescending(version => version.VersionMinor)
+            .ToListAsync(cancellationToken);
+
+        var toRemove = minors.Skip(retained).ToList();
+        if (toRemove.Count == 0)
+        {
+            return;
+        }
+
+        var keys = toRemove.Select(version => version.StorageKey).ToList();
+        var tracked = await db.DocumentVersions
+            .Where(version => toRemove.Select(item => item.Id).Contains(version.Id))
+            .ToListAsync(cancellationToken);
+        db.DocumentVersions.RemoveRange(tracked);
+        await db.SaveChangesAsync(cancellationToken);
+
+        foreach (var key in keys)
+        {
+            await storage.DeleteAsync(key, cancellationToken);
+        }
     }
 
     private async Task ValidateDestinationAsync(        Guid sourceLibraryId,

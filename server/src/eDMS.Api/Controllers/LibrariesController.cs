@@ -1,4 +1,5 @@
 using eDMS.Application.Libraries.Commands.CreateLibrary;
+using eDMS.Application.Libraries.Commands.UpdateLibrary;
 using eDMS.Application.Libraries.Queries.ListLibraries;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -20,5 +21,12 @@ public sealed class LibrariesController(IMediator mediator) : ControllerBase
     {
         var id = await mediator.Send(command with { SiteId = siteId }, cancellationToken);
         return CreatedAtAction(nameof(List), new { siteId }, id);
+    }
+
+    [HttpPut("{id:guid}")]
+    public async Task<IActionResult> Update(Guid id, [FromBody] UpdateLibraryCommand command, CancellationToken cancellationToken)
+    {
+        await mediator.Send(command with { LibraryId = id }, cancellationToken);
+        return NoContent();
     }
 }

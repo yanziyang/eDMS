@@ -8,4 +8,5 @@ public sealed record CreateLibraryCommand(
     string? Description,
     bool EnableVersioning = true,
     bool EnableMinorVersions = false,
-    bool RequireCheckout = false) : IRequest<Guid>;
+    bool RequireCheckout = false,
+    int? MinorVersionsRetained = null) : IRequest<Guid>;

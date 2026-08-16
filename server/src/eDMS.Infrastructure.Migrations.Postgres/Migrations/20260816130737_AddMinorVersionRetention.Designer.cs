@@ -2,43 +2,50 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
+using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using eDMS.Infrastructure.Persistence;
 
 #nullable disable
 
-namespace eDMS.Infrastructure.Migrations.MySql.Migrations
+namespace eDMS.Infrastructure.Migrations.Postgres
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260816130737_AddMinorVersionRetention")]
+    partial class AddMinorVersionRetention
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
                 .HasAnnotation("ProductVersion", "10.0.11")
-                .HasAnnotation("Relational:MaxIdentifierLength", 64);
+                .HasAnnotation("Relational:MaxIdentifierLength", 63);
+
+            NpgsqlModelBuilderExtensions.HasPostgresExtension(modelBuilder, "citext");
+            NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole<System.Guid>", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("char(36)")
+                        .HasColumnType("uuid")
                         .HasColumnName("id");
 
                     b.Property<string>("ConcurrencyStamp")
                         .IsConcurrencyToken()
-                        .HasColumnType("longtext")
+                        .HasColumnType("text")
                         .HasColumnName("concurrency_stamp");
 
                     b.Property<string>("Name")
                         .HasMaxLength(256)
-                        .HasColumnType("varchar(256)")
+                        .HasColumnType("character varying(256)")
                         .HasColumnName("name");
 
                     b.Property<string>("NormalizedName")
                         .HasMaxLength(256)
-                        .HasColumnType("varchar(256)")
+                        .HasColumnType("character varying(256)")
                         .HasColumnName("normalized_name");
 
                     b.HasKey("Id")
@@ -55,19 +62,21 @@ namespace eDMS.Infrastructure.Migrations.MySql.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
+                        .HasColumnType("integer")
                         .HasColumnName("id");
 
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
                     b.Property<string>("ClaimType")
-                        .HasColumnType("longtext")
+                        .HasColumnType("text")
                         .HasColumnName("claim_type");
 
                     b.Property<string>("ClaimValue")
-                        .HasColumnType("longtext")
+                        .HasColumnType("text")
                         .HasColumnName("claim_value");
 
                     b.Property<Guid>("RoleId")
-                        .HasColumnType("char(36)")
+                        .HasColumnType("uuid")
                         .HasColumnName("role_id");
 
                     b.HasKey("Id")
@@ -83,19 +92,21 @@ namespace eDMS.Infrastructure.Migrations.MySql.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
+                        .HasColumnType("integer")
                         .HasColumnName("id");
 
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
                     b.Property<string>("ClaimType")
-                        .HasColumnType("longtext")
+                        .HasColumnType("text")
                         .HasColumnName("claim_type");
 
                     b.Property<string>("ClaimValue")
-                        .HasColumnType("longtext")
+                        .HasColumnType("text")
                         .HasColumnName("claim_value");
 
                     b.Property<Guid>("UserId")
-                        .HasColumnType("char(36)")
+                        .HasColumnType("uuid")
                         .HasColumnName("user_id");
 
                     b.HasKey("Id")
@@ -110,19 +121,19 @@ namespace eDMS.Infrastructure.Migrations.MySql.Migrations
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserLogin<System.Guid>", b =>
                 {
                     b.Property<string>("LoginProvider")
-                        .HasColumnType("varchar(255)")
+                        .HasColumnType("text")
                         .HasColumnName("login_provider");
 
                     b.Property<string>("ProviderKey")
-                        .HasColumnType("varchar(255)")
+                        .HasColumnType("text")
                         .HasColumnName("provider_key");
 
                     b.Property<string>("ProviderDisplayName")
-                        .HasColumnType("longtext")
+                        .HasColumnType("text")
                         .HasColumnName("provider_display_name");
 
                     b.Property<Guid>("UserId")
-                        .HasColumnType("char(36)")
+                        .HasColumnType("uuid")
                         .HasColumnName("user_id");
 
                     b.HasKey("LoginProvider", "ProviderKey")
@@ -137,11 +148,11 @@ namespace eDMS.Infrastructure.Migrations.MySql.Migrations
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserRole<System.Guid>", b =>
                 {
                     b.Property<Guid>("UserId")
-                        .HasColumnType("char(36)")
+                        .HasColumnType("uuid")
                         .HasColumnName("user_id");
 
                     b.Property<Guid>("RoleId")
-                        .HasColumnType("char(36)")
+                        .HasColumnType("uuid")
                         .HasColumnName("role_id");
 
                     b.HasKey("UserId", "RoleId")
@@ -156,19 +167,19 @@ namespace eDMS.Infrastructure.Migrations.MySql.Migrations
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserToken<System.Guid>", b =>
                 {
                     b.Property<Guid>("UserId")
-                        .HasColumnType("char(36)")
+                        .HasColumnType("uuid")
                         .HasColumnName("user_id");
 
                     b.Property<string>("LoginProvider")
-                        .HasColumnType("varchar(255)")
+                        .HasColumnType("text")
                         .HasColumnName("login_provider");
 
                     b.Property<string>("Name")
-                        .HasColumnType("varchar(255)")
+                        .HasColumnType("text")
                         .HasColumnName("name");
 
                     b.Property<string>("Value")
-                        .HasColumnType("longtext")
+                        .HasColumnType("text")
                         .HasColumnName("value");
 
                     b.HasKey("UserId", "LoginProvider", "Name")
@@ -181,13 +192,13 @@ namespace eDMS.Infrastructure.Migrations.MySql.Migrations
                 {
                     b.Property<string>("Key")
                         .HasMaxLength(128)
-                        .HasColumnType("varchar(128)")
+                        .HasColumnType("character varying(128)")
                         .HasColumnName("key");
 
                     b.Property<string>("Value")
                         .IsRequired()
                         .HasMaxLength(2048)
-                        .HasColumnType("varchar(2048)")
+                        .HasColumnType("character varying(2048)")
                         .HasColumnName("value");
 
                     b.HasKey("Key")
@@ -200,118 +211,118 @@ namespace eDMS.Infrastructure.Migrations.MySql.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("char(36)")
+                        .HasColumnType("uuid")
                         .HasColumnName("id");
 
                     b.Property<int>("AccessFailedCount")
-                        .HasColumnType("int")
+                        .HasColumnType("integer")
                         .HasColumnName("access_failed_count");
 
                     b.Property<int>("AuthProvider")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
+                        .HasColumnType("integer")
                         .HasDefaultValue(0)
                         .HasColumnName("auth_provider");
 
                     b.Property<string>("AvatarUrl")
                         .HasMaxLength(2048)
-                        .HasColumnType("varchar(2048)")
+                        .HasColumnType("character varying(2048)")
                         .HasColumnName("avatar_url");
 
                     b.Property<string>("ConcurrencyStamp")
                         .IsConcurrencyToken()
-                        .HasColumnType("longtext")
+                        .HasColumnType("text")
                         .HasColumnName("concurrency_stamp");
 
                     b.Property<DateTimeOffset>("CreatedAt")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("datetime")
+                        .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP(6)");
+                        .HasDefaultValueSql("now()");
 
                     b.Property<string>("DisplayName")
                         .IsRequired()
                         .HasMaxLength(256)
-                        .HasColumnType("varchar(256)")
+                        .HasColumnType("character varying(256)")
                         .HasColumnName("display_name");
 
                     b.Property<string>("Email")
                         .HasMaxLength(256)
-                        .HasColumnType("varchar(256)")
+                        .HasColumnType("citext")
                         .HasColumnName("email");
 
                     b.Property<bool>("EmailConfirmed")
-                        .HasColumnType("tinyint(1)")
+                        .HasColumnType("boolean")
                         .HasColumnName("email_confirmed");
 
                     b.Property<string>("ExternalId")
                         .HasMaxLength(512)
-                        .HasColumnType("varchar(512)")
+                        .HasColumnType("character varying(512)")
                         .HasColumnName("external_id");
 
                     b.Property<bool>("IsActive")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("tinyint(1)")
+                        .HasColumnType("boolean")
                         .HasDefaultValue(true)
                         .HasColumnName("is_active");
 
                     b.Property<bool>("IsSystemAdmin")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("tinyint(1)")
+                        .HasColumnType("boolean")
                         .HasDefaultValue(false)
                         .HasColumnName("is_system_admin");
 
                     b.Property<DateTimeOffset?>("LastLoginAt")
-                        .HasColumnType("datetime")
+                        .HasColumnType("timestamp with time zone")
                         .HasColumnName("last_login_at");
 
                     b.Property<bool>("LockoutEnabled")
-                        .HasColumnType("tinyint(1)")
+                        .HasColumnType("boolean")
                         .HasColumnName("lockout_enabled");
 
                     b.Property<DateTimeOffset?>("LockoutEnd")
-                        .HasColumnType("datetime")
+                        .HasColumnType("timestamp with time zone")
                         .HasColumnName("lockout_end");
 
                     b.Property<bool>("MustChangePassword")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("tinyint(1)")
+                        .HasColumnType("boolean")
                         .HasDefaultValue(false)
                         .HasColumnName("must_change_password");
 
                     b.Property<string>("NormalizedEmail")
                         .HasMaxLength(256)
-                        .HasColumnType("varchar(256)")
+                        .HasColumnType("character varying(256)")
                         .HasColumnName("normalized_email");
 
                     b.Property<string>("NormalizedUserName")
                         .HasMaxLength(256)
-                        .HasColumnType("varchar(256)")
+                        .HasColumnType("character varying(256)")
                         .HasColumnName("normalized_user_name");
 
                     b.Property<string>("PasswordHash")
-                        .HasColumnType("longtext")
+                        .HasColumnType("text")
                         .HasColumnName("password_hash");
 
                     b.Property<string>("PhoneNumber")
-                        .HasColumnType("longtext")
+                        .HasColumnType("text")
                         .HasColumnName("phone_number");
 
                     b.Property<bool>("PhoneNumberConfirmed")
-                        .HasColumnType("tinyint(1)")
+                        .HasColumnType("boolean")
                         .HasColumnName("phone_number_confirmed");
 
                     b.Property<string>("SecurityStamp")
-                        .HasColumnType("longtext")
+                        .HasColumnType("text")
                         .HasColumnName("security_stamp");
 
                     b.Property<bool>("TwoFactorEnabled")
-                        .HasColumnType("tinyint(1)")
+                        .HasColumnType("boolean")
                         .HasColumnName("two_factor_enabled");
 
                     b.Property<string>("UserName")
                         .HasMaxLength(256)
-                        .HasColumnType("varchar(256)")
+                        .HasColumnType("character varying(256)")
                         .HasColumnName("user_name");
 
                     b.HasKey("Id")
@@ -335,46 +346,46 @@ namespace eDMS.Infrastructure.Migrations.MySql.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("char(36)")
+                        .HasColumnType("uuid")
                         .HasColumnName("id");
 
                     b.Property<int>("Action")
-                        .HasColumnType("int")
+                        .HasColumnType("integer")
                         .HasColumnName("action");
 
                     b.Property<string>("Details")
-                        .HasColumnType("longtext")
+                        .HasColumnType("jsonb")
                         .HasColumnName("details");
 
                     b.Property<string>("IpAddress")
-                        .HasColumnType("longtext")
+                        .HasColumnType("text")
                         .HasColumnName("ip_address");
 
                     b.Property<Guid>("ObjectId")
-                        .HasColumnType("char(36)")
+                        .HasColumnType("uuid")
                         .HasColumnName("object_id");
 
                     b.Property<string>("ObjectName")
                         .IsRequired()
-                        .HasColumnType("longtext")
+                        .HasColumnType("text")
                         .HasColumnName("object_name");
 
                     b.Property<int>("ObjectType")
-                        .HasColumnType("int")
+                        .HasColumnType("integer")
                         .HasColumnName("object_type");
 
                     b.Property<Guid?>("SiteId")
-                        .HasColumnType("char(36)")
+                        .HasColumnType("uuid")
                         .HasColumnName("site_id");
 
                     b.Property<DateTimeOffset>("Timestamp")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("datetime")
+                        .HasColumnType("timestamp with time zone")
                         .HasColumnName("timestamp")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP(6)");
+                        .HasDefaultValueSql("now()");
 
                     b.Property<Guid>("UserId")
-                        .HasColumnType("char(36)")
+                        .HasColumnType("uuid")
                         .HasColumnName("user_id");
 
                     b.HasKey("Id")
@@ -397,43 +408,43 @@ namespace eDMS.Infrastructure.Migrations.MySql.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("char(36)")
+                        .HasColumnType("uuid")
                         .HasColumnName("id");
 
                     b.Property<string>("ChoiceOptions")
                         .HasMaxLength(4096)
-                        .HasColumnType("varchar(4096)")
+                        .HasColumnType("character varying(4096)")
                         .HasColumnName("choice_options");
 
                     b.Property<Guid>("ContentTypeId")
-                        .HasColumnType("char(36)")
+                        .HasColumnType("uuid")
                         .HasColumnName("content_type_id");
 
                     b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("datetime")
+                        .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
 
                     b.Property<Guid>("CreatedBy")
-                        .HasColumnType("char(36)")
+                        .HasColumnType("uuid")
                         .HasColumnName("created_by");
 
                     b.Property<int>("DataType")
-                        .HasColumnType("int")
+                        .HasColumnType("integer")
                         .HasColumnName("data_type");
 
                     b.Property<string>("DefaultValue")
                         .HasMaxLength(2048)
-                        .HasColumnType("varchar(2048)")
+                        .HasColumnType("character varying(2048)")
                         .HasColumnName("default_value");
 
                     b.Property<bool>("IsRequired")
-                        .HasColumnType("tinyint(1)")
+                        .HasColumnType("boolean")
                         .HasColumnName("is_required");
 
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(256)
-                        .HasColumnType("varchar(256)")
+                        .HasColumnType("character varying(256)")
                         .HasColumnName("name");
 
                     b.HasKey("Id")
@@ -450,30 +461,30 @@ namespace eDMS.Infrastructure.Migrations.MySql.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("char(36)")
+                        .HasColumnType("uuid")
                         .HasColumnName("id");
 
                     b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("datetime")
+                        .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
 
                     b.Property<Guid>("CreatedBy")
-                        .HasColumnType("char(36)")
+                        .HasColumnType("uuid")
                         .HasColumnName("created_by");
 
                     b.Property<string>("Description")
                         .HasMaxLength(1024)
-                        .HasColumnType("varchar(1024)")
+                        .HasColumnType("character varying(1024)")
                         .HasColumnName("description");
 
                     b.Property<Guid?>("LibraryId")
-                        .HasColumnType("char(36)")
+                        .HasColumnType("uuid")
                         .HasColumnName("library_id");
 
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(256)
-                        .HasColumnType("varchar(256)")
+                        .HasColumnType("character varying(256)")
                         .HasColumnName("name");
 
                     b.HasKey("Id")
@@ -489,80 +500,80 @@ namespace eDMS.Infrastructure.Migrations.MySql.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("char(36)")
+                        .HasColumnType("uuid")
                         .HasColumnName("id");
 
                     b.Property<DateTimeOffset?>("CheckedOutAt")
-                        .HasColumnType("datetime")
+                        .HasColumnType("timestamp with time zone")
                         .HasColumnName("checked_out_at");
 
                     b.Property<Guid?>("CheckedOutBy")
-                        .HasColumnType("char(36)")
+                        .HasColumnType("uuid")
                         .HasColumnName("checked_out_by");
 
                     b.Property<string>("ContentType")
                         .IsRequired()
                         .HasMaxLength(128)
-                        .HasColumnType("varchar(128)")
+                        .HasColumnType("character varying(128)")
                         .HasColumnName("content_type");
 
                     b.Property<Guid?>("ContentTypeId")
-                        .HasColumnType("char(36)")
+                        .HasColumnType("uuid")
                         .HasColumnName("content_type_id");
 
                     b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("datetime")
+                        .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
 
                     b.Property<Guid>("CreatedBy")
-                        .HasColumnType("char(36)")
+                        .HasColumnType("uuid")
                         .HasColumnName("created_by");
 
                     b.Property<Guid?>("CurrentVersionId")
-                        .HasColumnType("char(36)")
+                        .HasColumnType("uuid")
                         .HasColumnName("current_version_id");
 
                     b.Property<DateTimeOffset?>("DeletedAt")
-                        .HasColumnType("datetime")
+                        .HasColumnType("timestamp with time zone")
                         .HasColumnName("deleted_at");
 
                     b.Property<Guid?>("DeletedBy")
-                        .HasColumnType("char(36)")
+                        .HasColumnType("uuid")
                         .HasColumnName("deleted_by");
 
                     b.Property<string>("Description")
-                        .HasColumnType("longtext")
+                        .HasColumnType("text")
                         .HasColumnName("description");
 
                     b.Property<Guid?>("FolderId")
-                        .HasColumnType("char(36)")
+                        .HasColumnType("uuid")
                         .HasColumnName("folder_id");
 
                     b.Property<bool>("IsDeleted")
-                        .HasColumnType("tinyint(1)")
+                        .HasColumnType("boolean")
                         .HasColumnName("is_deleted");
 
                     b.Property<Guid>("LibraryId")
-                        .HasColumnType("char(36)")
+                        .HasColumnType("uuid")
                         .HasColumnName("library_id");
 
                     b.Property<DateTimeOffset?>("ModifiedAt")
-                        .HasColumnType("datetime")
+                        .HasColumnType("timestamp with time zone")
                         .HasColumnName("modified_at");
 
                     b.Property<Guid?>("ModifiedBy")
-                        .HasColumnType("char(36)")
+                        .HasColumnType("uuid")
                         .HasColumnName("modified_by");
 
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(512)
-                        .HasColumnType("varchar(512)")
+                        .HasColumnType("character varying(512)")
                         .HasColumnName("name");
 
                     b.Property<string>("Title")
                         .HasMaxLength(512)
-                        .HasColumnType("varchar(512)")
+                        .HasColumnType("character varying(512)")
                         .HasColumnName("title");
 
                     b.HasKey("Id")
@@ -583,17 +594,17 @@ namespace eDMS.Infrastructure.Migrations.MySql.Migrations
             modelBuilder.Entity("eDMS.Domain.DocumentColumnValue", b =>
                 {
                     b.Property<Guid>("DocumentId")
-                        .HasColumnType("char(36)")
+                        .HasColumnType("uuid")
                         .HasColumnName("document_id");
 
                     b.Property<Guid>("ColumnDefinitionId")
-                        .HasColumnType("char(36)")
+                        .HasColumnType("uuid")
                         .HasColumnName("column_definition_id");
 
                     b.Property<string>("Value")
                         .IsRequired()
                         .HasMaxLength(4096)
-                        .HasColumnType("varchar(4096)")
+                        .HasColumnType("character varying(4096)")
                         .HasColumnName("value");
 
                     b.HasKey("DocumentId", "ColumnDefinitionId")
@@ -608,11 +619,11 @@ namespace eDMS.Infrastructure.Migrations.MySql.Migrations
             modelBuilder.Entity("eDMS.Domain.DocumentTag", b =>
                 {
                     b.Property<Guid>("DocumentId")
-                        .HasColumnType("char(36)")
+                        .HasColumnType("uuid")
                         .HasColumnName("document_id");
 
                     b.Property<Guid>("TagId")
-                        .HasColumnType("char(36)")
+                        .HasColumnType("uuid")
                         .HasColumnName("tag_id");
 
                     b.HasKey("DocumentId", "TagId")
@@ -628,32 +639,32 @@ namespace eDMS.Infrastructure.Migrations.MySql.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("char(36)")
+                        .HasColumnType("uuid")
                         .HasColumnName("id");
 
                     b.Property<string>("Checksum")
                         .IsRequired()
-                        .HasColumnType("longtext")
+                        .HasColumnType("text")
                         .HasColumnName("checksum");
 
                     b.Property<string>("Comment")
-                        .HasColumnType("longtext")
+                        .HasColumnType("text")
                         .HasColumnName("comment");
 
                     b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("datetime")
+                        .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
 
                     b.Property<Guid>("CreatedBy")
-                        .HasColumnType("char(36)")
+                        .HasColumnType("uuid")
                         .HasColumnName("created_by");
 
                     b.Property<Guid>("DocumentId")
-                        .HasColumnType("char(36)")
+                        .HasColumnType("uuid")
                         .HasColumnName("document_id");
 
                     b.Property<bool>("IsMajor")
-                        .HasColumnType("tinyint(1)")
+                        .HasColumnType("boolean")
                         .HasColumnName("is_major");
 
                     b.Property<long>("SizeBytes")
@@ -662,15 +673,15 @@ namespace eDMS.Infrastructure.Migrations.MySql.Migrations
 
                     b.Property<string>("StorageKey")
                         .IsRequired()
-                        .HasColumnType("longtext")
+                        .HasColumnType("text")
                         .HasColumnName("storage_key");
 
                     b.Property<int>("VersionMajor")
-                        .HasColumnType("int")
+                        .HasColumnType("integer")
                         .HasColumnName("version_major");
 
                     b.Property<int>("VersionMinor")
-                        .HasColumnType("int")
+                        .HasColumnType("integer")
                         .HasColumnName("version_minor");
 
                     b.HasKey("Id")
@@ -687,54 +698,54 @@ namespace eDMS.Infrastructure.Migrations.MySql.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("char(36)")
+                        .HasColumnType("uuid")
                         .HasColumnName("id");
 
                     b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("datetime")
+                        .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
 
                     b.Property<Guid>("CreatedBy")
-                        .HasColumnType("char(36)")
+                        .HasColumnType("uuid")
                         .HasColumnName("created_by");
 
                     b.Property<DateTimeOffset?>("DeletedAt")
-                        .HasColumnType("datetime")
+                        .HasColumnType("timestamp with time zone")
                         .HasColumnName("deleted_at");
 
                     b.Property<Guid?>("DeletedBy")
-                        .HasColumnType("char(36)")
+                        .HasColumnType("uuid")
                         .HasColumnName("deleted_by");
 
                     b.Property<bool>("IsDeleted")
-                        .HasColumnType("tinyint(1)")
+                        .HasColumnType("boolean")
                         .HasColumnName("is_deleted");
 
                     b.Property<Guid>("LibraryId")
-                        .HasColumnType("char(36)")
+                        .HasColumnType("uuid")
                         .HasColumnName("library_id");
 
                     b.Property<DateTimeOffset?>("ModifiedAt")
-                        .HasColumnType("datetime")
+                        .HasColumnType("timestamp with time zone")
                         .HasColumnName("modified_at");
 
                     b.Property<Guid?>("ModifiedBy")
-                        .HasColumnType("char(36)")
+                        .HasColumnType("uuid")
                         .HasColumnName("modified_by");
 
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(256)
-                        .HasColumnType("varchar(256)")
+                        .HasColumnType("character varying(256)")
                         .HasColumnName("name");
 
                     b.Property<Guid?>("ParentFolderId")
-                        .HasColumnType("char(36)")
+                        .HasColumnType("uuid")
                         .HasColumnName("parent_folder_id");
 
                     b.Property<string>("Path")
                         .IsRequired()
-                        .HasColumnType("longtext")
+                        .HasColumnType("text")
                         .HasColumnName("path");
 
                     b.HasKey("Id")
@@ -753,34 +764,34 @@ namespace eDMS.Infrastructure.Migrations.MySql.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("char(36)")
+                        .HasColumnType("uuid")
                         .HasColumnName("id");
 
                     b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("datetime")
+                        .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
 
                     b.Property<Guid>("CreatedBy")
-                        .HasColumnType("char(36)")
+                        .HasColumnType("uuid")
                         .HasColumnName("created_by");
 
                     b.Property<string>("Description")
                         .HasMaxLength(1024)
-                        .HasColumnType("varchar(1024)")
+                        .HasColumnType("character varying(1024)")
                         .HasColumnName("description");
 
                     b.Property<bool>("IsSystem")
-                        .HasColumnType("tinyint(1)")
+                        .HasColumnType("boolean")
                         .HasColumnName("is_system");
 
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(256)
-                        .HasColumnType("varchar(256)")
+                        .HasColumnType("character varying(256)")
                         .HasColumnName("name");
 
                     b.Property<Guid?>("SiteId")
-                        .HasColumnType("char(36)")
+                        .HasColumnType("uuid")
                         .HasColumnName("site_id");
 
                     b.HasKey("Id")
@@ -799,15 +810,15 @@ namespace eDMS.Infrastructure.Migrations.MySql.Migrations
             modelBuilder.Entity("eDMS.Domain.GroupMember", b =>
                 {
                     b.Property<Guid>("GroupId")
-                        .HasColumnType("char(36)")
+                        .HasColumnType("uuid")
                         .HasColumnName("group_id");
 
                     b.Property<Guid>("UserId")
-                        .HasColumnType("char(36)")
+                        .HasColumnType("uuid")
                         .HasColumnName("user_id");
 
                     b.Property<DateTimeOffset>("AddedAt")
-                        .HasColumnType("datetime")
+                        .HasColumnType("timestamp with time zone")
                         .HasColumnName("added_at");
 
                     b.HasKey("GroupId", "UserId")
@@ -823,43 +834,43 @@ namespace eDMS.Infrastructure.Migrations.MySql.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("char(36)")
+                        .HasColumnType("uuid")
                         .HasColumnName("id");
 
                     b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("datetime")
+                        .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
 
                     b.Property<Guid>("CreatedBy")
-                        .HasColumnType("char(36)")
+                        .HasColumnType("uuid")
                         .HasColumnName("created_by");
 
                     b.Property<DateTimeOffset>("GrantedAt")
-                        .HasColumnType("datetime")
+                        .HasColumnType("timestamp with time zone")
                         .HasColumnName("granted_at");
 
                     b.Property<Guid>("GrantedBy")
-                        .HasColumnType("char(36)")
+                        .HasColumnType("uuid")
                         .HasColumnName("granted_by");
 
                     b.Property<int>("Level")
-                        .HasColumnType("int")
+                        .HasColumnType("integer")
                         .HasColumnName("level");
 
                     b.Property<Guid>("ObjectId")
-                        .HasColumnType("char(36)")
+                        .HasColumnType("uuid")
                         .HasColumnName("object_id");
 
                     b.Property<int>("ObjectType")
-                        .HasColumnType("int")
+                        .HasColumnType("integer")
                         .HasColumnName("object_type");
 
                     b.Property<Guid>("PrincipalId")
-                        .HasColumnType("char(36)")
+                        .HasColumnType("uuid")
                         .HasColumnName("principal_id");
 
                     b.Property<int>("PrincipalType")
-                        .HasColumnType("int")
+                        .HasColumnType("integer")
                         .HasColumnName("principal_type");
 
                     b.HasKey("Id")
@@ -870,7 +881,7 @@ namespace eDMS.Infrastructure.Migrations.MySql.Migrations
 
                     b.HasIndex("ObjectType", "ObjectId", "PrincipalType", "PrincipalId")
                         .IsUnique()
-                        .HasDatabaseName("ix_item_permissions_object_type_object_id_principal_type_princi");
+                        .HasDatabaseName("ix_item_permissions_object_type_object_id_principal_type_princ");
 
                     b.ToTable("item_permissions", (string)null);
                 });
@@ -879,58 +890,58 @@ namespace eDMS.Infrastructure.Migrations.MySql.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("char(36)")
+                        .HasColumnType("uuid")
                         .HasColumnName("id");
 
                     b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("datetime")
+                        .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
 
                     b.Property<Guid>("CreatedBy")
-                        .HasColumnType("char(36)")
+                        .HasColumnType("uuid")
                         .HasColumnName("created_by");
 
                     b.Property<DateTimeOffset?>("DeletedAt")
-                        .HasColumnType("datetime")
+                        .HasColumnType("timestamp with time zone")
                         .HasColumnName("deleted_at");
 
                     b.Property<Guid?>("DeletedBy")
-                        .HasColumnType("char(36)")
+                        .HasColumnType("uuid")
                         .HasColumnName("deleted_by");
 
                     b.Property<string>("Description")
                         .HasMaxLength(1024)
-                        .HasColumnType("varchar(1024)")
+                        .HasColumnType("character varying(1024)")
                         .HasColumnName("description");
 
                     b.Property<bool>("EnableMinorVersions")
-                        .HasColumnType("tinyint(1)")
+                        .HasColumnType("boolean")
                         .HasColumnName("enable_minor_versions");
 
                     b.Property<bool>("EnableVersioning")
-                        .HasColumnType("tinyint(1)")
+                        .HasColumnType("boolean")
                         .HasColumnName("enable_versioning");
 
                     b.Property<bool>("IsDeleted")
-                        .HasColumnType("tinyint(1)")
+                        .HasColumnType("boolean")
                         .HasColumnName("is_deleted");
 
                     b.Property<int?>("MinorVersionsRetained")
-                        .HasColumnType("int")
+                        .HasColumnType("integer")
                         .HasColumnName("minor_versions_retained");
 
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(256)
-                        .HasColumnType("varchar(256)")
+                        .HasColumnType("character varying(256)")
                         .HasColumnName("name");
 
                     b.Property<bool>("RequireCheckout")
-                        .HasColumnType("tinyint(1)")
+                        .HasColumnType("boolean")
                         .HasColumnName("require_checkout");
 
                     b.Property<Guid>("SiteId")
-                        .HasColumnType("char(36)")
+                        .HasColumnType("uuid")
                         .HasColumnName("site_id");
 
                     b.HasKey("Id")
@@ -946,38 +957,38 @@ namespace eDMS.Infrastructure.Migrations.MySql.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("char(36)")
+                        .HasColumnType("uuid")
                         .HasColumnName("id");
 
                     b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("datetime")
+                        .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
 
                     b.Property<Guid>("CreatedBy")
-                        .HasColumnType("char(36)")
+                        .HasColumnType("uuid")
                         .HasColumnName("created_by");
 
                     b.Property<DateTimeOffset?>("DeletedAt")
-                        .HasColumnType("datetime")
+                        .HasColumnType("timestamp with time zone")
                         .HasColumnName("deleted_at");
 
                     b.Property<Guid?>("DeletedBy")
-                        .HasColumnType("char(36)")
+                        .HasColumnType("uuid")
                         .HasColumnName("deleted_by");
 
                     b.Property<string>("Description")
                         .HasMaxLength(1024)
-                        .HasColumnType("varchar(1024)")
+                        .HasColumnType("character varying(1024)")
                         .HasColumnName("description");
 
                     b.Property<bool>("IsDeleted")
-                        .HasColumnType("tinyint(1)")
+                        .HasColumnType("boolean")
                         .HasColumnName("is_deleted");
 
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(256)
-                        .HasColumnType("varchar(256)")
+                        .HasColumnType("character varying(256)")
                         .HasColumnName("name");
 
                     b.Property<long?>("StorageQuotaBytes")
@@ -991,7 +1002,7 @@ namespace eDMS.Infrastructure.Migrations.MySql.Migrations
                     b.Property<string>("UrlSlug")
                         .IsRequired()
                         .HasMaxLength(128)
-                        .HasColumnType("varchar(128)")
+                        .HasColumnType("character varying(128)")
                         .HasColumnName("url_slug");
 
                     b.HasKey("Id")
@@ -1008,31 +1019,31 @@ namespace eDMS.Infrastructure.Migrations.MySql.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("char(36)")
+                        .HasColumnType("uuid")
                         .HasColumnName("id");
 
                     b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("datetime")
+                        .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
 
                     b.Property<Guid>("CreatedBy")
-                        .HasColumnType("char(36)")
+                        .HasColumnType("uuid")
                         .HasColumnName("created_by");
 
                     b.Property<Guid>("PrincipalId")
-                        .HasColumnType("char(36)")
+                        .HasColumnType("uuid")
                         .HasColumnName("principal_id");
 
                     b.Property<int>("PrincipalType")
-                        .HasColumnType("int")
+                        .HasColumnType("integer")
                         .HasColumnName("principal_type");
 
                     b.Property<int>("Role")
-                        .HasColumnType("int")
+                        .HasColumnType("integer")
                         .HasColumnName("role");
 
                     b.Property<Guid>("SiteId")
-                        .HasColumnType("char(36)")
+                        .HasColumnType("uuid")
                         .HasColumnName("site_id");
 
                     b.HasKey("Id")
@@ -1049,21 +1060,21 @@ namespace eDMS.Infrastructure.Migrations.MySql.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("char(36)")
+                        .HasColumnType("uuid")
                         .HasColumnName("id");
 
                     b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("datetime")
+                        .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
 
                     b.Property<Guid>("CreatedBy")
-                        .HasColumnType("char(36)")
+                        .HasColumnType("uuid")
                         .HasColumnName("created_by");
 
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(128)
-                        .HasColumnType("varchar(128)")
+                        .HasColumnType("character varying(128)")
                         .HasColumnName("name");
 
                     b.HasKey("Id")
@@ -1076,97 +1087,42 @@ namespace eDMS.Infrastructure.Migrations.MySql.Migrations
                     b.ToTable("tags", (string)null);
                 });
 
-            modelBuilder.Entity("eDMS.Domain.UploadSession", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("char(36)")
-                        .HasColumnName("id");
-
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("datetime")
-                        .HasColumnName("created_at");
-
-                    b.Property<Guid>("CreatedBy")
-                        .HasColumnType("char(36)")
-                        .HasColumnName("created_by");
-
-                    b.Property<DateTimeOffset>("ExpiresAt")
-                        .HasColumnType("datetime")
-                        .HasColumnName("expires_at");
-
-                    b.Property<string>("FileName")
-                        .IsRequired()
-                        .HasMaxLength(512)
-                        .HasColumnType("varchar(512)")
-                        .HasColumnName("file_name");
-
-                    b.Property<Guid?>("FolderId")
-                        .HasColumnType("char(36)")
-                        .HasColumnName("folder_id");
-
-                    b.Property<Guid>("LibraryId")
-                        .HasColumnType("char(36)")
-                        .HasColumnName("library_id");
-
-                    b.Property<string>("MetadataJson")
-                        .HasMaxLength(4096)
-                        .HasColumnType("varchar(4096)")
-                        .HasColumnName("metadata_json");
-
-                    b.Property<long>("TotalBytes")
-                        .HasColumnType("bigint")
-                        .HasColumnName("total_bytes");
-
-                    b.Property<long>("UploadedBytes")
-                        .HasColumnType("bigint")
-                        .HasColumnName("uploaded_bytes");
-
-                    b.HasKey("Id")
-                        .HasName("pk_upload_sessions");
-
-                    b.HasIndex("ExpiresAt")
-                        .HasDatabaseName("ix_upload_sessions_expires_at");
-
-                    b.ToTable("upload_sessions", (string)null);
-                });
-
             modelBuilder.Entity("eDMS.Infrastructure.Persistence.RefreshToken", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("char(36)")
+                        .HasColumnType("uuid")
                         .HasColumnName("id");
 
                     b.Property<DateTimeOffset>("CreatedAt")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("datetime")
+                        .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at")
                         .HasDefaultValueSql("now()");
 
                     b.Property<string>("CreatedByIp")
-                        .HasColumnType("longtext")
+                        .HasColumnType("text")
                         .HasColumnName("created_by_ip");
 
                     b.Property<DateTimeOffset>("ExpiresAt")
-                        .HasColumnType("datetime")
+                        .HasColumnType("timestamp with time zone")
                         .HasColumnName("expires_at");
 
                     b.Property<Guid?>("ReplacedByTokenId")
-                        .HasColumnType("char(36)")
+                        .HasColumnType("uuid")
                         .HasColumnName("replaced_by_token_id");
 
                     b.Property<DateTimeOffset?>("RevokedAt")
-                        .HasColumnType("datetime")
+                        .HasColumnType("timestamp with time zone")
                         .HasColumnName("revoked_at");
 
                     b.Property<string>("TokenHash")
                         .IsRequired()
-                        .HasColumnType("varchar(255)")
+                        .HasColumnType("text")
                         .HasColumnName("token_hash");
 
                     b.Property<Guid>("UserId")
-                        .HasColumnType("char(36)")
+                        .HasColumnType("uuid")
                         .HasColumnName("user_id");
 
                     b.HasKey("Id")
@@ -1300,7 +1256,7 @@ namespace eDMS.Infrastructure.Migrations.MySql.Migrations
                         .HasForeignKey("ColumnDefinitionId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
-                        .HasConstraintName("fk_document_column_values_column_definitions_column_definition_");
+                        .HasConstraintName("fk_document_column_values_column_definitions_column_definition");
 
                     b.HasOne("eDMS.Domain.Document", null)
                         .WithMany()

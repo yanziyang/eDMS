@@ -925,6 +925,10 @@ namespace eDMS.Infrastructure.Migrations.SqlServer.Migrations
                         .HasColumnType("bit")
                         .HasColumnName("is_deleted");
 
+                    b.Property<int?>("MinorVersionsRetained")
+                        .HasColumnType("int")
+                        .HasColumnName("minor_versions_retained");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(256)
@@ -1080,6 +1084,61 @@ namespace eDMS.Infrastructure.Migrations.SqlServer.Migrations
                         .HasDatabaseName("ix_tags_name");
 
                     b.ToTable("tags", (string)null);
+                });
+
+            modelBuilder.Entity("eDMS.Domain.UploadSession", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("CreatedBy")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("created_by");
+
+                    b.Property<DateTimeOffset>("ExpiresAt")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("expires_at");
+
+                    b.Property<string>("FileName")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("nvarchar(512)")
+                        .HasColumnName("file_name");
+
+                    b.Property<Guid?>("FolderId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("folder_id");
+
+                    b.Property<Guid>("LibraryId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("library_id");
+
+                    b.Property<string>("MetadataJson")
+                        .HasMaxLength(4096)
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("metadata_json");
+
+                    b.Property<long>("TotalBytes")
+                        .HasColumnType("bigint")
+                        .HasColumnName("total_bytes");
+
+                    b.Property<long>("UploadedBytes")
+                        .HasColumnType("bigint")
+                        .HasColumnName("uploaded_bytes");
+
+                    b.HasKey("Id")
+                        .HasName("pk_upload_sessions");
+
+                    b.HasIndex("ExpiresAt")
+                        .HasDatabaseName("ix_upload_sessions_expires_at");
+
+                    b.ToTable("upload_sessions", (string)null);
                 });
 
             modelBuilder.Entity("eDMS.Infrastructure.Persistence.RefreshToken", b =>

@@ -5,6 +5,24 @@ export function listLibraries(siteId: string): Promise<LibraryDto[]> {
   return request<LibraryDto[]>(`/sites/${siteId}/libraries`);
 }
 
+export function updateLibrary(
+  siteId: string,
+  libraryId: string,
+  input: {
+    name: string;
+    description?: string | null;
+    enableVersioning: boolean;
+    enableMinorVersions: boolean;
+    requireCheckout: boolean;
+    minorVersionsRetained?: number | null;
+  },
+): Promise<void> {
+  return request<void>(`/sites/${siteId}/libraries/${libraryId}`, {
+    method: "PUT",
+    body: JSON.stringify(input),
+  });
+}
+
 export function listItems(libraryId: string): Promise<ItemDto[]> {
   return request<ItemDto[]>(`/libraries/${libraryId}/items`);
 }

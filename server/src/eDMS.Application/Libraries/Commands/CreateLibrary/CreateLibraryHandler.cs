@@ -23,6 +23,7 @@ public sealed class CreateLibraryHandler(
             EnableVersioning = command.EnableVersioning,
             EnableMinorVersions = command.EnableMinorVersions,
             RequireCheckout = command.RequireCheckout,
+            MinorVersionsRetained = command.MinorVersionsRetained,
         };
         library.SetCreator(userId);
 

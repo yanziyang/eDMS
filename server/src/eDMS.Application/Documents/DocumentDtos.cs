@@ -7,7 +7,8 @@ public sealed record LibraryDto(
     string? Description,
     bool EnableVersioning,
     bool EnableMinorVersions,
-    bool RequireCheckout);
+    bool RequireCheckout,
+    int? MinorVersionsRetained);
 
 public sealed record DocumentVersionDto(
     Guid Id,

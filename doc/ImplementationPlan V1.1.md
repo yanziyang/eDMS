@@ -108,11 +108,11 @@ M12–M18 have no dependency on each other beyond M10 and may be worked in any o
 | [M11](#m11--phase-1-hardening--sign-off-close-out) | Actually satisfy FS §15's Phase 1 checklist | Validator coverage is complete, the permission CTE has a documented perf profile at 20-level nesting, an accessibility + responsive pass is done, and a staging deploy has been run at least once | Done |
 | [M12](#m12--content-types--custom-metadata-columns) | Content Types & typed columns | Admin defines a Content Type with a required column on a Library; upload/check-in in that Library blocks completion until it's filled | Not Started |
 | [M13](#m13--office-preview) | In-browser Office preview | Opening a .docx/.xlsx/.pptx shows a PDF-converted preview, no download required | Not Started |
-| [M14](#m14--chunked-upload--minor-version-retention) | Large-file resilience + version hygiene | A >100MB upload resumes after a network interruption; a Library with a minor-version cap auto-trims old minors on check-in | Not Started |
+| [M14](#m14--chunked-upload--minor-version-retention) | Large-file resilience + version hygiene | A >100MB upload resumes after a network interruption; a Library with a minor-version cap auto-trims old minors on check-in | Done |
 | [M15](#m15--notifications--alerts) | Notifications/alerts ("Follow") | Sharing a document emails + in-app-notifies the recipient; following a folder delivers a digest at the configured frequency | Not Started |
 | [M16](#m16--org-wide-share-links) | Non-anonymous org-wide links | A generated link opens for any authenticated internal user without an individual ACL entry; revoking it blocks further access | Not Started |
 | [M17](#m17--full-text-content-indexing) | Search inside PDF/Office content | A phrase that only appears in a PDF's body text (not name/title/description) is found by search | Not Started |
-| [M18](#m18--dark-theme) | Light/dark theme | Toggling dark mode re-themes the whole app and the choice persists across reloads | Not Started |
+| [M18](#m18--dark-theme) | Light/dark theme | Toggling dark mode re-themes the whole app and the choice persists across reloads | Done |
 | [M19](#m19--phase-2-hardening--sign-off) | Phase 2 sign-off | FS §15 Phase 2 checklist fully satisfied; same staging→production path M11 proved, re-run for Phase 2's additions | Not Started |
 
 ## 6. Detailed Milestones — Phase 1 Close-out
@@ -185,10 +185,10 @@ FS §8.2 already sketches `ContentType`/`ColumnDefinition` — use those shapes 
 
 | Status | ID | Track | Task | Depends on | Size | Refs |
 |---|---|---|---|---|---|---|
-| Not Started | M14.1 | BE | Chunked/resumable upload for files >100MB, alongside (not replacing) the existing single-stream path for smaller files. Record the protocol choice (custom session-based endpoint vs. an existing standard like the tus protocol) as **ADR-11** in TDS §2.4. | M10 (all) | L | FR-DOC-12 |
-| Not Started | M14.2 | FE | Upload dialog support for resumable progress against M14.1. | M14.1, M10.5 | M | FR-DOC-12 |
-| Not Started | M14.3 | BE | Minor-version retention cap: optional per-Library setting that auto-trims oldest minor versions on check-in (majors never auto-trimmed). | M4.1 (done) | S | FR-VER-09 |
-| Not Started | M14.4 | FE | Expose the minor-version-cap setting in Library settings UI. | M14.3 | S | FR-VER-09 |
+| Done | M14.1 | BE | Chunked/resumable upload for files >100MB, alongside (not replacing) the existing single-stream path for smaller files. Record the protocol choice (custom session-based endpoint vs. an existing standard like the tus protocol) as **ADR-11** in TDS §2.4. | M10 (all) | L | FR-DOC-12 |
+| Done | M14.2 | FE | Upload dialog support for resumable progress against M14.1. | M14.1, M10.5 | M | FR-DOC-12 |
+| Done | M14.3 | BE | Minor-version retention cap: optional per-Library setting that auto-trims oldest minor versions on check-in (majors never auto-trimmed). | M4.1 (done) | S | FR-VER-09 |
+| Done | M14.4 | FE | Expose the minor-version-cap setting in Library settings UI. | M14.3 | S | FR-VER-09 |
 
 ### M15 — Notifications & Alerts
 
@@ -225,7 +225,7 @@ FS §16's roadmap scopes this as light/dark only (FR-UI-08). The original `proto
 
 | Status | ID | Track | Task | Depends on | Size | Refs |
 |---|---|---|---|---|---|---|
-| Not Started | M18.1 | FE | Wire `next-themes` (already an installed dependency — currently only incidentally imported by the generated `sonner.tsx`, not actually driving app theming) as a real app-wide `ThemeProvider`; add a light/dark toggle in the AppShell topbar plus a persisted preference, mirroring `prototype(html)`'s quick-toggle interaction pattern (`quickToggleTheme()` in `assets/app.js`) without porting its 4-theme scope. | M10 (all) | M | FR-UI-08 |
+| Done | M18.1 | FE | Wire `next-themes` (already an installed dependency — currently only incidentally imported by the generated `sonner.tsx`, not actually driving app theming) as a real app-wide `ThemeProvider`; add a light/dark toggle in the AppShell topbar plus a persisted preference, mirroring `prototype(html)`'s quick-toggle interaction pattern (`quickToggleTheme()` in `assets/app.js`) without porting its 4-theme scope. | M10 (all) | M | FR-UI-08 |
 
 > Low external risk, orthogonal to the other Phase 2 milestones — fine to do earlier if a session wants a fast, visible win, but doing it after M12–M17's new components exist means less rework re-checking dark-mode contrast on components that don't exist yet.
 

@@ -12,6 +12,11 @@ vi.mock("sonner", () => ({
   toast: { success: vi.fn(), error: vi.fn() },
 }));
 
+vi.mock("@/features/uploads/chunkedUpload", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/features/uploads/chunkedUpload")>();
+  return { ...actual, LARGE_FILE_THRESHOLD: 3 };
+});
+
 vi.mock("@/features/auth/auth-context", () => ({
   useAuth: () => ({
     user: { id: "u1" },
@@ -60,6 +65,7 @@ function library(overrides: Record<string, unknown> = {}) {
     enableVersioning: true,
     enableMinorVersions: false,
     requireCheckout: false,
+    minorVersionsRetained: null,
     ...overrides,
   };
 }
@@ -148,6 +154,111 @@ function itemNameRows(): string[] {
     .getAllByRole("row")
     .slice(1)
     .map((row) => within(row).queryAllByRole("button")[0]?.textContent ?? "");
+}
+
+function chunkedSessionDto(sessionId: string, s: { uploadedBytes: number; totalBytes: number; fileName: string }, chunkSize: number) {
+  return {
+    sessionId,
+    fileName: s.fileName,
+    totalBytes: s.totalBytes,
+    uploadedBytes: s.uploadedBytes,
+    chunkSize,
+    expiresAt: "2026-09-01T00:00:00Z",
+  };
+}
+
+function mockChunkedFlow(options: {
+  chunkSize?: number;
+  contentType?: unknown;
+  failChunks?: number[];
+  hangFirstChunk?: boolean;
+  failStart?: boolean;
+} = {}) {
+  const chunkSize = options.chunkSize ?? 100;
+  const state = {
+    starts: 0,
+    startsBody: [] as unknown[],
+    statusChecks: 0,
+    chunkRequests: [] as { sessionId: string; offset: number; bytes: number }[],
+    completions: [] as { sessionId: string; body: unknown }[],
+    aborts: [] as string[],
+    releaseFirstChunk: null as null | (() => void),
+    libraryItems: [] as unknown[],
+  };
+  const sessions = new Map<string, { uploadedBytes: number; totalBytes: number; fileName: string; metadata: unknown }>();
+  const failedOffsets = new Set<string>();
+  let firstChunkHeld = false;
+
+  server.use(
+    http.get(`${base}/sites`, () => HttpResponse.json([site()])),
+    http.get(`${base}/sites/s1/libraries`, () =>
+      HttpResponse.json([library(), library({ id: "l2", name: "Finance" })]),
+    ),
+    http.get(`${base}/libraries/l1/items`, () => HttpResponse.json(state.libraryItems)),
+    http.get(`${base}/admin/content-types`, () =>
+      HttpResponse.json(options.contentType ? [options.contentType] : []),
+    ),
+    http.post(`${base}/uploads`, async ({ request }) => {
+      if (options.failStart) {
+        return new HttpResponse(null, { status: 500 });
+      }
+      state.starts += 1;
+      const body = (await request.json()) as { fileName: string; totalBytes: number; metadata: unknown };
+      state.startsBody.push(body);
+      const sessionId = `s${state.starts}`;
+      sessions.set(sessionId, {
+        uploadedBytes: 0,
+        totalBytes: body.totalBytes,
+        fileName: body.fileName,
+        metadata: body.metadata,
+      });
+      return HttpResponse.json(chunkedSessionDto(sessionId, sessions.get(sessionId)!, chunkSize), { status: 201 });
+    }),
+    http.get(`${base}/uploads/:sessionId`, ({ params }) => {
+      state.statusChecks += 1;
+      return HttpResponse.json(chunkedSessionDto(String(params.sessionId), sessions.get(String(params.sessionId))!, chunkSize));
+    }),
+    http.put(`${base}/uploads/:sessionId/chunks`, async ({ request, params }) => {
+      const sessionId = String(params.sessionId);
+      const offset = Number(new URL(request.url).searchParams.get("offset"));
+      const s = sessions.get(sessionId)!;
+      const key = `${sessionId}:${offset}`;
+      if (options.failChunks?.includes(offset) && !failedOffsets.has(key)) {
+        failedOffsets.add(key);
+        return HttpResponse.json({ title: "Conflict", detail: "Offset mismatch" }, { status: 409 });
+      }
+      if (offset !== s.uploadedBytes) {
+        return HttpResponse.json({ title: "Conflict", detail: "Offset mismatch" }, { status: 409 });
+      }
+      const body = await request.arrayBuffer();
+      state.chunkRequests.push({ sessionId, offset, bytes: body.byteLength });
+      s.uploadedBytes = Math.min(s.uploadedBytes + body.byteLength, s.totalBytes);
+      const response = HttpResponse.json(chunkedSessionDto(sessionId, s, chunkSize));
+      if (options.hangFirstChunk && !firstChunkHeld) {
+        firstChunkHeld = true;
+        return new Promise<Response>((resolve) => {
+          state.releaseFirstChunk = () => resolve(response);
+        });
+      }
+      return response;
+    }),
+    http.post(`${base}/uploads/:sessionId/complete`, async ({ request, params }) => {
+      const sessionId = String(params.sessionId);
+      state.completions.push({ sessionId, body: await request.json() });
+      const s = sessions.get(sessionId)!;
+      state.libraryItems.push(item({ id: "d-big", name: s.fileName, documentId: "d-big", sizeBytes: s.totalBytes }));
+      return HttpResponse.json(
+        { documentId: "d-big", name: s.fileName, versionId: "v1", versionLabel: "1.0", sizeBytes: s.totalBytes, status: "ok" },
+        { status: 201 },
+      );
+    }),
+    http.delete(`${base}/uploads/:sessionId`, ({ params }) => {
+      state.aborts.push(String(params.sessionId));
+      return new HttpResponse(null, { status: 204 });
+    }),
+  );
+
+  return state;
 }
 
 async function openUploadDialog() {
@@ -469,6 +580,167 @@ describe("LibraryBrowser", () => {
 
     await waitFor(() => expect(mockedToast.error).toHaveBeenCalledWith("Failed to upload bad.txt"));
     expect(uploaded).toEqual(["bad.txt"]);
+  });
+
+  it("uploads a large file via the chunked flow and lists it on success", async () => {
+    const flow = mockChunkedFlow({ chunkSize: 100 });
+
+    renderLibrary();
+    await screen.findByText("This folder is empty");
+    await openUploadDialog();
+
+    fireEvent.change(fileInput(), {
+      target: { files: [new File([new Uint8Array(250).fill(7)], "big.bin")] },
+    });
+
+    await waitFor(() => expect(mockedToast.success).toHaveBeenCalledWith("Uploaded big.bin (v1.0)"));
+    expect(flow.starts).toBe(1);
+    expect(flow.startsBody[0]).toMatchObject({
+      libraryId: "l1",
+      folderId: null,
+      fileName: "big.bin",
+      totalBytes: 250,
+    });
+    expect(flow.chunkRequests.map((c) => c.offset)).toEqual([0, 100, 200]);
+    expect(flow.chunkRequests.map((c) => c.bytes)).toEqual([100, 100, 50]);
+    expect(flow.completions).toHaveLength(1);
+    expect(await screen.findByRole("button", { name: "big.bin" })).toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByText("Upload files")).not.toBeInTheDocument());
+  });
+
+  it("shows a resume button after a failed chunk and resumes from the reported offset", async () => {
+    const flow = mockChunkedFlow({ chunkSize: 100, failChunks: [100] });
+
+    const user = userEvent.setup();
+    renderLibrary();
+    await screen.findByText("This folder is empty");
+    await openUploadDialog();
+
+    fireEvent.change(fileInput(), {
+      target: { files: [new File([new Uint8Array(250).fill(7)], "big.bin")] },
+    });
+
+    expect(await screen.findByRole("button", { name: "Resume" })).toBeInTheDocument();
+    expect(flow.chunkRequests).toEqual([{ sessionId: "s1", offset: 0, bytes: 100 }]);
+    expect(screen.getByText("100 B / 250 B")).toBeInTheDocument();
+    expect(screen.getByText("40%")).toBeInTheDocument();
+    expect(screen.getByText("Upload failed: Offset mismatch")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Resume" }));
+
+    await waitFor(() => expect(mockedToast.success).toHaveBeenCalledWith("Uploaded big.bin (v1.0)"));
+    expect(flow.statusChecks).toBe(2);
+    expect(flow.chunkRequests.map((c) => c.offset)).toEqual([0, 100, 200]);
+    expect(flow.completions).toHaveLength(1);
+    expect(await screen.findByRole("button", { name: "big.bin" })).toBeInTheDocument();
+  });
+
+  it("aborts the session when canceling after a failed chunk", async () => {
+    const flow = mockChunkedFlow({ chunkSize: 100, failChunks: [0] });
+
+    const user = userEvent.setup();
+    renderLibrary();
+    await screen.findByText("This folder is empty");
+    await openUploadDialog();
+
+    fireEvent.change(fileInput(), {
+      target: { files: [new File([new Uint8Array(250).fill(7)], "big.bin")] },
+    });
+
+    expect(await screen.findByRole("button", { name: "Resume" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+
+    await waitFor(() => expect(flow.aborts).toEqual(["s1"]));
+    await waitFor(() => expect(screen.queryByText("Upload files")).not.toBeInTheDocument());
+    expect(mockedToast.success).not.toHaveBeenCalled();
+  });
+
+  it("disables cancel and ignores close while chunks are uploading", async () => {
+    const flow = mockChunkedFlow({ chunkSize: 100, hangFirstChunk: true });
+
+    const user = userEvent.setup();
+    renderLibrary();
+    await screen.findByText("This folder is empty");
+    await openUploadDialog();
+
+    fireEvent.change(fileInput(), {
+      target: { files: [new File([new Uint8Array(250).fill(7)], "big.bin")] },
+    });
+
+    await waitFor(() => expect(flow.chunkRequests).toHaveLength(1));
+    expect(screen.getByText("0 B / 250 B")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Cancel" })).toBeDisabled();
+
+    await user.click(screen.getByRole("button", { name: "Close" }));
+    expect(screen.getByText("Upload files")).toBeInTheDocument();
+
+    flow.releaseFirstChunk!();
+
+    await waitFor(() => expect(mockedToast.success).toHaveBeenCalledWith("Uploaded big.bin (v1.0)"));
+    expect(await screen.findByRole("button", { name: "big.bin" })).toBeInTheDocument();
+  });
+
+  it("passes metadata to start and complete for chunked uploads", async () => {
+    const contentType = {
+      id: "ct1",
+      libraryId: "l1",
+      name: "Invoice",
+      description: null,
+      columns: [
+        {
+          id: "col1",
+          name: "Vendor",
+          dataType: "Text",
+          isRequired: true,
+          choiceOptions: null,
+          defaultValue: null,
+        },
+      ],
+    };
+    const flow = mockChunkedFlow({ chunkSize: 100, contentType });
+
+    const user = userEvent.setup();
+    renderLibrary();
+    await screen.findByText("This folder is empty");
+
+    await user.click(screen.getByRole("button", { name: "Upload" }));
+    await screen.findByText("Upload files");
+    await user.type(screen.getByLabelText("Vendor *"), "Acme");
+
+    fireEvent.change(fileInput(), {
+      target: { files: [new File([new Uint8Array(250).fill(7)], "big.bin")] },
+    });
+
+    await waitFor(() => expect(mockedToast.success).toHaveBeenCalledWith("Uploaded big.bin (v1.0)"));
+    expect(flow.startsBody[0]).toMatchObject({
+      metadata: [{ columnDefinitionId: "col1", value: "Acme" }],
+    });
+    expect(flow.completions[0].body).toEqual({
+      metadata: [{ columnDefinitionId: "col1", value: "Acme" }],
+    });
+  });
+
+  it("shows an error without a resume button when starting the session fails", async () => {
+    const flow = mockChunkedFlow({ chunkSize: 100, failStart: true });
+
+    const user = userEvent.setup();
+    renderLibrary();
+    await screen.findByText("This folder is empty");
+    await openUploadDialog();
+
+    fireEvent.change(fileInput(), {
+      target: { files: [new File([new Uint8Array(250).fill(7)], "big.bin")] },
+    });
+
+    expect(await screen.findByText(/Upload failed/)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Resume" })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+
+    await waitFor(() => expect(screen.queryByText("Upload files")).not.toBeInTheDocument());
+    expect(flow.starts).toBe(0);
+    expect(flow.aborts).toEqual([]);
+    expect(mockedToast.success).not.toHaveBeenCalled();
   });
 
   it("ignores an empty file selection", async () => {
@@ -1327,5 +1599,49 @@ describe("LibraryBrowser", () => {
 
     await waitFor(() => expect(screen.queryByText("File type")).not.toBeInTheDocument());
     expect(screen.getByText("contract.pdf")).toBeInTheDocument();
+  });
+
+  it("opens library settings and saves the updated configuration", async () => {
+    mockNav();
+    server.use(
+      http.put(`${base}/sites/s1/libraries/l1`, () => new HttpResponse(null, { status: 204 })),
+    );
+    const user = userEvent.setup();
+    renderLibrary();
+
+    await user.click(await screen.findByRole("button", { name: "Library settings" }));
+
+    expect(await screen.findByText("Library settings")).toBeInTheDocument();
+    const nameInput = screen.getByLabelText("Name") as HTMLInputElement;
+    expect(nameInput.value).toBe("Policies");
+
+    await user.clear(nameInput);
+    await user.type(nameInput, "Renamed");
+    await user.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() =>
+      expect(mockedToast.success).toHaveBeenCalledWith("Library settings saved"),
+    );
+    await waitFor(() =>
+      expect(screen.queryByText("Library settings")).not.toBeInTheDocument(),
+    );
+  });
+
+  it("reports an error when saving library settings fails", async () => {
+    mockNav();
+    server.use(
+      http.put(`${base}/sites/s1/libraries/l1`, () => new HttpResponse(null, { status: 500 })),
+    );
+    const user = userEvent.setup();
+    renderLibrary();
+
+    await user.click(await screen.findByRole("button", { name: "Library settings" }));
+    await screen.findByText("Library settings");
+
+    await user.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() =>
+      expect(mockedToast.error).toHaveBeenCalledWith("Failed to save library settings"),
+    );
   });
 });

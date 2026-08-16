@@ -1,5 +1,6 @@
-import { LogOut, Menu, Recycle, Search, Settings } from "lucide-react";
+import { LogOut, Menu, Moon, Recycle, Search, Settings, Sun } from "lucide-react";
 import { useState } from "react";
+import { useTheme } from "next-themes";
 import { Navigate, NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useAuth } from "@/features/auth/auth-context";
 import { Button } from "@/components/ui/button";
@@ -8,6 +9,7 @@ import { cn } from "@/lib/utils";
 
 export function AppShell() {
   const { user, status, logout } = useAuth();
+  const { resolvedTheme, setTheme } = useTheme();
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -89,9 +91,17 @@ export function AppShell() {
             <span className="text-sm font-medium">{user.displayName}</span>
           </div>
           <div className="flex items-center gap-2">
-            <span className="max-w-[220px] truncate text-xs text-muted-foreground">
+            <span className="hidden max-w-[220px] truncate text-xs text-muted-foreground sm:inline">
               {user.email}
             </span>
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label={resolvedTheme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+              onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
+            >
+              {resolvedTheme === "dark" ? <Sun className="size-4" /> : <Moon className="size-4" />}
+            </Button>
             <Button variant="ghost" size="sm" onClick={handleLogout}>
               <LogOut className="size-4" />
               Sign out

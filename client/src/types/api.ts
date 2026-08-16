@@ -68,6 +68,7 @@ export interface LibraryDto {
   enableVersioning: boolean;
   enableMinorVersions: boolean;
   requireCheckout: boolean;
+  minorVersionsRetained: number | null;
 }
 
 export interface ItemDto {
@@ -88,6 +89,15 @@ export interface UploadResult {
   versionLabel: string;
   sizeBytes: number;
   status: string;
+}
+
+export interface UploadSessionDto {
+  sessionId: string;
+  fileName: string;
+  totalBytes: number;
+  uploadedBytes: number;
+  chunkSize: number;
+  expiresAt: string;
 }
 
 export type PermissionLevel = "FullControl" | "Contribute" | "Read" | "NoAccess";

@@ -1,5 +1,6 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { ThemeProvider } from "next-themes";
 import { describe, expect, it, vi } from "vitest";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { AppShell } from "./AppShell";
@@ -23,15 +24,17 @@ function adminUser(overrides: Partial<{ isSystemAdmin: boolean }> = {}) {
 
 function renderShell(initialPath = "/") {
   return render(
-    <MemoryRouter initialEntries={[initialPath]}>
-      <Routes>
-        <Route element={<AppShell />}>
-          <Route path="/" element={<div>HOME_CONTENT</div>} />
-          <Route path="/admin" element={<div>ADMIN_CONTENT</div>} />
-        </Route>
-        <Route path="/login" element={<div>LOGIN_PAGE</div>} />
-      </Routes>
-    </MemoryRouter>,
+    <ThemeProvider attribute="class">
+      <MemoryRouter initialEntries={[initialPath]}>
+        <Routes>
+          <Route element={<AppShell />}>
+            <Route path="/" element={<div>HOME_CONTENT</div>} />
+            <Route path="/admin" element={<div>ADMIN_CONTENT</div>} />
+          </Route>
+          <Route path="/login" element={<div>LOGIN_PAGE</div>} />
+        </Routes>
+      </MemoryRouter>
+    </ThemeProvider>,
   );
 }
 
@@ -172,5 +175,27 @@ describe("AppShell", () => {
     expect(activeLink.className).toContain("bg-accent");
     const inactiveLink = screen.getByRole("link", { name: "Search" });
     expect(inactiveLink.className).not.toContain("bg-accent");
+  });
+
+  it("toggles between light and dark theme", async () => {
+    mockedUseAuth.mockReturnValue({
+      user: adminUser(),
+      status: "authenticated",
+      login: vi.fn(),
+      logout: vi.fn(),
+    });
+
+    const user = userEvent.setup();
+    renderShell("/");
+
+    const toggle = screen.getByRole("button", { name: /Switch to dark mode/ });
+    await user.click(toggle);
+
+    expect(document.documentElement.classList.contains("dark")).toBe(true);
+
+    const lightToggle = screen.getByRole("button", { name: /Switch to light mode/ });
+    await user.click(lightToggle);
+
+    expect(document.documentElement.classList.contains("dark")).toBe(false);
   });
 });

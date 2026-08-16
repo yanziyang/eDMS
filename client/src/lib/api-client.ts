@@ -88,6 +88,31 @@ export async function request<T>(path: string, init: RequestInit = {}): Promise<
   return response.status === 204 ? (undefined as T) : ((await response.json()) as T);
 }
 
+export async function requestRaw<T>(path: string, init: RequestInit = {}): Promise<T> {
+  const response = await fetch(`${API_BASE}${path}`, {
+    ...init,
+    credentials: "include",
+    headers: {
+      ...(init.headers ?? {}),
+      ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+    },
+  });
+
+  if (response.status === 401) {
+    const refreshed = await refreshAccessToken();
+    if (refreshed) {
+      return requestRaw<T>(path, init);
+    }
+    throw new ApiError(401, { title: "Unauthorized" });
+  }
+
+  if (!response.ok) {
+    throw await ApiError.fromResponse(response);
+  }
+
+  return response.status === 204 ? (undefined as T) : ((await response.json()) as T);
+}
+
 export async function requestBlob(path: string): Promise<Blob> {
   let response = await fetch(`${API_BASE}${path}`, {
     credentials: "include",

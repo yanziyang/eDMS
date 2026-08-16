@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { ApiError, request, requestBlob, setAccessToken } from "./api-client";
+import { ApiError, request, requestBlob, requestRaw, setAccessToken } from "./api-client";
 
 describe("api-client", () => {
   beforeEach(() => {
@@ -232,6 +232,103 @@ describe("api-client", () => {
     );
 
     await expect(requestBlob("/documents/1/download")).rejects.toMatchObject({ status: 404 });
+  });
+
+  it("requestRaw sends the raw body without a default content-type", async () => {
+    let captured: RequestInit | undefined;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (_url: RequestInfo | URL, init?: RequestInit) => {
+        captured = init;
+        return jsonResponse({ uploadedBytes: 10 });
+      }),
+    );
+
+    const chunk = new Blob(["chunk-bytes"]);
+    const result = await requestRaw<{ uploadedBytes: number }>("/uploads/s1/chunks?offset=0", {
+      method: "PUT",
+      body: chunk,
+    });
+
+    expect(result.uploadedBytes).toBe(10);
+    expect(captured?.body).toBe(chunk);
+    const headers = (captured?.headers ?? {}) as Record<string, string>;
+    expect(headers["Content-Type"]).toBeUndefined();
+  });
+
+  it("requestRaw attaches the bearer token when set", async () => {
+    setAccessToken("tok-raw");
+    let captured: RequestInit | undefined;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (_url: RequestInfo | URL, init?: RequestInit) => {
+        captured = init;
+        return jsonResponse({ uploadedBytes: 0 });
+      }),
+    );
+
+    await requestRaw("/uploads/s1/chunks?offset=0", { method: "PUT", body: new Blob(["x"]) });
+
+    const headers = (captured?.headers ?? {}) as Record<string, string>;
+    expect(headers.Authorization).toBe("Bearer tok-raw");
+  });
+
+  it("requestRaw refreshes and retries on 401", async () => {
+    const calls: string[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: RequestInfo | URL) => {
+        const path = typeof url === "string" ? url : url.toString();
+        calls.push(path);
+        if (path.endsWith("/auth/refresh")) {
+          return jsonResponse({ accessToken: "tok-2", expiresInSeconds: 900 });
+        }
+        if (path.includes("/chunks") && calls.filter((p) => p.includes("/chunks")).length > 1) {
+          return jsonResponse({ uploadedBytes: 100 });
+        }
+        return jsonResponse({ title: "Unauthorized" }, 401);
+      }),
+    );
+
+    const result = await requestRaw<{ uploadedBytes: number }>("/uploads/s1/chunks?offset=0", {
+      method: "PUT",
+      body: new Blob(["x"]),
+    });
+
+    expect(result.uploadedBytes).toBe(100);
+    expect(calls.filter((p) => p.includes("/chunks"))).toHaveLength(2);
+    expect(calls.some((path) => path.endsWith("/auth/refresh"))).toBe(true);
+  });
+
+  it("requestRaw throws when refresh fails", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => jsonResponse({ title: "Unauthorized" }, 401)),
+    );
+
+    await expect(requestRaw("/uploads/s1/chunks?offset=0", { method: "PUT", body: new Blob(["x"]) })).rejects.toMatchObject(
+      { status: 401 },
+    );
+  });
+
+  it("requestRaw throws an ApiError for non-401 failures", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => jsonResponse({ title: "Conflict", detail: "Offset mismatch" }, 409)),
+    );
+
+    await expect(requestRaw("/uploads/s1/chunks?offset=0", { method: "PUT", body: new Blob(["x"]) })).rejects.toMatchObject(
+      { status: 409 },
+    );
+  });
+
+  it("requestRaw returns undefined for 204 responses", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response(null, { status: 204 })),
+    );
+
+    await expect(requestRaw<void>("/uploads/s1", { method: "DELETE" })).resolves.toBeUndefined();
   });
 });
 

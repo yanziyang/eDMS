@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowDown,
@@ -13,6 +13,7 @@ import {
   List,
   LoaderCircle,
   MoveRight,
+  Settings2,
   Trash2,
   Upload,
   X,
@@ -32,6 +33,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Progress } from "@/components/ui/progress";
 import {
   Select,
   SelectContent,
@@ -50,12 +52,15 @@ import {
   listItems,
   listLibraries,
   moveDocument,
+  updateLibrary,
   uploadToFolder,
   uploadToLibrary,
 } from "@/features/documents/api";
 import { listContentTypes } from "@/features/content-types/api";
 import { buildMetadataValues, MetadataFields } from "@/features/content-types/components/MetadataFields";
 import { listSites } from "@/features/sites/api";
+import { abortUpload, completeUpload, startUpload } from "@/features/uploads/api";
+import { LARGE_FILE_THRESHOLD, uploadChunks } from "@/features/uploads/chunkedUpload";
 import { ApiError } from "@/lib/api-client";
 import { queryKeys } from "@/lib/queryKeys";
 import type { ContentTypeColumnDto, ItemDto, LibraryDto, MetadataValueInput } from "@/types/api";
@@ -73,9 +78,10 @@ export function LibraryBrowser() {
   const [sortKey, setSortKey] = useState<SortKey>("name");
   const [sortDesc, setSortDesc] = useState(false);
   const [selection, setSelection] = useState<Set<string>>(new Set());
-  const [createFolderOpen, setCreateFolderOpen] = useState(false);
-  const [uploadOpen, setUploadOpen] = useState(false);
-  const [moveOpen, setMoveOpen] = useState(false);
+const [createFolderOpen, setCreateFolderOpen] = useState(false);
+const [uploadOpen, setUploadOpen] = useState(false);
+const [settingsOpen, setSettingsOpen] = useState(false);
+const [moveOpen, setMoveOpen] = useState(false);
   const [selectedDocumentId, setSelectedDocumentId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -289,6 +295,9 @@ export function LibraryBrowser() {
           <Button size="sm" onClick={() => setUploadOpen(true)}>
             <Upload className="size-4" />
             Upload
+          </Button>
+          <Button variant="ghost" size="icon" aria-label="Library settings" onClick={() => setSettingsOpen(true)}>
+            <Settings2 className="size-4" />
           </Button>
         </div>
       </div>
@@ -543,9 +552,19 @@ export function LibraryBrowser() {
         open={uploadOpen}
         onOpenChange={setUploadOpen}
         pending={upload.isPending}
+        libraryId={libraryId ?? ""}
+        folderId={folderId}
         showMetadata={folderId === null && uploadContentType !== null && uploadContentType.columns.length > 0}
         metadataColumns={uploadContentType?.columns ?? []}
         onUpload={(files, metadata) => upload.mutate({ files, metadata })}
+        onChunkedCompleted={invalidateItems}
+      />
+
+      <LibrarySettingsDialog
+        open={settingsOpen}
+        onOpenChange={setSettingsOpen}
+        siteId={libraries.data?.find((candidate) => candidate.id === libraryId)?.siteId ?? ""}
+        library={library ?? null}
       />
 
       {singleSelectedDocument && (
@@ -678,20 +697,45 @@ interface UploadDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   pending: boolean;
+  libraryId: string;
+  folderId: string | null;
   showMetadata: boolean;
   metadataColumns: ContentTypeColumnDto[];
   onUpload: (files: File[], metadata: MetadataValueInput[]) => void;
+  onChunkedCompleted: () => void;
+}
+
+interface ChunkedQueueItem {
+  file: File;
+  metadata: MetadataValueInput[];
+  sessionId: string | null;
+}
+
+interface ChunkedUploadState {
+  fileName: string;
+  sessionId: string | null;
+  uploadedBytes: number;
+  totalBytes: number;
+  failed: boolean;
+  errorText: string;
 }
 
 function UploadDialog({
   open,
   onOpenChange,
   pending,
+  libraryId,
+  folderId,
   showMetadata,
   metadataColumns,
   onUpload,
+  onChunkedCompleted,
 }: UploadDialogProps) {
   const [draft, setDraft] = useState<Record<string, string>>({});
+  const [chunked, setChunked] = useState<ChunkedUploadState | null>(null);
+  const queueRef = useRef<ChunkedQueueItem[]>([]);
+  const pendingSmallRef = useRef<{ files: File[]; metadata: MetadataValueInput[] }>({ files: [], metadata: [] });
+  const uploadingRef = useRef(false);
 
   useEffect(() => {
     const next: Record<string, string> = {};
@@ -701,8 +745,120 @@ function UploadDialog({
     setDraft(next);
   }, [metadataColumns, open]);
 
+  useEffect(() => {
+    if (!open) {
+      setChunked(null);
+      queueRef.current = [];
+      pendingSmallRef.current = { files: [], metadata: [] };
+      uploadingRef.current = false;
+    }
+  }, [open]);
+
+  async function runChunked(item: ChunkedQueueItem, sessionId: string): Promise<boolean> {
+    uploadingRef.current = true;
+    let lastProgress = { uploadedBytes: 0, totalBytes: item.file.size };
+    try {
+      await uploadChunks(item.file, sessionId, (progress) => {
+        lastProgress = progress;
+        setChunked({
+          fileName: item.file.name,
+          sessionId,
+          uploadedBytes: progress.uploadedBytes,
+          totalBytes: progress.totalBytes,
+          failed: false,
+          errorText: "",
+        });
+      });
+      const result = await completeUpload(sessionId, item.metadata);
+      setChunked(null);
+      uploadingRef.current = false;
+      toast.success(`Uploaded ${result.name} (v${result.versionLabel})`);
+      onChunkedCompleted();
+      onOpenChange(false);
+      return true;
+    } catch (error) {
+      setChunked({
+        fileName: item.file.name,
+        sessionId,
+        uploadedBytes: lastProgress.uploadedBytes,
+        totalBytes: lastProgress.totalBytes,
+        failed: true,
+        errorText: chunkedErrorText(error),
+      });
+      uploadingRef.current = false;
+      return false;
+    }
+  }
+
+  async function startChunked(item: ChunkedQueueItem): Promise<boolean> {
+    if (!item.sessionId) {
+      setChunked({
+        fileName: item.file.name,
+        sessionId: null,
+        uploadedBytes: 0,
+        totalBytes: item.file.size,
+        failed: false,
+        errorText: "",
+      });
+      try {
+        const session = await startUpload({
+          libraryId,
+          folderId,
+          fileName: item.file.name,
+          totalBytes: item.file.size,
+          metadata: item.metadata,
+        });
+        item.sessionId = session.sessionId;
+      } catch (error) {
+        setChunked((current) =>
+          current
+            ? { ...current, failed: true, errorText: chunkedErrorText(error) }
+            : current,
+        );
+        uploadingRef.current = false;
+        return false;
+      }
+    }
+    return runChunked(item, item.sessionId);
+  }
+
+  async function processQueue(): Promise<void> {
+    while (queueRef.current.length > 0) {
+      const item = queueRef.current[0];
+      const ok = await startChunked(item);
+      if (!ok) {
+        return;
+      }
+      queueRef.current.shift();
+    }
+    const small = pendingSmallRef.current;
+    pendingSmallRef.current = { files: [], metadata: [] };
+    if (small.files.length > 0) {
+      onUpload(small.files, small.metadata);
+    }
+  }
+
+  function requestClose(): void {
+    if (uploadingRef.current) {
+      return;
+    }
+    if (chunked?.sessionId) {
+      void abortUpload(chunked.sessionId).catch(() => {});
+    }
+    onOpenChange(false);
+  }
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog
+      open={open}
+      onOpenChange={(value) => {
+        if (value) {
+          onOpenChange(value);
+          return;
+        }
+        requestClose();
+      }}
+    >
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Upload files</DialogTitle>
@@ -712,52 +868,114 @@ function UploadDialog({
           </DialogDescription>
         </DialogHeader>
         <div className="flex flex-col gap-4">
-          {showMetadata && (
-            <div className="rounded-lg border bg-muted/50 p-3">
-              <div className="text-sm font-medium">Metadata</div>
-              <p className="mt-0.5 text-xs text-muted-foreground">
-                Required fields are marked with *. Values apply to all uploaded files.
-              </p>
-              <div className="mt-3">
-                <MetadataFields
-                  columns={metadataColumns}
-                  draft={draft}
-                  onChange={(columnId, value) =>
-                    setDraft((current) => ({ ...current, [columnId]: value }))
+          {chunked === null ? (
+            <>
+              {showMetadata && (
+                <div className="rounded-lg border bg-muted/50 p-3">
+                  <div className="text-sm font-medium">Metadata</div>
+                  <p className="mt-0.5 text-xs text-muted-foreground">
+                    Required fields are marked with *. Values apply to all uploaded files.
+                  </p>
+                  <div className="mt-3">
+                    <MetadataFields
+                      columns={metadataColumns}
+                      draft={draft}
+                      onChange={(columnId, value) =>
+                        setDraft((current) => ({ ...current, [columnId]: value }))
+                      }
+                    />
+                  </div>
+                </div>
+              )}
+              <Label
+                htmlFor="upload-files"
+                className="flex cursor-pointer flex-col items-center gap-2 rounded-lg border border-dashed p-8 text-center"
+              >
+                <Upload className="size-8 text-muted-foreground" />
+                <span className="text-sm">
+                  <span className="font-medium text-primary">Click to browse</span> or drag files
+                  here
+                </span>
+              </Label>
+              <Input
+                id="upload-files"
+                type="file"
+                multiple
+                disabled={pending}
+                className="sr-only"
+                onChange={(event) => {
+                  const files = Array.from(event.target.files ?? []);
+                  event.target.value = "";
+                  if (files.length === 0) {
+                    return;
                   }
-                />
+                  const metadata = buildMetadataValues(metadataColumns, draft);
+                  const small = files.filter((file) => file.size < LARGE_FILE_THRESHOLD);
+                  const large = files.filter((file) => file.size >= LARGE_FILE_THRESHOLD);
+                  queueRef.current = large.map((file) => ({ file, metadata, sessionId: null }));
+                  pendingSmallRef.current = { files: small, metadata };
+                  void processQueue();
+                }}
+              />
+            </>
+          ) : (
+            <div className="flex flex-col gap-2 rounded-lg border p-4">
+              <div className="flex items-center justify-between gap-2 text-sm">
+                <span className="truncate font-medium">{chunked.fileName}</span>
+                <span className="text-muted-foreground">
+                  {chunked.totalBytes > 0
+                    ? Math.round((chunked.uploadedBytes / chunked.totalBytes) * 100)
+                    : 0}
+                  %
+                </span>
               </div>
+              <Progress
+                value={
+                  chunked.totalBytes > 0
+                    ? Math.round((chunked.uploadedBytes / chunked.totalBytes) * 100)
+                    : 0
+                }
+              />
+              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                <span>
+                  {formatBytes(chunked.uploadedBytes)} / {formatBytes(chunked.totalBytes)}
+                </span>
+                {chunked.failed && (
+                  <span>Paused — progress is kept so you can resume</span>
+                )}
+              </div>
+              {chunked.failed && (
+                <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-2 text-sm text-destructive">
+                  {chunked.errorText}
+                </div>
+              )}
             </div>
           )}
-          <Label
-            htmlFor="upload-files"
-            className="flex cursor-pointer flex-col items-center gap-2 rounded-lg border border-dashed p-8 text-center"
-          >
-            <Upload className="size-8 text-muted-foreground" />
-            <span className="text-sm">
-              <span className="font-medium text-primary">Click to browse</span> or drag files
-              here
-            </span>
-          </Label>
-          <Input
-            id="upload-files"
-            type="file"
-            multiple
-            disabled={pending}
-            className="sr-only"
-            onChange={(event) => {
-              const files = Array.from(event.target.files ?? []);
-              if (files.length > 0) {
-                onUpload(files, buildMetadataValues(metadataColumns, draft));
-              }
-              event.target.value = "";
-            }}
-          />
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={pending}>
-            Cancel
-          </Button>
+          {chunked === null && (
+            <Button variant="outline" onClick={requestClose} disabled={pending}>
+              Cancel
+            </Button>
+          )}
+          {chunked !== null && chunked.failed && (
+            <>
+              {chunked.sessionId && (
+                <Button onClick={() => void processQueue()}>
+                  <Upload className="size-4" />
+                  Resume
+                </Button>
+              )}
+              <Button variant="outline" onClick={requestClose}>
+                Cancel
+              </Button>
+            </>
+          )}
+          {chunked !== null && !chunked.failed && (
+            <Button variant="outline" disabled>
+              Cancel
+            </Button>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -897,6 +1115,132 @@ function MoveCopyDialog({
 function uploadErrorText(error: unknown, fileName: string): string {
   const detail = error instanceof ApiError ? error.problem.detail : null;
   return detail ? `Failed to upload ${fileName}: ${detail}` : `Failed to upload ${fileName}`;
+}
+
+function chunkedErrorText(error: unknown): string {
+  const detail = error instanceof ApiError ? error.problem.detail : null;
+  return detail ? `Upload failed: ${detail}` : "Upload failed. You can resume from where it stopped.";
+}
+
+interface LibrarySettingsDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  siteId: string;
+  library: LibraryDto | null;
+}
+
+function LibrarySettingsDialog({ open, onOpenChange, siteId, library }: LibrarySettingsDialogProps) {
+  const queryClient = useQueryClient();
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+  const [enableVersioning, setEnableVersioning] = useState(true);
+  const [enableMinorVersions, setEnableMinorVersions] = useState(false);
+  const [requireCheckout, setRequireCheckout] = useState(false);
+  const [minorVersionsRetained, setMinorVersionsRetained] = useState("");
+
+  useEffect(() => {
+    if (library && open) {
+      setName(library.name);
+      setDescription(library.description ?? "");
+      setEnableVersioning(library.enableVersioning);
+      setEnableMinorVersions(library.enableMinorVersions);
+      setRequireCheckout(library.requireCheckout);
+      setMinorVersionsRetained(library.minorVersionsRetained?.toString() ?? "");
+    }
+  }, [library, open]);
+
+  const save = useMutation({
+    mutationFn: () =>
+      updateLibrary(siteId, library!.id, {
+        name,
+        description,
+        enableVersioning,
+        enableMinorVersions,
+        requireCheckout,
+        minorVersionsRetained: minorVersionsRetained === "" ? null : Number(minorVersionsRetained),
+      }),
+    onSuccess: () => {
+      toast.success("Library settings saved");
+      queryClient.invalidateQueries({ queryKey: queryKeys.libraries.list(siteId) });
+      onOpenChange(false);
+    },
+    onError: () => toast.error("Failed to save library settings"),
+  });
+
+  if (!library) {
+    return null;
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Library settings</DialogTitle>
+          <DialogDescription>
+            Versioning options for &quot;{library.name}&quot;.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="settings-name">Name</Label>
+            <Input
+              id="settings-name"
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+            />
+          </div>
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="settings-description">Description</Label>
+            <Input
+              id="settings-description"
+              value={description}
+              onChange={(event) => setDescription(event.target.value)}
+            />
+          </div>
+          <label className="flex items-center gap-2 text-sm">
+            <Checkbox
+              checked={enableVersioning}
+              onCheckedChange={(value) => setEnableVersioning(value === true)}
+            />
+            Enable versioning
+          </label>
+          <label className="flex items-center gap-2 text-sm">
+            <Checkbox
+              checked={enableMinorVersions}
+              onCheckedChange={(value) => setEnableMinorVersions(value === true)}
+            />
+            Enable minor versions
+          </label>
+          <label className="flex items-center gap-2 text-sm">
+            <Checkbox
+              checked={requireCheckout}
+              onCheckedChange={(value) => setRequireCheckout(value === true)}
+            />
+            Require check-out before editing
+          </label>
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="settings-cap">Retained minor versions (blank = unlimited)</Label>
+            <Input
+              id="settings-cap"
+              type="number"
+              min={1}
+              value={minorVersionsRetained}
+              onChange={(event) => setMinorVersionsRetained(event.target.value)}
+            />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
+          <Button onClick={() => save.mutate()} disabled={save.isPending || name.trim() === ""}>
+            {save.isPending && <LoaderCircle className="size-4 animate-spin" />}
+            Save
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
 }
 
 function formatBytes(bytes: number): string {

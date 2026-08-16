@@ -43,5 +43,7 @@ public interface IAppDbContext
 
     DbSet<DocumentColumnValue> DocumentColumnValues { get; }
 
+    DbSet<UploadSession> UploadSessions { get; }
+
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

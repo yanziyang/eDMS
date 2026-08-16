@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using eDMS.Infrastructure.Persistence;
 
@@ -10,9 +11,11 @@ using eDMS.Infrastructure.Persistence;
 namespace eDMS.Infrastructure.Migrations.MySql.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260816130758_AddMinorVersionRetention")]
+    partial class AddMinorVersionRetention
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1074,61 +1077,6 @@ namespace eDMS.Infrastructure.Migrations.MySql.Migrations
                         .HasDatabaseName("ix_tags_name");
 
                     b.ToTable("tags", (string)null);
-                });
-
-            modelBuilder.Entity("eDMS.Domain.UploadSession", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("char(36)")
-                        .HasColumnName("id");
-
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("datetime")
-                        .HasColumnName("created_at");
-
-                    b.Property<Guid>("CreatedBy")
-                        .HasColumnType("char(36)")
-                        .HasColumnName("created_by");
-
-                    b.Property<DateTimeOffset>("ExpiresAt")
-                        .HasColumnType("datetime")
-                        .HasColumnName("expires_at");
-
-                    b.Property<string>("FileName")
-                        .IsRequired()
-                        .HasMaxLength(512)
-                        .HasColumnType("varchar(512)")
-                        .HasColumnName("file_name");
-
-                    b.Property<Guid?>("FolderId")
-                        .HasColumnType("char(36)")
-                        .HasColumnName("folder_id");
-
-                    b.Property<Guid>("LibraryId")
-                        .HasColumnType("char(36)")
-                        .HasColumnName("library_id");
-
-                    b.Property<string>("MetadataJson")
-                        .HasMaxLength(4096)
-                        .HasColumnType("varchar(4096)")
-                        .HasColumnName("metadata_json");
-
-                    b.Property<long>("TotalBytes")
-                        .HasColumnType("bigint")
-                        .HasColumnName("total_bytes");
-
-                    b.Property<long>("UploadedBytes")
-                        .HasColumnType("bigint")
-                        .HasColumnName("uploaded_bytes");
-
-                    b.HasKey("Id")
-                        .HasName("pk_upload_sessions");
-
-                    b.HasIndex("ExpiresAt")
-                        .HasDatabaseName("ix_upload_sessions_expires_at");
-
-                    b.ToTable("upload_sessions", (string)null);
                 });
 
             modelBuilder.Entity("eDMS.Infrastructure.Persistence.RefreshToken", b =>

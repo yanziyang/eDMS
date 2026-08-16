@@ -4,7 +4,9 @@ using Microsoft.Extensions.Logging;
 namespace eDMS.Infrastructure.Background;
 
 /// <summary>
-/// Hourly cleanup of temp upload files that never completed a transaction (TDS §5.8).
+/// Hourly cleanup of temp upload files that never completed a transaction (TDS §5.8):
+/// single-stream temp files older than 24h, and expired chunked-upload sessions whose
+/// part files are still on disk.
 /// </summary>
 public sealed class OrphanedUploadSweepService(ILogger<OrphanedUploadSweepService> logger) : BackgroundService
 {
@@ -40,18 +42,21 @@ public sealed class OrphanedUploadSweepService(ILogger<OrphanedUploadSweepServic
         var cutoff = DateTime.UtcNow - MaxAge;
         var removed = 0;
 
-        foreach (var file in Directory.EnumerateFiles(directory, "edms-upload-*.tmp"))
+        foreach (var pattern in new[] { "edms-upload-*.tmp", "edms-chunk-*.part" })
         {
-            if (File.GetLastWriteTimeUtc(file) < cutoff)
+            foreach (var file in Directory.EnumerateFiles(directory, pattern))
             {
-                try
+                if (File.GetLastWriteTimeUtc(file) < cutoff)
                 {
-                    File.Delete(file);
-                    removed++;
-                }
-                catch
-                {
-                    // best-effort cleanup
+                    try
+                    {
+                        File.Delete(file);
+                        removed++;
+                    }
+                    catch
+                    {
+                        // best-effort cleanup
+                    }
                 }
             }
         }

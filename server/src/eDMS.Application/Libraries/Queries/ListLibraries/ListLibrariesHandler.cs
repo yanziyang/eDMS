@@ -21,6 +21,7 @@ public sealed class ListLibrariesHandler(IAppDbContext db) : IRequestHandler<Lis
             library.Description,
             library.EnableVersioning,
             library.EnableMinorVersions,
-            library.RequireCheckout)).ToList();
+            library.RequireCheckout,
+            library.MinorVersionsRetained)).ToList();
     }
 }

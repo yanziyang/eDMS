@@ -49,6 +49,8 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options)
 
     public DbSet<DocumentColumnValue> DocumentColumnValues => Set<DocumentColumnValue>();
 
+    public DbSet<UploadSession> UploadSessions => Set<UploadSession>();
+
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
         // The SQLite provider has no DateTimeOffset support; store as UTC binary.
@@ -130,6 +132,14 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options)
                 .WithMany()
                 .HasForeignKey(value => value.ColumnDefinitionId)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<UploadSession>(entity =>
+        {
+            entity.ToTable("upload_sessions");
+            entity.Property(session => session.FileName).IsRequired().HasMaxLength(512);
+            entity.Property(session => session.MetadataJson).HasMaxLength(4096);
+            entity.HasIndex(session => session.ExpiresAt);
         });
 
         ApplyProviderSpecificColumnTypes(builder);
