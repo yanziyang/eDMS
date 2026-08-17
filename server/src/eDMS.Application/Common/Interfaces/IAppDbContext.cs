@@ -51,5 +51,7 @@ public interface IAppDbContext
 
     DbSet<Notification> Notifications { get; }
 
+    DbSet<FavoriteItem> FavoriteItems { get; }
+
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

@@ -755,6 +755,29 @@ namespace eDMS.Infrastructure.Migrations.Postgres
                     b.ToTable("document_versions", (string)null);
                 });
 
+            modelBuilder.Entity("eDMS.Domain.FavoriteItem", b =>
+                {
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.Property<int>("ObjectType")
+                        .HasColumnType("integer")
+                        .HasColumnName("object_type");
+
+                    b.Property<Guid>("ObjectId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("object_id");
+
+                    b.HasKey("UserId", "ObjectType", "ObjectId")
+                        .HasName("pk_favorite_items");
+
+                    b.HasIndex("ObjectType", "ObjectId")
+                        .HasDatabaseName("ix_favorite_items_object_type_object_id");
+
+                    b.ToTable("favorite_items", (string)null);
+                });
+
             modelBuilder.Entity("eDMS.Domain.Folder", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1590,6 +1613,16 @@ namespace eDMS.Infrastructure.Migrations.Postgres
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("fk_document_versions_documents_document_id");
+                });
+
+            modelBuilder.Entity("eDMS.Domain.FavoriteItem", b =>
+                {
+                    b.HasOne("eDMS.Domain.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_favorite_items_asp_net_users_user_id");
                 });
 
             modelBuilder.Entity("eDMS.Domain.Folder", b =>

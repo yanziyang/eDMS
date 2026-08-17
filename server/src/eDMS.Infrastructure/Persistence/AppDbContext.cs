@@ -57,6 +57,8 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options)
 
     public DbSet<Notification> Notifications => Set<Notification>();
 
+    public DbSet<FavoriteItem> FavoriteItems => Set<FavoriteItem>();
+
     public DbSet<SsoHandoffCode> SsoHandoffCodes => Set<SsoHandoffCode>();
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
@@ -198,6 +200,22 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options)
             entity.HasOne<ApplicationUser>()
                 .WithMany()
                 .HasForeignKey(notification => notification.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<FavoriteItem>(entity =>
+        {
+            entity.ToTable("favorite_items");
+            entity.HasKey(favorite => new
+            {
+                favorite.UserId,
+                favorite.ObjectType,
+                favorite.ObjectId,
+            });
+            entity.HasIndex(favorite => new { favorite.ObjectType, favorite.ObjectId });
+            entity.HasOne<ApplicationUser>()
+                .WithMany()
+                .HasForeignKey(favorite => favorite.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
 
