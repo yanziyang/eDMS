@@ -18,6 +18,7 @@ public sealed class GlobalExceptionHandler(
             ValidationException validation => Validation(validation),
             NotFoundException => Problem(404, "urn:edms:not-found", "Not Found", exception.Message),
             ForbiddenException => Problem(403, "urn:edms:forbidden", "Forbidden", exception.Message),
+            QuotaExceededException quota => Quota(quota),
             ConflictException => Problem(409, "urn:edms:conflict", "Conflict", exception.Message),
             SsoRequiredException => Problem(401, "urn:edms:sso-required", "SSO required", exception.Message),
             SsoSafetyRailException => Problem(409, "urn:edms:sso-safety-rail", "SSO safety rail", exception.Message),
@@ -46,6 +47,23 @@ public sealed class GlobalExceptionHandler(
             Type = type,
             Title = title,
             Detail = detail,
+        };
+
+    private static ProblemDetails Quota(QuotaExceededException exception) =>
+        new()
+        {
+            Status = 409,
+            Type = "urn:edms:quota-exceeded",
+            Title = "Storage quota exceeded",
+            Detail = exception.Message,
+            Extensions =
+            {
+                ["rejectionReason"] = "quota-exceeded",
+                ["siteName"] = exception.SiteName,
+                ["quotaBytes"] = exception.QuotaBytes,
+                ["storageUsedBytes"] = exception.UsedBytes,
+                ["incomingSizeBytes"] = exception.IncomingBytes,
+            },
         };
 
     private static ProblemDetails Validation(ValidationException exception) =>

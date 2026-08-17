@@ -130,21 +130,26 @@ public sealed class MoveCopyApiTests : IClassFixture<ApiFactory>
     }
 
     [Fact]
-    public async Task Move_across_sites_is_rejected()
+    public async Task Move_and_copy_across_sites_are_supported()
     {
         var (client, _, libraryId) = await AdminAsync();
         var (_, otherLibraryId) = await TestSupport.CreateSiteWithLibraryAsync(client);
-        var documentId = await TestSupport.UploadAsync(client, libraryId, "doc.txt", "v1");
+        var movedDocumentId = await TestSupport.UploadAsync(client, libraryId, "move.txt", "v1");
 
         var moveResponse = await client.PostAsJsonAsync(
-            $"/api/v1/documents/{documentId}/move",
+            $"/api/v1/documents/{movedDocumentId}/move",
             new { destinationLibraryId = otherLibraryId, destinationFolderId = (Guid?)null });
-        await TestSupport.AssertProblemAsync(moveResponse, HttpStatusCode.Conflict);
+        Assert.Equal(HttpStatusCode.OK, moveResponse.StatusCode);
+        Assert.Equal(movedDocumentId, Guid.Parse((await moveResponse.Content.ReadAsStringAsync()).Trim('"')));
 
+        var copiedDocumentId = await TestSupport.UploadAsync(client, libraryId, "copy.txt", "v1");
         var copyResponse = await client.PostAsJsonAsync(
-            $"/api/v1/documents/{documentId}/copy",
+            $"/api/v1/documents/{copiedDocumentId}/copy",
             new { destinationLibraryId = otherLibraryId, destinationFolderId = (Guid?)null });
-        await TestSupport.AssertProblemAsync(copyResponse, HttpStatusCode.Conflict);
+        Assert.Equal(HttpStatusCode.OK, copyResponse.StatusCode);
+        var copyId = Guid.Parse((await copyResponse.Content.ReadAsStringAsync()).Trim('"'));
+        Assert.NotEqual(copiedDocumentId, copyId);
+        Assert.Equal("v1", await (await client.GetAsync($"/api/v1/documents/{copyId}/download")).Content.ReadAsStringAsync());
     }
 
     [Fact]

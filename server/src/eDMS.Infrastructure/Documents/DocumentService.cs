@@ -112,6 +112,9 @@ public sealed class DocumentService(
         var library = await db.Libraries.IgnoreQueryFilters()
             .SingleOrDefaultAsync(item => item.Id == libraryId, cancellationToken)
             ?? throw new NotFoundException(nameof(Library), libraryId);
+        var site = await db.Sites.IgnoreQueryFilters()
+            .SingleOrDefaultAsync(item => item.Id == library.SiteId, cancellationToken)
+            ?? throw new NotFoundException(nameof(Site), library.SiteId);
 
         var extension = Path.GetExtension(fileName);
         if (BlockedExtensions.Contains(extension, StringComparer.OrdinalIgnoreCase))
@@ -260,6 +263,8 @@ public sealed class DocumentService(
                 }
             }
 
+            EnsureQuotaAvailable(site, sizeBytes);
+
             var storageKey = $"{library.SiteId}/{libraryId}/{document.Id}/{version.Id}/{fileName}";
             version.StorageKey = storageKey;
             db.DocumentVersions.Add(version);
@@ -268,10 +273,11 @@ public sealed class DocumentService(
             document.ContentType = contentType;
             document.ModifiedBy = userId;
             document.ModifiedAt = DateTimeOffset.UtcNow;
+            site.StorageUsedBytes = checked(site.StorageUsedBytes + sizeBytes);
 
             await db.SaveChangesAsync(cancellationToken);
 
-            await TrimMinorVersionsAsync(document.Id, library.MinorVersionsRetained, cancellationToken);
+            await TrimMinorVersionsAsync(document.Id, site.Id, library.MinorVersionsRetained, cancellationToken);
 
             await using var fileStream = File.OpenRead(tempPath);
             await storage.SaveAsync(fileStream, storageKey, cancellationToken);
@@ -476,6 +482,8 @@ public sealed class DocumentService(
 
         var library = await db.Libraries.IgnoreQueryFilters()
             .SingleAsync(item => item.Id == document.LibraryId, cancellationToken);
+        var site = await db.Sites.IgnoreQueryFilters()
+            .SingleAsync(item => item.Id == library.SiteId, cancellationToken);
         var current = await db.DocumentVersions
             .SingleAsync(version => version.Id == document.CurrentVersionId, cancellationToken);
 
@@ -490,6 +498,7 @@ public sealed class DocumentService(
             IsMajor = true,
         };
         restored.SetCreator(userId);
+        EnsureQuotaAvailable(site, restored.SizeBytes);
 
         var storageKey = $"{library.SiteId}/{document.LibraryId}/{document.Id}/{restored.Id}/{document.Name}";
         restored.StorageKey = storageKey;
@@ -503,6 +512,7 @@ public sealed class DocumentService(
         document.CurrentVersionId = restored.Id;
         document.ModifiedBy = userId;
         document.ModifiedAt = DateTimeOffset.UtcNow;
+        site.StorageUsedBytes = checked(site.StorageUsedBytes + restored.SizeBytes);
         await db.SaveChangesAsync(cancellationToken);
         if (notifications is not null)
         {
@@ -528,18 +538,75 @@ public sealed class DocumentService(
             .SingleOrDefaultAsync(item => item.Id == documentId, cancellationToken)
             ?? throw new NotFoundException(nameof(Document), documentId);
 
-        await ValidateDestinationAsync(document.LibraryId, destinationLibraryId, destinationFolderId, cancellationToken);
-        var siteId = await db.Libraries.IgnoreQueryFilters()
-            .Where(item => item.Id == destinationLibraryId)
-            .Select(item => item.SiteId)
-            .SingleAsync(cancellationToken);
+        var destinationLibrary = await ValidateDestinationAsync(
+            document.LibraryId,
+            destinationLibraryId,
+            destinationFolderId,
+            cancellationToken);
+        var sourceLibrary = await db.Libraries.IgnoreQueryFilters()
+            .SingleAsync(item => item.Id == document.LibraryId, cancellationToken);
+        var sourceSite = await db.Sites.IgnoreQueryFilters()
+            .SingleAsync(item => item.Id == sourceLibrary.SiteId, cancellationToken);
+        var destinationSite = sourceSite.Id == destinationLibrary.SiteId
+            ? sourceSite
+            : await db.Sites.IgnoreQueryFilters()
+                .SingleAsync(item => item.Id == destinationLibrary.SiteId, cancellationToken);
+        var crossSite = sourceSite.Id != destinationSite.Id;
+        var storageMoves = new List<(string OldKey, string NewKey)>();
+        var movedBytes = 0L;
+
+        if (crossSite)
+        {
+            var versions = await db.DocumentVersions
+                .Where(version => version.DocumentId == document.Id)
+                .ToListAsync(cancellationToken);
+            movedBytes = versions.Sum(version => version.SizeBytes);
+            EnsureQuotaAvailable(destinationSite, movedBytes);
+
+            try
+            {
+                foreach (var version in versions)
+                {
+                    var newKey = $"{destinationSite.Id}/{destinationLibrary.Id}/{document.Id}/{version.Id}/{document.Name}";
+                    await CopyStorageAsync(version.StorageKey, newKey, cancellationToken);
+                    storageMoves.Add((version.StorageKey, newKey));
+                    version.StorageKey = newKey;
+                }
+            }
+            catch
+            {
+                foreach (var (_, newKey) in storageMoves)
+                {
+                    await storage.DeleteAsync(newKey, cancellationToken);
+                }
+
+                throw;
+            }
+        }
 
         document.LibraryId = destinationLibraryId;
         document.FolderId = destinationFolderId;
         document.ModifiedBy = userId;
         document.ModifiedAt = DateTimeOffset.UtcNow;
+        if (crossSite)
+        {
+            sourceSite.StorageUsedBytes = Math.Max(0, sourceSite.StorageUsedBytes - movedBytes);
+            destinationSite.StorageUsedBytes = checked(destinationSite.StorageUsedBytes + movedBytes);
+        }
+
         await db.SaveChangesAsync(cancellationToken);
-        await audit.LogAsync(AuditAction.Move, ObjectType.Document, document.Id, document.Name, siteId, cancellationToken);
+        foreach (var (oldKey, _) in storageMoves)
+        {
+            await storage.DeleteAsync(oldKey, cancellationToken);
+        }
+
+        await audit.LogAsync(
+            AuditAction.Move,
+            ObjectType.Document,
+            document.Id,
+            document.Name,
+            destinationSite.Id,
+            cancellationToken);
         return document.Id;
     }
 
@@ -560,7 +627,11 @@ public sealed class DocumentService(
         var sourceVersion = await db.DocumentVersions
             .SingleAsync(version => version.Id == document.CurrentVersionId, cancellationToken);
 
-        await ValidateDestinationAsync(document.LibraryId, destinationLibraryId, destinationFolderId, cancellationToken);
+        var destinationLibrary = await ValidateDestinationAsync(
+            document.LibraryId,
+            destinationLibraryId,
+            destinationFolderId,
+            cancellationToken);
 
         var nameTaken = await db.Documents.IgnoreQueryFilters().AnyAsync(
             item => item.LibraryId == destinationLibraryId
@@ -595,12 +666,14 @@ public sealed class DocumentService(
         };
         newVersion.SetCreator(userId);
 
-        var destinationLibrary = await db.Libraries.IgnoreQueryFilters()
-            .SingleAsync(item => item.Id == destinationLibraryId, cancellationToken);
+        var destinationSite = await db.Sites.IgnoreQueryFilters()
+            .SingleAsync(item => item.Id == destinationLibrary.SiteId, cancellationToken);
+        EnsureQuotaAvailable(destinationSite, sourceVersion.SizeBytes);
         var storageKey = $"{destinationLibrary.SiteId}/{destinationLibraryId}/{copy.Id}/{newVersion.Id}/{document.Name}";
         newVersion.StorageKey = storageKey;
 
         copy.CurrentVersionId = newVersion.Id;
+        destinationSite.StorageUsedBytes = checked(destinationSite.StorageUsedBytes + newVersion.SizeBytes);
         db.Documents.Add(copy);
         db.DocumentVersions.Add(newVersion);
         await db.SaveChangesAsync(cancellationToken);
@@ -669,6 +742,7 @@ public sealed class DocumentService(
 
     private async Task TrimMinorVersionsAsync(
         Guid documentId,
+        Guid siteId,
         int? cap,
         CancellationToken cancellationToken)
     {
@@ -695,6 +769,9 @@ public sealed class DocumentService(
             .Where(version => toRemove.Select(item => item.Id).Contains(version.Id))
             .ToListAsync(cancellationToken);
         db.DocumentVersions.RemoveRange(tracked);
+        var site = await db.Sites.IgnoreQueryFilters()
+            .SingleAsync(item => item.Id == siteId, cancellationToken);
+        site.StorageUsedBytes = Math.Max(0, site.StorageUsedBytes - toRemove.Sum(version => version.SizeBytes));
         await db.SaveChangesAsync(cancellationToken);
 
         foreach (var key in keys)
@@ -703,7 +780,8 @@ public sealed class DocumentService(
         }
     }
 
-    private async Task ValidateDestinationAsync(        Guid sourceLibraryId,
+    private async Task<Library> ValidateDestinationAsync(
+        Guid sourceLibraryId,
         Guid destinationLibraryId,
         Guid? destinationFolderId,
         CancellationToken cancellationToken)
@@ -723,12 +801,8 @@ public sealed class DocumentService(
             }
         }
 
-        var sourceLibrary = await db.Libraries.IgnoreQueryFilters()
-            .SingleAsync(item => item.Id == sourceLibraryId, cancellationToken);
-        if (sourceLibrary.SiteId != destinationLibrary.SiteId)
-        {
-            throw new ConflictException("Documents can only be moved or copied within the same site.");
-        }
+        _ = sourceLibraryId;
+        return destinationLibrary;
     }
 
     public async Task CheckOutAsync(Guid documentId, CancellationToken cancellationToken = default)
@@ -770,6 +844,18 @@ public sealed class DocumentService(
             throw new ForbiddenException();
         }
 
+        var librarySiteId = await db.Libraries.IgnoreQueryFilters()
+            .Where(item => item.Id == document.LibraryId)
+            .Select(item => item.SiteId)
+            .SingleAsync(cancellationToken);
+        var site = await db.Sites.IgnoreQueryFilters()
+            .SingleAsync(item => item.Id == librarySiteId, cancellationToken);
+
+        // The explicit check-in endpoint releases the lock; the checked-out
+        // upload that precedes it is the operation that creates and accounts for
+        // the new version. Still fail closed if the Site is already over quota.
+        EnsureQuotaAvailable(site, 0);
+
         var missingColumns = await MissingRequiredColumnsAsync(document.ContentTypeId, document.Id, cancellationToken);
         if (missingColumns.Count != 0)
         {
@@ -808,5 +894,27 @@ public sealed class DocumentService(
         document.CheckedOutAt = null;
         await db.SaveChangesAsync(cancellationToken);
         await audit.LogAsync(AuditAction.DiscardCheckout, ObjectType.Document, document.Id, document.Name, null, cancellationToken);
+    }
+
+    private static void EnsureQuotaAvailable(Site site, long incomingBytes)
+    {
+        if (site.StorageQuotaBytes is { } quota
+            && StorageQuotaPolicy.WouldExceed(site.StorageUsedBytes, incomingBytes, quota))
+        {
+            throw new QuotaExceededException(
+                site.Name,
+                quota,
+                site.StorageUsedBytes,
+                incomingBytes);
+        }
+    }
+
+    private async Task CopyStorageAsync(
+        string sourceKey,
+        string destinationKey,
+        CancellationToken cancellationToken)
+    {
+        await using var sourceStream = await storage.OpenReadAsync(sourceKey, cancellationToken);
+        await storage.SaveAsync(sourceStream, destinationKey, cancellationToken);
     }
 }

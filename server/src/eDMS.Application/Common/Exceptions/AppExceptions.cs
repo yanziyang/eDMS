@@ -8,6 +8,24 @@ public sealed class ForbiddenException(string? message = "You do not have permis
 
 public sealed class ConflictException(string message) : Exception(message);
 
+public sealed class QuotaExceededException(
+    string siteName,
+    long quotaBytes,
+    long usedBytes,
+    long incomingBytes)
+    : Exception(
+        $"Site '{siteName}' has a storage quota of {quotaBytes:N0} bytes. " +
+        $"This operation would use {(usedBytes > long.MaxValue - incomingBytes ? long.MaxValue : usedBytes + incomingBytes):N0} bytes.")
+{
+    public string SiteName { get; } = siteName;
+
+    public long QuotaBytes { get; } = quotaBytes;
+
+    public long UsedBytes { get; } = usedBytes;
+
+    public long IncomingBytes { get; } = incomingBytes;
+}
+
 public sealed class SsoRequiredException(
     string message = "This account requires SSO authentication.") : Exception(message);
 

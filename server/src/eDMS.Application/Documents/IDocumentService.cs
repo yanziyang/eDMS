@@ -55,8 +55,8 @@ public interface IDocumentService
     Task RestoreVersionAsync(Guid documentId, Guid versionId, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Moves a document to another folder/library within the same Site (FR-DOC-06).
-    /// Returns the document id; the version history travels with the document.
+    /// Moves a document to another folder/library (FR-DOC-06). The version history
+    /// travels with the document; a cross-Site move transfers its stored bytes.
     /// </summary>
     Task<Guid> MoveAsync(
         Guid documentId,
@@ -65,8 +65,8 @@ public interface IDocumentService
         CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Copies the current version of a document to another folder/library within the
-    /// same Site as a new Document at v1.0 with no link to the source (FR-DOC-06).
+    /// Copies the current version of a document to another folder/library as a new
+    /// Document at v1.0 with no link to the source (FR-DOC-06).
     /// Returns the new document id.
     /// </summary>
     Task<Guid> CopyAsync(
