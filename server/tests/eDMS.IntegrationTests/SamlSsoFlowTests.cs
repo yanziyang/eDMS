@@ -4,9 +4,12 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
 using eDMS.Application.Auth;
+using eDMS.Domain;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.WebUtilities;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Configuration;
 using DotNet.Testcontainers.Containers;
 
@@ -167,6 +170,25 @@ public sealed class SamlSsoFlowTests : IAsyncLifetime
             "/api/v1/auth/sso/exchange",
             new { code });
         Assert.Equal(HttpStatusCode.Unauthorized, replay.StatusCode);
+
+        using (var scope = factory.Services.CreateScope())
+        {
+            var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+            var user = await userManager.FindByEmailAsync(SamlTestProvider.DemoEmail);
+            Assert.NotNull(user);
+            user!.IsActive = false;
+            var result = await userManager.UpdateAsync(user);
+            Assert.True(result.Succeeded, string.Join("; ", result.Errors.Select(error => error.Description)));
+        }
+
+        var deactivatedCallback = await apiClient.PostAsync(
+            "/api/v1/auth/sso/saml/acs",
+            new FormUrlEncodedContent(new Dictionary<string, string>
+            {
+                ["SAMLResponse"] = samlResponse!,
+                ["RelayState"] = relayState!,
+            }));
+        Assert.Equal(HttpStatusCode.Unauthorized, deactivatedCallback.StatusCode);
     }
 
     private void SkipOrFailOnCi()
