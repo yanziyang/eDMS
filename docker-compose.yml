@@ -92,6 +92,29 @@ services:
     mem_limit: 512m
     cpus: 0.5
 
+  saml-idp:
+    # Test/demo only. Never use this provider in a production deployment.
+    image: cirrusid/simplesamlphp:v2.5.0
+    entrypoint: ["bash", "/opt/edms-saml/entrypoint.sh"]
+    environment:
+      SSP_ADMIN_PASSWORD: secret1
+      SSP_SECRET_SALT: edms-saml-demo-secret
+      SSP_APACHE_ALIAS: simplesaml/
+      APACHE_CERT_NAME: local-stack-dev
+    volumes:
+      - ./docker/saml-idp:/opt/edms-saml:ro
+      - saml-certs:/shared
+    ports:
+      - "4443:443"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -k -fsS https://127.0.0.1/simplesaml/saml2/idp/metadata.php > /dev/null"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+    mem_limit: 512m
+    cpus: 0.5
+
   api:
     build: ./server
     environment:
@@ -104,6 +127,13 @@ services:
       Oidc__ClientSecret: "edms-demo-secret"
       Oidc__CallbackPath: "/api/v1/auth/sso/oidc/callback"
       Oidc__RequireHttpsMetadata: "false"
+      Saml__IdpEntityId: "urn:edms:test-saml-idp"
+      Saml__IdpSingleSignOnUrl: "https://localhost:4443/simplesaml/saml2/idp/SSOService.php"
+      Saml__IdpSigningCertificate: "/run/saml/server.crt"
+      Saml__EntityId: "urn:edms:saml"
+      Saml__CallbackPath: "/api/v1/auth/sso/saml/acs"
+      Saml__MetadataPath: "/api/v1/auth/sso/saml/metadata"
+      Saml__EmailAttributeName: "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress"
       Client__BaseUrl: "http://localhost:5173"
       Jwt__PrivateKey: ""
       Jwt__PublicKey: ""
@@ -126,6 +156,10 @@ services:
         condition: service_healthy
       mock-oauth2-server:
         condition: service_healthy
+      saml-idp:
+        condition: service_healthy
+    volumes:
+      - saml-certs:/run/saml:ro
 
   web:
     build:
@@ -140,3 +174,4 @@ services:
 
 volumes:
   pgdata:
+  saml-certs:
