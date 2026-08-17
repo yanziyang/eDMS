@@ -96,6 +96,11 @@ The coding agent has basically finished the implementation plan V1.1, refer to t
 
 Next, plan the next phase Implementation Plan and save as 'doc\ImplementationPlan V1.2.md'. Please note that the implementation will be done by other AI Coding Agent such as OpenCode + DeepSeek.
 
+-------------------------------------------------------
+Prompt:
+
+Compare with SharePoint online, what are important features good to have or important for daily use? Update implementation plan version 1.2 accordingly.
+
 =======================================================
 -------------------------------------------------------
 Implementation 
@@ -156,4 +161,6 @@ I will go away for several hours. You just continue yesterday's work and proceed
 Prompt:
 
 Please fix the GitHub error.
+
+--------------------------------------------------------
 

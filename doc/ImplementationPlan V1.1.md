@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Version** | 1.1 |
-| **Status** | Active — update in place as work lands |
+| **Status** | **Superseded by [`ImplementationPlan V1.2.md`](ImplementationPlan%20V1.2.md) as of 2026-08-17.** Kept as a historical snapshot of Phase 1 close-out (M10/M11) and Phase 2 (M12–M19) planning and status — every milestone in this file finished `Done`, verified against actual source, before it was superseded; do not update in place. Phase 3 (federation) is planned in V1.2 — check there for current status, not here. |
 | **Date** | 2026-08-16 |
 | **Audience** | AI coding agents (OpenCode + DeepSeek, Claude Code, or any other tool) implementing eDMS |
 | **Companion documents** | `functional-spec.md` (what/why), `technical-design-spec.md` (how), `AGENTS.md` (repo rules & navigation), [`ImplementationPlan V1.0.md`](ImplementationPlan%20V1.0.md) (archived — Phase 1's original plan, historical reference only) |
