@@ -177,6 +177,50 @@ namespace eDMS.Infrastructure.Migrations.MySql.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
+            modelBuilder.Entity("eDMS.Domain.AlertSubscription", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("char(36)")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetime")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("CreatedBy")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("created_by");
+
+                    b.Property<int>("Frequency")
+                        .HasColumnType("int")
+                        .HasColumnName("frequency");
+
+                    b.Property<Guid>("ObjectId")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("object_id");
+
+                    b.Property<int>("ObjectType")
+                        .HasColumnType("int")
+                        .HasColumnName("object_type");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_alert_subscriptions");
+
+                    b.HasIndex("ObjectId")
+                        .HasDatabaseName("ix_alert_subscriptions_object_id");
+
+                    b.HasIndex("UserId", "ObjectType", "ObjectId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_alert_subscriptions_user_id_object_type_object_id");
+
+                    b.ToTable("alert_subscriptions", (string)null);
+                });
+
             modelBuilder.Entity("eDMS.Domain.AppSetting", b =>
                 {
                     b.Property<string>("Key")
@@ -942,6 +986,80 @@ namespace eDMS.Infrastructure.Migrations.MySql.Migrations
                     b.ToTable("libraries", (string)null);
                 });
 
+            modelBuilder.Entity("eDMS.Domain.Notification", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("char(36)")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetime")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("CreatedBy")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("created_by");
+
+                    b.Property<DateTimeOffset?>("EmailSentAt")
+                        .HasColumnType("datetime")
+                        .HasColumnName("email_sent_at");
+
+                    b.Property<int>("Frequency")
+                        .HasColumnType("int")
+                        .HasColumnName("frequency");
+
+                    b.Property<bool>("IsRead")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_read");
+
+                    b.Property<int>("Kind")
+                        .HasColumnType("int")
+                        .HasColumnName("kind");
+
+                    b.Property<string>("Message")
+                        .IsRequired()
+                        .HasMaxLength(2048)
+                        .HasColumnType("varchar(2048)")
+                        .HasColumnName("message");
+
+                    b.Property<Guid>("ObjectId")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("object_id");
+
+                    b.Property<string>("ObjectName")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("varchar(512)")
+                        .HasColumnName("object_name");
+
+                    b.Property<int>("ObjectType")
+                        .HasColumnType("int")
+                        .HasColumnName("object_type");
+
+                    b.Property<DateTimeOffset?>("ReadAt")
+                        .HasColumnType("datetime")
+                        .HasColumnName("read_at");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_notifications");
+
+                    b.HasIndex("UserId", "CreatedAt")
+                        .HasDatabaseName("ix_notifications_user_id_created_at");
+
+                    b.HasIndex("EmailSentAt", "Frequency", "CreatedAt")
+                        .HasDatabaseName("ix_notifications_email_sent_at_frequency_created_at");
+
+                    b.HasIndex("UserId", "IsRead", "CreatedAt")
+                        .HasDatabaseName("ix_notifications_user_id_is_read_created_at");
+
+                    b.ToTable("notifications", (string)null);
+                });
+
             modelBuilder.Entity("eDMS.Domain.ShareLink", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1300,6 +1418,16 @@ namespace eDMS.Infrastructure.Migrations.MySql.Migrations
                         .HasConstraintName("fk_asp_net_user_tokens_asp_net_users_user_id");
                 });
 
+            modelBuilder.Entity("eDMS.Domain.AlertSubscription", b =>
+                {
+                    b.HasOne("eDMS.Domain.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_alert_subscriptions_asp_net_users_user_id");
+                });
+
             modelBuilder.Entity("eDMS.Domain.AuditLogEntry", b =>
                 {
                     b.HasOne("eDMS.Domain.ApplicationUser", null)
@@ -1445,6 +1573,16 @@ namespace eDMS.Infrastructure.Migrations.MySql.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("fk_libraries_sites_site_id");
+                });
+
+            modelBuilder.Entity("eDMS.Domain.Notification", b =>
+                {
+                    b.HasOne("eDMS.Domain.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_notifications_asp_net_users_user_id");
                 });
 
             modelBuilder.Entity("eDMS.Domain.SitePermission", b =>

@@ -53,6 +53,10 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options)
 
     public DbSet<ShareLink> ShareLinks => Set<ShareLink>();
 
+    public DbSet<AlertSubscription> AlertSubscriptions => Set<AlertSubscription>();
+
+    public DbSet<Notification> Notifications => Set<Notification>();
+
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
         // The SQLite provider has no DateTimeOffset support; store as UTC binary.
@@ -150,6 +154,48 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options)
             entity.Property(link => link.Token).IsRequired().HasMaxLength(64);
             entity.HasIndex(link => link.Token).IsUnique();
             entity.HasIndex(link => new { link.ObjectType, link.ObjectId });
+        });
+
+        builder.Entity<AlertSubscription>(entity =>
+        {
+            entity.ToTable("alert_subscriptions");
+            entity.HasKey(subscription => subscription.Id);
+            entity.HasIndex(subscription => new
+            {
+                subscription.UserId,
+                subscription.ObjectType,
+                subscription.ObjectId,
+            }).IsUnique();
+            entity.HasIndex(subscription => subscription.ObjectId);
+            entity.HasOne<ApplicationUser>()
+                .WithMany()
+                .HasForeignKey(subscription => subscription.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<Notification>(entity =>
+        {
+            entity.ToTable("notifications");
+            entity.HasKey(notification => notification.Id);
+            entity.Property(notification => notification.ObjectName).IsRequired().HasMaxLength(512);
+            entity.Property(notification => notification.Message).IsRequired().HasMaxLength(2048);
+            entity.HasIndex(notification => new { notification.UserId, notification.CreatedAt });
+            entity.HasIndex(notification => new
+            {
+                notification.UserId,
+                notification.IsRead,
+                notification.CreatedAt,
+            });
+            entity.HasIndex(notification => new
+            {
+                notification.EmailSentAt,
+                notification.Frequency,
+                notification.CreatedAt,
+            });
+            entity.HasOne<ApplicationUser>()
+                .WithMany()
+                .HasForeignKey(notification => notification.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
         ApplyProviderSpecificColumnTypes(builder);

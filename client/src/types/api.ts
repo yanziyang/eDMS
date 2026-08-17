@@ -224,6 +224,29 @@ export interface DocumentMetadataColumnDto {
   value: string | null;
 }
 
+export type AlertFrequency = "Immediate" | "Daily" | "Weekly";
+
+export interface AlertSubscriptionDto {
+  id: string;
+  objectType: "Document" | "Folder";
+  objectId: string;
+  objectName: string;
+  frequency: AlertFrequency;
+  createdAt: string;
+}
+
+export interface NotificationDto {
+  id: string;
+  kind: "SharedWithMe" | "FollowedItemChanged";
+  objectType: "Document" | "Folder";
+  objectId: string;
+  objectName: string;
+  message: string;
+  frequency: AlertFrequency;
+  occurredAt: string;
+  isRead: boolean;
+}
+
 export interface MetadataValueInput {
   columnDefinitionId: string;
   value: string | null;

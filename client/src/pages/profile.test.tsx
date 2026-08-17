@@ -8,6 +8,9 @@ import { Profile } from "./profile";
 const base = "http://localhost:5080/api/v1";
 
 function renderProfile() {
+  server.use(
+    http.get(`${base}/me/notifications/subscriptions`, () => HttpResponse.json([])),
+  );
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });

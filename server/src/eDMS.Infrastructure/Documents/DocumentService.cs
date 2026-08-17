@@ -4,6 +4,7 @@ using eDMS.Application.Admin;
 using eDMS.Application.Common.Exceptions;
 using eDMS.Application.Common.Interfaces;
 using eDMS.Application.Documents;
+using eDMS.Application.Notifications;
 using eDMS.Domain;
 using Microsoft.EntityFrameworkCore;
 
@@ -15,7 +16,8 @@ public sealed class DocumentService(
     ICurrentUser currentUser,
     IPermissionResolver permissions,
     IAuditLogger audit,
-    IAppSettings appSettings) : IDocumentService
+    IAppSettings appSettings,
+    INotificationService? notifications = null) : IDocumentService
 {
     private static readonly string[] BlockedExtensions = [".exe", ".bat", ".cmd", ".sh", ".ps1", ".msi", ".dll"];
 
@@ -276,6 +278,15 @@ public sealed class DocumentService(
 
             await audit.LogAsync(AuditAction.Upload, ObjectType.Document, document.Id, document.Name, library.SiteId, cancellationToken);
 
+            if (notifications is not null)
+            {
+                await notifications.PublishFollowedChangeAsync(
+                    ObjectType.Document,
+                    document.Id,
+                    "received a new version",
+                    cancellationToken);
+            }
+
             return new UploadResult(
                 document.Id,
                 document.Name,
@@ -367,6 +378,14 @@ public sealed class DocumentService(
         document.MarkDeleted(userId, DateTimeOffset.UtcNow);
         await db.SaveChangesAsync(cancellationToken);
         await audit.LogAsync(AuditAction.Delete, ObjectType.Document, document.Id, document.Name, null, cancellationToken);
+        if (notifications is not null)
+        {
+            await notifications.PublishFollowedChangeAsync(
+                ObjectType.Document,
+                document.Id,
+                "was deleted",
+                cancellationToken);
+        }
     }
 
     public async Task RenameAsync(Guid documentId, string newName, CancellationToken cancellationToken = default)
@@ -382,6 +401,14 @@ public sealed class DocumentService(
         document.ModifiedBy = userId;
         document.ModifiedAt = DateTimeOffset.UtcNow;
         await db.SaveChangesAsync(cancellationToken);
+        if (notifications is not null)
+        {
+            await notifications.PublishFollowedChangeAsync(
+                ObjectType.Document,
+                document.Id,
+                "was renamed",
+                cancellationToken);
+        }
         await audit.LogAsync(AuditAction.EditMetadata, ObjectType.Document, document.Id, document.Name, null, cancellationToken);
         await audit.LogAsync(AuditAction.Rename, ObjectType.Document, document.Id, document.Name, null, cancellationToken);
     }
@@ -477,6 +504,14 @@ public sealed class DocumentService(
         document.ModifiedBy = userId;
         document.ModifiedAt = DateTimeOffset.UtcNow;
         await db.SaveChangesAsync(cancellationToken);
+        if (notifications is not null)
+        {
+            await notifications.PublishFollowedChangeAsync(
+                ObjectType.Document,
+                document.Id,
+                "received a restored version",
+                cancellationToken);
+        }
     }
 
     public async Task<Guid> MoveAsync(

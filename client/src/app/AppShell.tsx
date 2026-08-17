@@ -1,11 +1,28 @@
 import { LogOut, Menu, Moon, Recycle, Search, Settings, Sun } from "lucide-react";
+import { Bell } from "lucide-react";
 import { useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTheme } from "next-themes";
 import { Navigate, NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useAuth } from "@/features/auth/auth-context";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
+import {
+  listNotifications,
+  markAllNotificationsRead,
+  markNotificationRead,
+} from "@/features/notifications/api";
+import { queryKeys } from "@/lib/queryKeys";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Badge } from "@/components/ui/badge";
 
 export function AppShell() {
   const { user, status, logout } = useAuth();
@@ -94,6 +111,7 @@ export function AppShell() {
             <span className="hidden max-w-[220px] truncate text-xs text-muted-foreground sm:inline">
               {user.email}
             </span>
+            <NotificationBell />
             <Button
               variant="ghost"
               size="icon"
@@ -114,6 +132,96 @@ export function AppShell() {
       </div>
     </div>
   );
+}
+
+function NotificationBell() {
+  const queryClient = useQueryClient();
+  const notifications = useQuery({
+    queryKey: queryKeys.notifications.list(),
+    queryFn: () => listNotifications(),
+  });
+  const markRead = useMutation({
+    mutationFn: markNotificationRead,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.notifications.all });
+    },
+  });
+  const markAllRead = useMutation({
+    mutationFn: markAllNotificationsRead,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.notifications.all });
+    },
+  });
+
+  const entries = notifications.data ?? [];
+  const unreadCount = entries.filter((entry) => !entry.isRead).length;
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          variant="ghost"
+          size="sm"
+          aria-label={`Notifications${unreadCount > 0 ? ` (${unreadCount} unread)` : ""}`}
+        >
+          <Bell data-icon="inline-start" />
+          {unreadCount > 0 && (
+            <Badge variant="destructive" className="min-w-5 px-1">
+              {unreadCount > 99 ? "99+" : unreadCount}
+            </Badge>
+          )}
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-96 max-w-[calc(100vw-2rem)]">
+        <div className="flex items-center justify-between px-1.5">
+          <DropdownMenuLabel className="px-0">Notifications</DropdownMenuLabel>
+          {unreadCount > 0 && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 px-2 text-xs"
+              onClick={() => markAllRead.mutate()}
+              disabled={markAllRead.isPending}
+            >
+              Mark all read
+            </Button>
+          )}
+        </div>
+        <DropdownMenuSeparator />
+        {notifications.isLoading && (
+          <div className="px-1.5 py-3 text-sm text-muted-foreground">Loading…</div>
+        )}
+        {notifications.isError && (
+          <div className="px-1.5 py-3 text-sm text-destructive">Unable to load notifications.</div>
+        )}
+        {!notifications.isLoading && !notifications.isError && entries.length === 0 && (
+          <div className="px-1.5 py-3 text-sm text-muted-foreground">You’re all caught up.</div>
+        )}
+        {entries.slice(0, 8).map((entry) => (
+          <DropdownMenuItem
+            key={entry.id}
+            className={cn("items-start whitespace-normal", !entry.isRead && "bg-accent/50")}
+            onSelect={() => {
+              if (!entry.isRead) {
+                markRead.mutate(entry.id);
+              }
+            }}
+          >
+            <div className="flex min-w-0 flex-col gap-1">
+              <span className="font-medium">{entry.message}</span>
+              <span className="text-xs text-muted-foreground">
+                {entry.objectName} · {formatNotificationTime(entry.occurredAt)}
+              </span>
+            </div>
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+function formatNotificationTime(value: string): string {
+  return new Date(value).toLocaleString();
 }
 
 function navClass({ isActive }: { isActive: boolean }) {

@@ -109,7 +109,7 @@ M12–M18 have no dependency on each other beyond M10 and may be worked in any o
 | [M12](#m12--content-types--custom-metadata-columns) | Content Types & typed columns | Admin defines a Content Type with a required column on a Library; upload/check-in in that Library blocks completion until it's filled | Not Started |
 | [M13](#m13--office-preview) | In-browser Office preview | Opening a .docx/.xlsx/.pptx shows a PDF-converted preview, no download required | Done |
 | [M14](#m14--chunked-upload--minor-version-retention) | Large-file resilience + version hygiene | A >100MB upload resumes after a network interruption; a Library with a minor-version cap auto-trims old minors on check-in | Done |
-| [M15](#m15--notifications--alerts) | Notifications/alerts ("Follow") | Sharing a document emails + in-app-notifies the recipient; following a folder delivers a digest at the configured frequency | Not Started |
+| [M15](#m15--notifications--alerts) | Notifications/alerts ("Follow") | Sharing a document emails + in-app-notifies the recipient; following a folder delivers a digest at the configured frequency | Done |
 | [M16](#m16--org-wide-share-links) | Non-anonymous org-wide links | A generated link opens for any authenticated internal user without an individual ACL entry; revoking it blocks further access | Done |
 | [M17](#m17--full-text-content-indexing) | Search inside PDF/Office content | A phrase that only appears in a PDF's body text (not name/title/description) is found by search | Not Started |
 | [M18](#m18--dark-theme) | Light/dark theme | Toggling dark mode re-themes the whole app and the choice persists across reloads | Done |
@@ -196,12 +196,12 @@ FS §8.2 sketches `AlertSubscription` (the "Follow" record) but not a delivered-
 
 | Status | ID | Track | Task | Depends on | Size | Refs |
 |---|---|---|---|---|---|---|
-| Not Started | M15.1 | BE | `AlertSubscription` entity/migration per FS §8.2 + Follow/Unfollow endpoints (Folder/Document). | M10 (all) | M | FR-NOTIF-02 |
-| Not Started | M15.2 | BE | A persisted notification/inbox entity (not in FS §8.2 — design it) generated when a followed item changes or an item is shared with a user. Record the schema and the fan-out approach (on-write vs. on-read) as **ADR-12** in TDS §2.4. | M15.1, M5.3 (done) | M | FR-NOTIF-04 |
-| Not Started | M15.3 | BE | Email notification on share (FR-NOTIF-01) — extend the existing `IEmailSender` usage from V1.0's M5.3, don't build a second email path. | M5.3 (done) | S | FR-NOTIF-01 |
-| Not Started | M15.4 | BE | Digest scheduling background service (Immediate/Daily/Weekly per subscription), mirroring `RecycleBinPurgeService`'s existing background-job pattern. | M15.2 | M | FR-NOTIF-03, TDS §5.8 |
-| Not Started | M15.5 | FE | Notification bell in the AppShell topbar + notification list. | M15.2, M10.5 | M | FR-NOTIF-04 |
-| Not Started | M15.6 | FE | Follow/unfollow control in the Document Details Sheet + a Preferences section (on `profile.tsx` or a new page) to manage/unsubscribe from alerts. | M15.1, M10.6 | M | FR-NOTIF-05 |
+| Done | M15.1 | BE | `AlertSubscription` entity/migration per FS §8.2 + Follow/Unfollow endpoints (Folder/Document). | M10 (all) | M | FR-NOTIF-02 |
+| Done | M15.2 | BE | A persisted notification/inbox entity (not in FS §8.2 — design it) generated when a followed item changes or an item is shared with a user. Record the schema and the fan-out approach (on-write vs. on-read) as **ADR-12** in TDS §2.4. | M15.1, M5.3 (done) | M | FR-NOTIF-04 |
+| Done | M15.3 | BE | Email notification on share (FR-NOTIF-01) — extend the existing `IEmailSender` usage from V1.0's M5.3, don't build a second email path. | M5.3 (done) | S | FR-NOTIF-01 |
+| Done | M15.4 | BE | Digest scheduling background service (Immediate/Daily/Weekly per subscription), mirroring `RecycleBinPurgeService`'s existing background-job pattern. | M15.2 | M | FR-NOTIF-03, TDS §5.8 |
+| Done | M15.5 | FE | Notification bell in the AppShell topbar + notification list. | M15.2, M10.5 | M | FR-NOTIF-04 |
+| Done | M15.6 | FE | Follow/unfollow control in the Document Details Sheet + a Preferences section (on `profile.tsx` or a new page) to manage/unsubscribe from alerts. | M15.1, M10.6 | M | FR-NOTIF-05 |
 
 ### M16 — Org-wide Share Links
 

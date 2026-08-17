@@ -185,6 +185,50 @@ namespace eDMS.Infrastructure.Migrations.Postgres
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
+            modelBuilder.Entity("eDMS.Domain.AlertSubscription", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("CreatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by");
+
+                    b.Property<int>("Frequency")
+                        .HasColumnType("integer")
+                        .HasColumnName("frequency");
+
+                    b.Property<Guid>("ObjectId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("object_id");
+
+                    b.Property<int>("ObjectType")
+                        .HasColumnType("integer")
+                        .HasColumnName("object_type");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_alert_subscriptions");
+
+                    b.HasIndex("ObjectId")
+                        .HasDatabaseName("ix_alert_subscriptions_object_id");
+
+                    b.HasIndex("UserId", "ObjectType", "ObjectId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_alert_subscriptions_user_id_object_type_object_id");
+
+                    b.ToTable("alert_subscriptions", (string)null);
+                });
+
             modelBuilder.Entity("eDMS.Domain.AppSetting", b =>
                 {
                     b.Property<string>("Key")
@@ -950,6 +994,80 @@ namespace eDMS.Infrastructure.Migrations.Postgres
                     b.ToTable("libraries", (string)null);
                 });
 
+            modelBuilder.Entity("eDMS.Domain.Notification", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("CreatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by");
+
+                    b.Property<DateTimeOffset?>("EmailSentAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("email_sent_at");
+
+                    b.Property<int>("Frequency")
+                        .HasColumnType("integer")
+                        .HasColumnName("frequency");
+
+                    b.Property<bool>("IsRead")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_read");
+
+                    b.Property<int>("Kind")
+                        .HasColumnType("integer")
+                        .HasColumnName("kind");
+
+                    b.Property<string>("Message")
+                        .IsRequired()
+                        .HasMaxLength(2048)
+                        .HasColumnType("character varying(2048)")
+                        .HasColumnName("message");
+
+                    b.Property<Guid>("ObjectId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("object_id");
+
+                    b.Property<string>("ObjectName")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)")
+                        .HasColumnName("object_name");
+
+                    b.Property<int>("ObjectType")
+                        .HasColumnType("integer")
+                        .HasColumnName("object_type");
+
+                    b.Property<DateTimeOffset?>("ReadAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("read_at");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_notifications");
+
+                    b.HasIndex("UserId", "CreatedAt")
+                        .HasDatabaseName("ix_notifications_user_id_created_at");
+
+                    b.HasIndex("EmailSentAt", "Frequency", "CreatedAt")
+                        .HasDatabaseName("ix_notifications_email_sent_at_frequency_created_at");
+
+                    b.HasIndex("UserId", "IsRead", "CreatedAt")
+                        .HasDatabaseName("ix_notifications_user_id_is_read_created_at");
+
+                    b.ToTable("notifications", (string)null);
+                });
+
             modelBuilder.Entity("eDMS.Domain.ShareLink", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1308,6 +1426,16 @@ namespace eDMS.Infrastructure.Migrations.Postgres
                         .HasConstraintName("fk_asp_net_user_tokens_asp_net_users_user_id");
                 });
 
+            modelBuilder.Entity("eDMS.Domain.AlertSubscription", b =>
+                {
+                    b.HasOne("eDMS.Domain.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_alert_subscriptions_asp_net_users_user_id");
+                });
+
             modelBuilder.Entity("eDMS.Domain.AuditLogEntry", b =>
                 {
                     b.HasOne("eDMS.Domain.ApplicationUser", null)
@@ -1453,6 +1581,16 @@ namespace eDMS.Infrastructure.Migrations.Postgres
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("fk_libraries_sites_site_id");
+                });
+
+            modelBuilder.Entity("eDMS.Domain.Notification", b =>
+                {
+                    b.HasOne("eDMS.Domain.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_notifications_asp_net_users_user_id");
                 });
 
             modelBuilder.Entity("eDMS.Domain.SitePermission", b =>

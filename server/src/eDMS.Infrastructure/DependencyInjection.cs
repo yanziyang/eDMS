@@ -24,6 +24,8 @@ using eDMS.Infrastructure.Uploads;
 using eDMS.Application.Search;
 using eDMS.Application.Sharing;
 using eDMS.Application.Uploads;
+using eDMS.Infrastructure.Notifications;
+using eDMS.Application.Notifications;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Configuration;
@@ -101,10 +103,12 @@ public static class DependencyInjection
         services.AddScoped<IAdminService, AdminService>();
         services.AddScoped<IChunkedUploadService, ChunkedUploadService>();
         services.AddScoped<IShareLinkService, ShareLinkService>();
+        services.AddScoped<INotificationService, NotificationService>();
         services.AddSingleton<IFileStorageProvider, LocalDiskFileStorageProvider>();
         services.AddMemoryCache();
         services.AddHostedService<OrphanedUploadSweepService>();
         services.AddHostedService<RecycleBinPurgeService>();
+        services.AddHostedService<NotificationDigestService>();
 
         return services;
     }

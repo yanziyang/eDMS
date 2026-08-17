@@ -1,6 +1,7 @@
 using eDMS.Application.Common.Exceptions;
 using eDMS.Application.Common.Interfaces;
 using eDMS.Application.Permissions;
+using eDMS.Application.Notifications;
 using eDMS.Domain;
 using Microsoft.EntityFrameworkCore;
 
@@ -12,7 +13,8 @@ public sealed class PermissionService(
     IPermissionResolver permissions,
     IPermissionCacheInvalidator cacheInvalidator,
     IEmailSender emailSender,
-    IAuditLogger audit) : IPermissionService
+    IAuditLogger audit,
+    INotificationService? notifications = null) : IPermissionService
 {
     public async Task<GetPermissionsResponse> GetPermissionsAsync(
         ObjectType objectType,
@@ -96,6 +98,14 @@ public sealed class PermissionService(
         await db.SaveChangesAsync(cancellationToken);
         cacheInvalidator.Invalidate();
         await audit.LogAsync(AuditAction.PermissionChange, objectType, objectId, objectType.ToString(), null, cancellationToken);
+        if (notifications is not null)
+        {
+            await notifications.PublishFollowedChangeAsync(
+                objectType,
+                objectId,
+                "had a permission change",
+                cancellationToken);
+        }
     }
 
     public async Task RevokeAsync(
@@ -117,6 +127,14 @@ public sealed class PermissionService(
             db.ItemPermissions.Remove(existing);
             await db.SaveChangesAsync(cancellationToken);
             cacheInvalidator.Invalidate();
+            if (notifications is not null)
+            {
+                await notifications.PublishFollowedChangeAsync(
+                    objectType,
+                    objectId,
+                    "had a permission change",
+                    cancellationToken);
+            }
         }
     }
 
@@ -134,6 +152,14 @@ public sealed class PermissionService(
         db.ItemPermissions.RemoveRange(entries);
         await db.SaveChangesAsync(cancellationToken);
         cacheInvalidator.Invalidate();
+        if (notifications is not null)
+        {
+            await notifications.PublishFollowedChangeAsync(
+                objectType,
+                objectId,
+                "had its inheritance reset",
+                cancellationToken);
+        }
     }
 
     public async Task ShareAsync(
@@ -150,12 +176,22 @@ public sealed class PermissionService(
 
         var user = await db.Users.AsNoTracking()
             .SingleOrDefaultAsync(item => item.Id == principalId, cancellationToken);
-        if (user?.Email is not null)
+        if (notifications is null && user?.Email is not null)
         {
             await emailSender.SendAsync(
                 user.Email,
                 "An item was shared with you",
                 "<p>An item was shared with you in eDMS.</p>",
+                cancellationToken);
+        }
+
+        if (notifications is not null)
+        {
+            await notifications.PublishSharedAsync(
+                principalId,
+                objectType,
+                objectId,
+                objectType.ToString(),
                 cancellationToken);
         }
 

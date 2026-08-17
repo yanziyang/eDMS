@@ -1,5 +1,6 @@
 using eDMS.Application.Common.Exceptions;
 using eDMS.Application.Common.Interfaces;
+using eDMS.Application.Notifications;
 using eDMS.Domain;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -9,7 +10,8 @@ namespace eDMS.Application.Folders.Commands.DeleteFolder;
 public sealed class DeleteFolderHandler(
     IAppDbContext db,
     ICurrentUser currentUser,
-    IPermissionResolver permissions) : IRequestHandler<DeleteFolderCommand>
+    IPermissionResolver permissions,
+    INotificationService notifications) : IRequestHandler<DeleteFolderCommand>
 {
     public async Task Handle(DeleteFolderCommand command, CancellationToken cancellationToken)
     {
@@ -40,5 +42,10 @@ public sealed class DeleteFolderHandler(
         }
 
         await db.SaveChangesAsync(cancellationToken);
+        await notifications.PublishFollowedChangeAsync(
+            ObjectType.Folder,
+            folder.Id,
+            "was deleted",
+            cancellationToken);
     }
 }

@@ -1,5 +1,6 @@
 using eDMS.Application.Common.Exceptions;
 using eDMS.Application.Common.Interfaces;
+using eDMS.Application.Notifications;
 using eDMS.Domain;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -9,7 +10,8 @@ namespace eDMS.Application.Folders.Commands.RenameFolder;
 public sealed class RenameFolderHandler(
     IAppDbContext db,
     ICurrentUser currentUser,
-    IPermissionResolver permissions) : IRequestHandler<RenameFolderCommand>
+    IPermissionResolver permissions,
+    INotificationService notifications) : IRequestHandler<RenameFolderCommand>
 {
     public async Task Handle(RenameFolderCommand command, CancellationToken cancellationToken)
     {
@@ -37,5 +39,10 @@ public sealed class RenameFolderHandler(
         }
 
         await db.SaveChangesAsync(cancellationToken);
+        await notifications.PublishFollowedChangeAsync(
+            ObjectType.Folder,
+            folder.Id,
+            "was renamed",
+            cancellationToken);
     }
 }

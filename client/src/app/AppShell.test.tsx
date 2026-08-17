@@ -1,10 +1,13 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { http, HttpResponse } from "msw";
 import { ThemeProvider } from "next-themes";
 import { describe, expect, it, vi } from "vitest";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { AppShell } from "./AppShell";
 import { useAuth } from "@/features/auth/auth-context";
+import { server } from "@/test/server";
 
 vi.mock("@/features/auth/auth-context", () => ({
   useAuth: vi.fn(),
@@ -23,17 +26,25 @@ function adminUser(overrides: Partial<{ isSystemAdmin: boolean }> = {}) {
 }
 
 function renderShell(initialPath = "/") {
+  server.use(
+    http.get("http://localhost:5080/api/v1/me/notifications", () => HttpResponse.json([])),
+  );
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
   return render(
     <ThemeProvider attribute="class">
-      <MemoryRouter initialEntries={[initialPath]}>
-        <Routes>
-          <Route element={<AppShell />}>
-            <Route path="/" element={<div>HOME_CONTENT</div>} />
-            <Route path="/admin" element={<div>ADMIN_CONTENT</div>} />
-          </Route>
-          <Route path="/login" element={<div>LOGIN_PAGE</div>} />
-        </Routes>
-      </MemoryRouter>
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter initialEntries={[initialPath]}>
+          <Routes>
+            <Route element={<AppShell />}>
+              <Route path="/" element={<div>HOME_CONTENT</div>} />
+              <Route path="/admin" element={<div>ADMIN_CONTENT</div>} />
+            </Route>
+            <Route path="/login" element={<div>LOGIN_PAGE</div>} />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>
     </ThemeProvider>,
   );
 }

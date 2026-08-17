@@ -28,6 +28,7 @@ public sealed class EmailSender(
             using var client = new SmtpClient(settings.Host, settings.Port)
             {
                 EnableSsl = settings.EnableSsl,
+                Timeout = 5_000,
             };
 
             if (!string.IsNullOrWhiteSpace(settings.Username))

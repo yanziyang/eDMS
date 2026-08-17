@@ -64,4 +64,9 @@ export const queryKeys = {
     all: ["me"] as const,
     current: () => [...queryKeys.me.all, "current"] as const,
   },
+  notifications: {
+    all: ["notifications"] as const,
+    list: (unreadOnly = false) => [...queryKeys.notifications.all, "list", unreadOnly] as const,
+    subscriptions: () => [...queryKeys.notifications.all, "subscriptions"] as const,
+  },
 } as const;
