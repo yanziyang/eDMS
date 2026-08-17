@@ -1,4 +1,4 @@
-# eDMS — Implementation Plan (Phase 3: Federation)
+# eDMS — Implementation Plan (Phase 3: Federation & Phase 4: Daily-Use Enhancements)
 
 | | |
 |---|---|
@@ -6,50 +6,47 @@
 | **Status** | Active — update in place as work lands |
 | **Date** | 2026-08-17 |
 | **Audience** | AI coding agents (OpenCode + DeepSeek, Claude Code, or any other tool) implementing eDMS |
-| **Companion documents** | `functional-spec.md` (what/why), `technical-design-spec.md` (how), `AGENTS.md` (repo rules & navigation), [`ImplementationPlan V1.1.md`](ImplementationPlan%20V1.1.md) (superseded — Phase 2's plan, historical reference only), [`ImplementationPlan V1.0.md`](ImplementationPlan%20V1.0.md) (archived — Phase 1's original plan, historical reference only) |
+| **Companion documents** | `functional-spec.md` v1.1 (what/why — bumped 2026-08-17 for Phase 4, see FS §18), `technical-design-spec.md` (how), `AGENTS.md` (repo rules & navigation), [`ImplementationPlan V1.1.md`](ImplementationPlan%20V1.1.md) (superseded — Phase 2's plan, historical reference only), [`ImplementationPlan V1.0.md`](ImplementationPlan%20V1.0.md) (archived — Phase 1's original plan, historical reference only) |
 
 ## 1. Purpose & Relationship to Other Docs
 
-V1.1 closed out Phase 1's remaining gaps (M10–M11) and then implemented Phase 2 in full (M12–M19). As of this writing, **every milestone in V1.1 is marked `Done`**, and that status was spot-checked against actual source — `ApplicationUser`, `AuthController`, the admin settings surface, `docker-compose.yml`, and the ADR table in TDS §2.4 were all read directly, not assumed from the file's own claims (§3 below records what was found).
+V1.1 closed out Phase 1's remaining gaps (M10–M11) and then implemented Phase 2 in full (M12–M19). Every milestone in V1.1 is marked `Done`, spot-checked against actual source rather than assumed (§3 records what was found).
 
-This document plans **Phase 3** (FS §15's third and — as the functional spec currently stands — final phase): federated authentication.
+This document now plans **two independent phases**:
 
-```
-FR-AUTH-09  SAML2 federated login, JIT-provisioned
-FR-AUTH-10  OIDC federated login, JIT-provisioned
-FR-AUTH-11  SSO-enforcement admin controls (per-user or global)
-```
+- **Phase 3 — Federation** (M20–M23): FR-AUTH-09/10/11, SAML2/OIDC/SSO-enforcement. This was the whole of this document when it was first written on 2026-08-17, and its content (§7) is unchanged from that version.
+- **Phase 4 — SharePoint-parity daily-use enhancements** (M24–M30): added the same day, after a follow-up request to compare eDMS against SharePoint Online's document-library feature set and fold in what's genuinely valuable for everyday use. §4 is the full comparison and scope reasoning; §8 is the resulting milestone detail.
 
-That is the **entire** Phase 3 scope per FS §15 — three requirements, versus Phase 2's fifteen (FR-DOC-10/11/12, FR-VER-09, FR-META-03/04, FR-PERM-07, FR-NOTIF-01–05, FR-AUDIT-05, FR-ADMIN-06, FR-UI-08) across eight milestones (M12–M19). Don't let the small requirement count suggest a small plan, though: federated auth is unusually decision-dense per requirement (protocol nuances, a new library dependency with its own compatibility risk, a browser-redirect flow that must not leak a token, an enforcement model FS deliberately leaves for the implementer to design) and it is the **highest-blast-radius surface in the system** — every task below touches the login path, and a mistake here doesn't just break a feature, it can lock out every user or open an authentication bypass. This plan is sized and guarded accordingly: four milestones, nineteen tasks, five new ADRs (V1.1 needed six ADRs total — ADR-8 through ADR-13 — across its ten milestones, M10 through M19; Phase 3 needs five, ADR-14 through ADR-18, across four. Roughly double the ADR-per-milestone density, which is the expected shape for a protocol-integration phase rather than a feature-breadth phase).
+**These two phases don't depend on each other.** Nothing in Phase 4 touches authentication, and nothing in Phase 3 touches the document/library surfaces Phase 4 extends — both branch directly from "Phase 1+2 done" (§6's dependency graph shows this). Work them in either order, or in parallel across two sessions. If your organization doesn't need SSO yet, there's no reason to wait on Phase 3 before picking up Phase 4's more immediately visible wins, or vice versa.
 
-FS §15 names two things beyond FR-AUTH-09/10/11 in its Phase 3 line — "candidates beyond this spec's scope: retention policies, legal hold, workflow/approval." Read that parenthetical literally: those are **not** Phase 3 scope, they're a note that such requests might come up later and would need their own spec change first (`AGENTS.md` §10, §11 rule 3). Nothing in this plan touches them.
+**Why Phase 4 exists at all, and why it isn't scope creep:** `AGENTS.md` rule 9 says don't build ahead of the roadmap, and FS §2.2 lists real non-goals. Both still hold. Phase 4 isn't an exception to either — every FR it adds first passed through two filters (§4.1): not already covered by Phase 1–3, and not already excluded by FS §2.2. Features that failed the second filter are named and explained in §4.3, not quietly dropped and not quietly added either. FS itself was updated first (v1.1, 2026-08-17) with the new FR IDs before this plan was written against them — the plan follows the spec, same as every phase before it; it doesn't invent scope FS doesn't already contain.
 
-**This document is self-contained.** You should not need to open V1.0 or V1.1 to work from this plan — §3 below carries forward everything from them that's still relevant to Phase 3 work. Open the earlier plans only if you want Phase 1/2's task-by-task history.
+**This document is self-contained.** You shouldn't need to open V1.0 or V1.1 to work from either phase here — §3 carries forward what's still relevant from them. Open the earlier plans only for Phase 1/2's task-by-task history.
 
-**The archive-and-repoint already happened.** Mirroring exactly how V1.0 was marked superseded the moment V1.1 was created (compare `ImplementationPlan V1.0.md`'s header — dated the same day as V1.1, not the day Phase 1's leftover work actually finished), `ImplementationPlan V1.1.md`'s header was updated to "Superseded by V1.2" and `AGENTS.md`/`README.md` were repointed to this file as part of *creating* this document, not deferred to Phase 3's sign-off. So don't be confused that the pointers already lead here while every task below still reads `Not Started` — that's expected, it's the same sequencing V1.0→V1.1 used. What M23.7 later updates is the *prose* in those files (flipping "federation planned" language to "federation done"), not the pointer itself.
+**The archive-and-repoint already happened.** Mirroring exactly how V1.0 was marked superseded the moment V1.1 was created (compare `ImplementationPlan V1.0.md`'s header — dated the same day as V1.1, not the day Phase 1's leftover work actually finished), `ImplementationPlan V1.1.md`'s header was updated to "Superseded by V1.2" and `AGENTS.md`/`README.md` were repointed to this file when this document was first created, not deferred to Phase 3's sign-off. Don't be confused that the pointers already lead here while most tasks below still read `Not Started` — that's expected. M23.7 and M30.6 later update those files' *prose* (not their pointers) as each phase actually finishes.
 
 ## 2. How to Use This Plan
 
 Unchanged from V1.0/V1.1 — the conventions worked for two phases, keep using them:
 
-- **Start here every session.** Find the first task whose `Status` is not `Done` and whose `Depends on` tasks are all `Done`. That is your next task.
+- **Start here every session.** Find the first task whose `Status` is not `Done` and whose `Depends on` tasks are all `Done`. That is your next task. With two independent phases now in this file, that may be a Phase 3 task or a Phase 4 task depending on what's already landed — check both §7 and §8.
 - **Update the Status column in the same commit that completes the task.** Valid values: `Not Started` (default), `In Progress`, `Done`, `Blocked` (+ a one-line reason in the Task cell).
 - **Don't start a task whose dependencies aren't `Done`.**
 - **If this file's Status looks stale, trust the repository over the file** — fix the file, then proceed.
 - **One task, one commit (or a small tight series), referencing the task ID** — e.g. `feat: OIDC JIT provisioning + handoff-code exchange (M20.1)`.
 - **A milestone is "done" only when every task in it is `Done` *and* its Demo-able outcome is actually true.**
 - Every task links back to `FR-*` IDs and/or `TDS §*` sections — read those before implementing, per `AGENTS.md` §2.
-- **New for this phase — read the ADR before writing the corresponding code.** Five tasks below (M20.1, M20.2, M20.3, M21.1, M22.1) each require recording a new ADR (ADR-14–18) *before* the implementation it governs, not after. These aren't paperwork — each one resolves a real ambiguity that FS/TDS leave open, and getting it wrong is expensive to unwind in an auth subsystem (§4 principle 9 explains why).
+- **Read the ADR before writing the corresponding code.** Six tasks across both phases (M20.1, M20.2, M20.3, M21.1, M22.1, M27.1) each require recording a new ADR (ADR-14–19) *before* the implementation it governs, not after — each resolves a real ambiguity FS/TDS leave open.
 
 ## 3. Current State Snapshot (as of 2026-08-17)
 
-Verified directly against `server/` and `client/` source, the same discipline V1.1 §3 used — not inferred from README/AGENTS.md's own claims alone.
+Verified directly against `server/` and `client/` source, the same discipline V1.1 §3 used — not inferred from README/AGENTS.md's own claims alone. This section covers Phase 3's federation-specific starting point; Phase 4's comparison-specific verification (what's already built vs. genuinely missing) lives in §4 instead, since it's tightly coupled to that analysis.
 
 ### 3.1 Phase 1 + Phase 2 — confirmed done
 
-`README.md` and `AGENTS.md` both state Phase 2 (M0–M19) is complete. Spot-checks confirm it: `AuthController.cs`, `AdminController.cs`/`IAdminService.cs`, `AdminUsersController.cs`/`IUserManagementService.cs`, `docker-compose.yml` (6 services: postgres, mailhog, office-converter, text-extractor, api, web), and TDS §2.4's ADR table (ends at **ADR-13**) all match what V1.1 §10's history row claims was built. No open Phase 1/2 items were found. This plan's new ADRs are therefore **ADR-14** onward.
+`README.md` and `AGENTS.md` both state Phase 2 (M0–M19) is complete. Spot-checks confirm it: `AuthController.cs`, `AdminController.cs`/`IAdminService.cs`, `AdminUsersController.cs`/`IUserManagementService.cs`, `docker-compose.yml` (6 services: postgres, mailhog, office-converter, text-extractor, api, web), and TDS §2.4's ADR table (ends at **ADR-13**) all match what V1.1 §10's history row claims was built. No open Phase 1/2 items were found. This plan's new ADRs are therefore **ADR-14** onward (Phase 3 used 14–18; Phase 4 uses 19).
 
-### 3.2 What already exists for this phase — don't rebuild it
+### 3.2 What already exists for Phase 3 — don't rebuild it
 
 Phase 1 deliberately reserved room for federation so Phase 3 wouldn't need a data-model rewrite. Confirmed still true today:
 
@@ -64,52 +61,147 @@ Phase 1 deliberately reserved room for federation so Phase 3 wouldn't need a dat
 | Admin Settings / Admin Users pages | `client/src/pages/admin/settings.tsx`, `client/src/pages/admin/users.tsx` | Extended, not replaced, by M22.2 |
 | `login.tsx` + `auth-context.tsx` | `client/src/pages/login.tsx`, `client/src/features/auth/auth-context.tsx` | Extended, not replaced, by M20.4 |
 
-### 3.3 What does not exist yet — confirmed by direct search
+Zero hits for `Saml`/`Oidc`/`SSO` package references or endpoints anywhere in `server/` or `client/` beyond the reserved enum/columns above. No SAML or OIDC NuGet package is referenced in any `.csproj`. No `/auth/sso/*` route exists. Neither `prototype(html)/` nor `Prototype(React)/` has any SSO/federated-login page to mirror — this is genuinely new UI territory; follow shadcn conventions and match `login.tsx`'s existing visual language instead.
 
-Zero hits for `Saml`/`Oidc`/`SSO` package references or endpoints anywhere in `server/` or `client/` beyond the reserved enum/columns above. No SAML or OIDC NuGet package is referenced in any `.csproj`. No `/auth/sso/*` route exists. Neither `prototype(html)/` nor `Prototype(React)/` has any SSO/federated-login page to mirror — this is genuinely new UI territory; follow shadcn conventions and match `login.tsx`'s existing visual language instead (§4 principle 5 restates this).
+### 3.3 A note on this codebase's actual Application-layer shape
+
+TDS §3.1/§5.2 illustrates one MediatR command/handler class per use case, with business logic inline in the handler. The real codebase uses MediatR the same way for cross-cutting concerns (`IMediator` is injected into controllers, e.g. `DocumentsController.cs`; 44+ files implement `IRequestHandler`) but consolidates business logic into per-aggregate service interfaces underneath the handlers — `IDocumentService`, `IAuthService`, `IAdminService`, `IUserManagementService`, `INotificationService`, each one interface with many methods, rather than one file per method. This doesn't contradict ADR-2 (MediatR pipeline behaviors are the actual architectural commitment, and they're intact); it's a reasonable internal layering choice the earlier plans' tasks already worked with correctly by checking real interfaces before writing task text, rather than assuming TDS's illustrative sketch was literal. Do the same for every task below — verify the nearest existing analogous handler/service before extending it, since "sounds like TDS §5.2's example" and "matches what's actually in the file" aren't always the same thing.
 
 ### 3.4 Noted, not in scope for this plan
 
-`.github/workflows/` currently has `ci.yml` and `deploy-staging.yml` only — TDS §11.3 describes a third workflow (`deploy-prod.yml`) that was never created; this predates this plan (V1.1's M11.6 scoped itself to staging only) and isn't blocking Phase 3 work. Flagged for awareness, not a task in this plan — don't silently fold a production-deploy workflow into a Phase 3 task under a different label.
+`.github/workflows/` currently has `ci.yml` and `deploy-staging.yml` only — TDS §11.3 describes a third workflow (`deploy-prod.yml`) that was never created; this predates this plan (V1.1's M11.6 scoped itself to staging only) and isn't blocking either phase's work. Flagged for awareness, not a task here.
 
-## 4. Guiding Principles
+## 4. SharePoint Online Comparison & Phase 4 Scope Decision
 
-Carried forward from V1.1 §4 — still correct:
+This is the analysis behind Phase 4 (§8) — what SharePoint Online offers that eDMS doesn't yet, sorted into what's worth building, what's already excluded on purpose, and what's a closer call left for an explicit decision.
 
-1. **Vertical slices over horizontal layers** — with the same foundation-first exception V1.1's M10.5 established: a shared horizontal seam (M20.1) is built once, then OIDC and SAML are vertical slices on top of it.
+### 4.1 Method
+
+Every SharePoint Online document-library feature considered went through two filters, in order:
+
+1. **Already covered by Phase 1–3?** If yes, it's not a gap — listed in §4.2 for completeness, not re-specified.
+2. **Already excluded by FS §2.2's non-goals?** If yes, it's out regardless of how useful it might be — listed in §4.3 with the specific non-goal it hits, not silently reconsidered.
+
+Only what clears both filters became a Phase 4 candidate (§4.5). Two items that cleared filter 2 only partially or arguably are called out separately (§4.6) rather than forced through. This is deliberately a narrower bar than "everything SharePoint has" — matching `AGENTS.md` rule 9's "don't build ahead of the roadmap" instead of treating the comparison as a blank check.
+
+Sourced from direct verification against `server/`/`client/` (§4.4, §4.5's "Verified gap" column) plus a current check of SharePoint Online's document-library feature set — see Sources at the end of this document for what was checked and when, since a feature-parity comparison is only as good as its currency.
+
+### 4.2 Already covered by Phase 1–3 — not a gap
+
+Sites/Libraries/Folders/Documents, versioning, check-out/check-in, item-level permissions with inheritance breaking, internal Share + org-wide links (Phase 2), Recycle Bin, full audit log + activity tabs, content types + required columns (Phase 2), Office preview (Phase 2), bulk delete/move/zip-download (Phase 2), chunked upload (Phase 2), email + in-app notifications/alerts for Folder/Document (Phase 2), full-text content indexing (Phase 2), CSV audit export (Phase 2), storage usage dashboard — reporting only, see §4.4 (Phase 2), dark theme (Phase 2), SAML2/OIDC/SSO-enforcement (Phase 3, this document). Responsive layout down to tablet width already covers "usable on a phone/tablet" (FR-UI-07) without a native app.
+
+### 4.3 Deliberately excluded — named, not silently reconsidered
+
+Everything below is a real SharePoint Online capability. None of it is recommended, because each hits a specific FS §2.2 non-goal:
+
+| SharePoint capability | Non-goal it hits |
+|---|---|
+| Real-time co-authoring (Office Online simultaneous editing) | "Real-time co-authoring / simultaneous multi-user editing" |
+| OneDrive-style desktop sync client, mobile native apps | "Desktop sync client... or mobile native apps" |
+| Power Automate approval workflows, multi-stage/branching workflows | "Workflow/approval engine... e-signature" |
+| Microsoft Purview retention labels, legal hold, DLP, eDiscovery | "Retention labels, legal hold, DLP, compliance/eDiscovery tooling" |
+| Anonymous "anyone with the link", external/guest (B2B) sharing | "Anonymous or external... sharing of any kind" |
+| Wiki pages, Lists, News, Teams/Viva integration | "Wiki pages, lists, news, Teams/Slack integration, intranet portal features" |
+
+One more came up in the comparison that isn't on FS §2.2's original list at all: **Copilot-driven search, summarization, and drafting**, now a headline SharePoint investment area. This isn't excluded by a document-management non-goal — it's excluded because it isn't a document-library feature in the first place. It's a separate LLM-integration architecture (model calls, prompt/agent infrastructure, a whole new class of data-handling and cost concerns) that FS §3's tech stack never included and TDS never designed around. Treating "add AI features" as a roadmap line item the way "add saved views" is would understate what it actually requires — it's a from-scratch architecture decision, not a Phase 4 task, and isn't recommended as either.
+
+### 4.4 A gap found along the way — not a new idea, unfinished old scope
+
+`FavoriteItem` was sketched in FS §8.2 from this document's first draft, tagged P2, right next to `AlertSubscription`. Direct search of `server/src/eDMS.Domain/` confirms `AlertSubscription.cs` exists (built, per Phase 2's M15) but **no `FavoriteItem.cs` exists anywhere** — and neither does any FR-* requirement for it anywhere in FS §6. Phase 2 didn't drop this; there was never an FR to build it from, because §6 and §8.2 had drifted out of sync in the original spec. FS v1.1 (§18) now closes that gap with FR-UI-11. It's included in §4.5 below, not treated as new scope, because it already had a committed data-model shape — it just never had a requirement or a UI.
+
+Also verified while checking this: `StorageQuotaBytes`/`StorageUsedBytes` are stored, editable (FR-SITE-03), and displayed (the M10.16 storage dashboard), but a repo-wide search of `eDMS.Application` for both fields turns up only Site CRUD (`SiteDto.cs`, `UpdateSiteHandler.cs`, `ListSitesHandler.cs`, `GetSiteHandler.cs`) — never the document-upload path. A Site's quota is currently decorative: nothing stops an upload once a Site is over quota. This one has an FR (FR-SITE-03 implies the field matters), just no enforcement — genuinely closer to a bug than new scope, and included in §4.5 for the same reason as Favorites.
+
+### 4.5 New Phase 4 scope
+
+Six FRs, added to FS v1.1 §6/§15 before this plan was written against them:
+
+| FR | Feature | Why it matters daily | Verified gap |
+|---|---|---|---|
+| FR-SITE-07 | Storage quota enforcement | Prevents silent storage sprawl past what admins configured — today the quota is a number nobody enforces | Confirmed via §4.4 — `StorageQuotaBytes` read/written, never checked at upload |
+| FR-DOC-13 | Bulk metadata edit ("Quick Edit"-style) | SharePoint's grid-editing of multiple items' properties at once is one of its most-used power-user features; eDMS has bulk delete/move/zip (FR-DOC-11) but not bulk *edit* | Confirmed — zero hits for bulk-edit/quick-edit/datasheet-style UI anywhere in `client/src` |
+| FR-NOTIF-06 | Follow extended to Library/Site | Today's Follow (FR-NOTIF-02) only covers Folder/Document; SharePoint lets you follow a whole library or site | Confirmed — `INotificationService.FollowAsync`'s `ObjectType` parameter is already generic (the shared enum already has `Library`/`Site` values), but `PublishFollowedChangeAsync` only notifies subscribers of the exact object passed to it, not ancestors — see M28.1 |
+| FR-UI-09 | "Recent" cross-site activity view on Home | Home today is only "My Sites" (FR-SITE-05); no way to jump back to what you were just working on across sites | Confirmed — zero hits for "recent"/"recently" anywhere in `home.tsx` |
+| FR-UI-10 | Saved/named library Views | SharePoint's custom views (filter + sort + group-by, savable and shareable) are an actively-invested 2026 SharePoint UX area (see Sources) and a real daily-use gap versus eDMS's fixed single sort | Confirmed — zero hits for a saved-view/groupBy concept in `library.tsx` |
+| FR-UI-11 | Favorites/pinning | Quick access to specific items regardless of where they live in the hierarchy | See §4.4 — entity sketched since v1.0, never given a requirement until now |
+
+### 4.6 Considered, not included by default — real tension, left for an explicit call
+
+Two more things surfaced by the comparison did **not** make §4.5, for different reasons. Both are described here rather than either silently added or silently dropped, per `AGENTS.md` §11 rule 3 ("for anything touching scope... don't guess — surface the gap").
+
+**Site templates** (a predefined library/folder structure + permission preset applied when creating a new Site). This one's simple: it's a real feature, it doesn't hit any non-goal, but it's meaningfully lower daily-use value than the six above (it helps at Site-creation time only, not every day) and it adds its own admin-authoring surface (someone has to build and maintain the templates). Not recommended for this pass; a reasonable Phase 5 candidate if it comes up again.
+
+**Lightweight per-Library content approval** is the harder one. SharePoint's version (verified directly — see Sources) is genuinely narrow: a single per-Library toggle ("require content approval?"), an Approval Status (Draft/Pending/Approved/Rejected) added to the existing major/minor version model eDMS already has (FR-VER-02), and a "who can see pending items" visibility rule. There's no designer, no branching, no multi-stage routing — it's much closer to "one more version-status field" than to Power Automate. That's exactly why it's a closer call than it looks: it plausibly *doesn't* hit the "workflow/approval engine" non-goal (§2.2) at all, read narrowly. But it sits close enough to that line, and the non-goal exists deliberately (FS §2.2 calls it out by name), that adding it without an explicit yes would be exactly the kind of silent scope resolution `AGENTS.md` §11 rule 3 warns against — a narrow reading today could look like the thin end of a wedge in six months. **Not included pending an explicit decision.** If wanted, it would slot in as its own small Phase 4 milestone (a `RequireApproval` bool on `Library`, an `ApprovalStatus` enum on `DocumentVersion`, a visibility filter, and an Approve/Reject action gated on Full Control) — deliberately not pre-built into this plan's task list below so that building it requires someone to say yes to it specifically, not inherit it by default from an otherwise-approved Phase 4.
+
+### Sources
+
+SharePoint Online feature-currency check (2026-08-17):
+
+- [SharePoint document library: Features and best practices](https://sharegate.com/blog/sharepoint-document-library-changes-and-best-practices-for-admins)
+- [Top 4 NEW SharePoint Features You MUST Try in 2026 — Approvals, Quick Steps, PDF Tools & More (Microsoft Community Hub)](https://techcommunity.microsoft.com/discussions/sharepoint_general/top-4-new-sharepoint-features-you-must-try-in-2026--approvals-quick-steps-pdf-to/4501837)
+- [SharePoint document libraries are getting a new user experience (custom views, filter pills, command bar) — Super Simple 365](https://supersimple365.com/sharepoint-document-libraries-are-getting-a-new-user-experience/)
+- [How to Configure Content Approvals in SharePoint Online](https://blog.admindroid.com/how-to-configure-content-approvals-in-sharepoint-online/)
+- [Require approval of items in a list or library — Microsoft Support](https://support.microsoft.com/en-us/office/require-approval-of-items-in-a-list-or-library-cd0761c4-8c3f-4ea2-9435-13c28aa23d08)
+- [Plan document versioning, content approval, and check-out controls in SharePoint — Microsoft Support](https://support.microsoft.com/en-au/office/plan-document-versioning-content-approval-and-check-out-controls-in-sharepoint-428b488e-2807-4ef0-b942-91cb09d8921c)
+
+## 5. Guiding Principles
+
+Carried forward from V1.1 §4 — still correct, now shared by both phases:
+
+1. **Vertical slices over horizontal layers** — with the foundation-first exception V1.1's M10.5 established: M20.1 (Phase 3) and, more lightly, M27.1 (Phase 4's new `LibraryView` entity) are each built once before the slices that depend on them.
 2. **Backend before its corresponding frontend, but not all backend before any frontend.**
 3. **Tests land with the code, not after it.**
-4. **Don't build ahead of the roadmap.** FS §15 defines no Phase 4. This plan's scope is exactly FR-AUTH-09/10/11 — nothing past it belongs here (§1, §8 below).
-5. **The prototype is a UX reference, never a code source** — with the caveat noted in §3.3: no prototype page covers SSO login/admin UI, so there is nothing to mirror here. Match the shadcn/Tailwind visual language already established in `login.tsx` and the admin pages instead.
+4. **Don't build ahead of the roadmap.** Phase 3 is exactly FR-AUTH-09/10/11; Phase 4 is exactly the six FRs in §4.5. FS §15 defines no Phase 5 — §10 below covers what that means.
+5. **The prototype is a UX reference, never a code source** — with a split caveat: no prototype page covers SSO UI (genuinely new territory, Phase 3); Phase 4's pages (library view picker, bulk-edit grid, Favorites, Home's Recent section) are extensions of pages the prototype *does* cover — match its interaction patterns for the parts that already exist (the library toolbar, the Home layout) and follow shadcn conventions for the genuinely new pieces (the view picker, the bulk-edit grid) the same way M12.4 did for Content Types, which also had no prototype page.
 6. **When in doubt, re-read `AGENTS.md` §7 (Non-Negotiable Rules)** before writing code, not after review flags it.
-7. **Verify before trusting any status label — including this file's.** Every claim in §3 was checked against actual source, not copied from README/AGENTS.md's own claims. Repeat that discipline before starting any task here.
-8. **Small, explicit steps — even more so this phase.** This is written for an agent (OpenCode + DeepSeek) that may run for hours unattended, committing and pushing milestone by milestone with no human reviewing each step. Auth code is the one place where "looked right, moved on" is not an acceptable bar. If a task still feels too large to finish confidently in one sitting, split it further.
-9. **Record architecturally significant decisions as new ADRs.** This phase's five (ADR-14 through ADR-18, assigned to specific tasks below) resolve real ambiguities FS/TDS leave open: a library-compatibility risk TDS flags nowhere, a state-handoff mechanism TDS's existing sequence diagrams don't cover, and an enforcement model FR-AUTH-11 states as an outcome ("System Admin shall be able to enforce SSO-only login") without specifying the mechanism.
-10. **No anonymous access, ever.** JIT-provisioning via SSO (FR-AUTH-09/10) is safe specifically *because* the IdP is the organization's own trusted internal identity system (FS §2.2) — a user who successfully authenticates against the org's Entra ID/Okta/etc. is, by definition, an internal user. This is not a path to external/unauthenticated access and must never become one. A JIT-provisioned account starts with **zero site memberships**, exactly like an admin-created local account (TDS §6.5) — SSO grants an identity, never permissions.
-11. **NEW — auth is the highest-blast-radius surface in the system.** Every task below touches the login path. The "don't mark `Done` without X" callouts on M20.1, M21.1, M22.1, and M23.5 are load-bearing in the same way V1.1 treated its M10.1 permission-resolver callout — don't skip the specified tests to move faster.
+7. **Verify before trusting any status label — including this file's.** Every claim in §3/§4 was checked against actual source. Repeat that discipline before starting any task here — §4.4/§4.5's "Verified gap" column shows exactly what was checked for Phase 4; do the same depth of check for whatever you touch next, since a session working weeks later shouldn't assume nothing changed underneath these claims.
+8. **Small, explicit steps.** Written for an agent (OpenCode + DeepSeek) that may run for hours unattended, committing and pushing milestone by milestone with no human reviewing each step. If a task still feels too large to finish confidently in one sitting, split it further.
+9. **Record architecturally significant decisions as new ADRs.** ADR-14–18 (Phase 3) and ADR-19 (Phase 4, M27.1's `LibraryView` config-storage design) each resolve a real ambiguity FS/TDS leave open — don't leave the decision implicit in code only.
+10. **No anonymous access, ever.** Restated for Phase 3 specifically in the previous version of this section (still true — see M-task text in §7). Phase 4 doesn't touch authentication or permissions at all — every new FR in §4.5 operates strictly within the caller's existing effective permission on the object involved (a Favorite/View/Follow/bulk-edit is never itself a grant of access; §9's risk table restates this for the bulk-edit case specifically, where it's easiest to get wrong).
+11. **Auth is the highest-blast-radius surface in the system.** Every Phase 3 task touches the login path — the "don't mark `Done` without X" callouts on M20.1, M21.1, M22.1, and M23.5 are load-bearing. Phase 4 has no comparable single point of failure, but §4.6's content-approval tension shows the same "don't silently resolve a scope question" discipline applies beyond auth too.
+12. **NEW — a scope decision made via comparison still needs the same rigor as one made via direct request.** §4 exists specifically so Phase 4's inclusions and exclusions are traceable to a specific filter (§4.1) rather than to taste. If a future session is tempted to add a seventh "obviously good" SharePoint feature to Phase 4 without running it through both filters first, don't — that's exactly the drift this section was written to prevent.
 
-## 5. Milestone Overview
+## 6. Milestone Overview
 
 ```mermaid
 graph TD
-    M20[M20 SSO Foundation and OIDC Federation] --> M21[M21 SAML2 Federation]
-    M20 --> M22[M22 SSO Enforcement and Admin Controls]
-    M21 --> M23[M23 Phase 3 Hardening and Sign-off]
+    P[Phase 1+2 Done, M19] --> M20[M20 SSO Foundation and OIDC]
+    M20 --> M21[M21 SAML2 Federation]
+    M20 --> M22[M22 SSO Enforcement]
+    M21 --> M23[M23 Phase 3 Hardening]
     M22 --> M23
+    P --> M24[M24 Storage Quota Enforcement]
+    P --> M25[M25 Favorites]
+    P --> M26[M26 Recent Activity View]
+    P --> M27[M27 Saved Library Views]
+    P --> M28[M28 Follow Library and Site]
+    P --> M29[M29 Bulk Metadata Edit]
+    M24 --> M30[M30 Phase 4 Hardening]
+    M25 --> M30
+    M26 --> M30
+    M27 --> M30
+    M28 --> M30
+    M29 --> M30
 ```
 
-M21 and M22 both depend only on M20 (its foundation task, specifically) and may be worked in either order or in parallel by separate sessions — same "fan out, converge on the hardening milestone" shape V1.1 used for M12–M18 converging on M19.
+Phase 3 (M20→M23) and Phase 4 (M24–M29→M30) are two separate trees, both rooted at M19. Within Phase 4, M24–M29 have no dependency on each other and may be worked in any order or in parallel, same "fan out, converge on hardening" shape V1.1 used for M12–M18→M19 and this document already used for M20's descendants.
 
 | Milestone | Goal | Demo-able outcome | Status |
 |---|---|---|---|
-| [M20](#m20--sso-foundation--oidc-federation) | Shared federation plumbing + OIDC (FR-AUTH-10) | A user clicks "Sign in with SSO" on the login page, authenticates against a real OIDC identity provider, and lands in eDMS signed in — with a brand-new account JIT-provisioned on first login and zero site access until an admin grants some | Not Started |
-| [M21](#m21--saml2-federation) | SAML2 (FR-AUTH-09) | The same experience via SAML2 — a user authenticates against a SAML IdP and lands in eDMS signed in, reusing M20's shared exchange/callback UI | Not Started |
-| [M22](#m22--sso-enforcement--admin-controls) | SSO enforcement (FR-AUTH-11) | A System Administrator turns on "Require SSO for all logins"; every non-exempt user's password login is then rejected with a clear message, while at least one designated account can still log in locally | Not Started |
-| [M23](#m23--phase-3-hardening--sign-off) | Phase 3 sign-off | FS §15 Phase 3 checklist (FR-AUTH-09/10/11) fully satisfied; same hardening bar M11/M19 proved, re-run for federation's additions, plus a dedicated auth-specific security pass | Not Started |
+| [M20](#m20--sso-foundation--oidc-federation) | Shared federation plumbing + OIDC (FR-AUTH-10) | A user clicks "Sign in with SSO", authenticates against a real OIDC IdP, and lands in eDMS signed in — new account JIT-provisioned, zero site access until granted | Not Started |
+| [M21](#m21--saml2-federation) | SAML2 (FR-AUTH-09) | Same experience via SAML2, reusing M20's shared exchange/callback UI | Not Started |
+| [M22](#m22--sso-enforcement--admin-controls) | SSO enforcement (FR-AUTH-11) | Admin turns on "Require SSO for all logins"; non-exempt users' password logins are rejected with a clear message; a break-glass account still works | Not Started |
+| [M23](#m23--phase-3-hardening--sign-off) | Phase 3 sign-off | FS Phase 3 checklist satisfied; hardening bar M11/M19 proved, re-run for federation, plus a dedicated auth security pass | Not Started |
+| [M24](#m24--storage-quota-enforcement) | Quota enforcement (FR-SITE-07) | Uploading to a Site already at its configured quota is rejected with a clear error; other Sites are unaffected | Not Started |
+| [M25](#m25--favorites) | Favorites (FR-UI-11) | A user favorites a Document from its details sheet and a Site from its card; both appear in a dedicated Favorites list | Not Started |
+| [M26](#m26--recent--cross-site-activity-view) | Recent view (FR-UI-09) | Home shows the documents a user most recently touched across every Site they can access, each one clickable | Not Started |
+| [M27](#m27--saved-library-views) | Saved Views (FR-UI-10) | A user filters/sorts/groups a library, saves it as a named View, and switches back to it later in one click; a Library Owner sets one as the default others see | Not Started |
+| [M28](#m28--follow-library--site) | Follow Library/Site (FR-NOTIF-06) | Following a Library delivers the same alerts as following one of its documents would, for any change anywhere inside it | Not Started |
+| [M29](#m29--bulk-metadata-edit) | Bulk metadata edit (FR-DOC-13) | Selecting 10 documents and editing Tags once applies to all 10, with a clear per-item result if one fails | Not Started |
+| [M30](#m30--phase-4-hardening--sign-off) | Phase 4 sign-off | FS Phase 4 checklist (§4.5's six FRs) satisfied; same hardening bar as M23, re-run for Phase 4's additions | Not Started |
 
-## 6. Detailed Milestones — Phase 3 (FS §15)
+## 7. Detailed Milestones — Phase 3 (FS §15)
 
-Columns match V1.1: **Track** — `BE` backend, `FE` frontend, `INF` infra/tooling, `DOC` documentation, `Both` cross-cutting. **Size** — `S` small/mechanical, `M` moderate, `L` complex/high-stakes.
+Unchanged from this document's first version. Columns: **Track** — `BE` backend, `FE` frontend, `INF` infra/tooling, `DOC` documentation, `Both` cross-cutting. **Size** — `S` small/mechanical, `M` moderate, `L` complex/high-stakes.
 
 ### M20 — SSO Foundation & OIDC Federation
 
@@ -154,11 +246,78 @@ FR-AUTH-11 states the outcome ("System Admin shall be able to enforce SSO-only l
 | Not Started | M23.4 | FE | Responsive/mobile re-verification on the same new UI. | M20.4, M21.3, M22.2 | S | FS §7 NFR |
 | Not Started | M23.5 | Both | **Dedicated auth-specific security review pass** — narrower and more pointed than a generic code review, because this is the highest-blast-radius surface in the system (principle 11). Explicitly verify, and write down the result of each: (a) no access token, refresh token, or SAML assertion ever appears in a URL, browser history entry, or server log at any point in either flow; (b) a deactivated user cannot regain access via SSO (re-run FR-AUTH-07's deactivation test against both federated paths, not just local login); (c) a consumed or expired handoff code genuinely cannot be replayed (M20.1's test, re-verified here against both providers' real callback paths, not just the unit test's synthetic input); (d) the M22.1 safety-rail actually prevents total admin lockout under a real `PUT /admin/settings` call, not just the unit-level decision function; (e) a tampered/unsigned SAML assertion and an OIDC token with an invalid signature are both rejected (M21.4's negative test, confirmed still passing here). | M20 (all), M21 (all), M22 (all) | M | TDS §10, AGENTS.md §7 |
 | Not Started | M23.6 | INF | Update `docker-compose.yml`, `.env.example`, and the deploy workflow(s) that exist (`deploy-staging.yml` — see §3.4) for the two new test-IdP containers and the new required secrets (OIDC client secret, SAML signing certificate/key) — resource sizing notes and health checks, following the same pattern M19.5 used for M13/M17's containers. | M20.3, M21.2 | S | TDS §11 |
-| Not Started | M23.7 | DOC | `AGENTS.md`/`README.md` already point at this file (§1's note above) — this task updates their **prose**, not their pointers: flip "federation planned"/"in progress" language to "done" now that M20–M22 are actually `Done`, the same role V1.1's M19.6 played for Phase 2. This is the point where Phase 3, and the functional spec's entire currently-defined roadmap (FS §15), is actually, verifiably done — see §8. | M23.1–M23.6 | S | — |
+| Not Started | M23.7 | DOC | `AGENTS.md`/`README.md` already point at this file (§1's note above) — this task updates their **prose**, not their pointers: flip "federation planned"/"in progress" language to "done" now that M20–M22 are actually `Done`. If M30.6 (Phase 4's equivalent task) hasn't landed yet, touch only the Phase 3-related sentences and leave Phase 4's claims alone — don't overwrite the other phase's status while updating yours. | M23.1–M23.6 | S | — |
 
-## 7. Sequencing Risks
+## 8. Detailed Milestones — Phase 4 (FS §15, §4 above)
 
-Distinct from TDS §14.1's technical risks — these are about order and handoff across many independent, stateless agent sessions, same framing V1.1 §8 used.
+Same column conventions as §7.
+
+### M24 — Storage Quota Enforcement
+
+| Status | ID | Track | Task | Depends on | Size | Refs |
+|---|---|---|---|---|---|---|
+| Not Started | M24.1 | BE | In `IDocumentService`'s upload path (`server/src/eDMS.Application/Documents/IDocumentService.cs`'s `UploadAsync` overloads and whatever handler(s) currently call them — check `DocumentsController.cs`/`UploadsController.cs` for the exact wiring before extending it), before writing the new `DocumentVersion`, load the target `Site` and check `site.StorageUsedBytes + incomingSizeBytes > site.StorageQuotaBytes` — skip the check entirely when `StorageQuotaBytes` is null (FR-SITE-07's explicit carve-out for unlimited Sites). On exceed, reject that file with a typed error distinguishable from validation failures (a `QuotaExceededException` mapped through TDS §5.7's existing exception-to-Problem-Details table, or reuse whatever mechanism `checked-out-by-other-user` already uses for a similarly state-dependent, non-validation rejection — check that pattern first). Multi-file batch uploads must keep FR-DOC-02's continue-on-error behavior: one file hitting the quota fails only that file, not the whole batch — extend `UploadDocumentResponseItem`'s `rejectionReason` union (TDS §8.2: currently `"file-too-large" | "blocked-extension" | "checked-out-by-other-user"`) with `"quota-exceeded"`. Also apply the same check to check-in (a new version of an existing document still adds bytes) and to Move/Copy *into* a different Site (Copy always adds bytes to the destination; Move does only when crossing Sites) — check `IDocumentService`'s `MoveAsync`/`CopyAsync` for where the destination Site is already resolved and hook in there. | M19 | M | FR-SITE-07, TDS §5.4, §5.7 |
+| Not Started | M24.2 | FE | Surface `"quota-exceeded"` in the upload dialog's existing per-file status UI (the same place `"file-too-large"`/`"blocked-extension"` already render) with a message naming the Site and its configured limit, not a generic failure. | M24.1 | S | FR-SITE-07 |
+| Not Started | M24.3 | Both | Unit tests for the boundary math (exactly at quota succeeds or fails consistently — pick one and assert it explicitly, one byte over fails, null quota always succeeds regardless of usage). Integration test seeding a Site's `StorageUsedBytes` near its quota and asserting the next upload/check-in/cross-Site-copy is rejected while a same-Site rename/metadata-only edit (no new bytes) is not. | M24.1, M24.2 | S | TDS §12.1 |
+
+### M25 — Favorites
+
+FS §8.2 already sketches `FavoriteItem`'s shape (§4.4) — use it as-is, don't redesign.
+
+| Status | ID | Track | Task | Depends on | Size | Refs |
+|---|---|---|---|---|---|---|
+| Not Started | M25.1 | BE | `FavoriteItem` entity/migration per FS §8.2's existing sketch (`UserId` + `ObjectType`/`ObjectId` composite PK, no other fields). Endpoints mirroring `NotificationsController.cs`'s existing `{objectType}/objects/{id}/follow` pattern for consistency: `POST/DELETE api/v1/{objectType}/objects/{id}/favorite`, `GET api/v1/me/favorites` (mirrors the existing `GET /me/notifications`/`GET /me/notifications/subscriptions` naming). The list endpoint is polymorphic across Site/Library/Folder/Document — resolve each favorited object's current display name and a location breadcrumb for the UI in one query per `ObjectType` group, not N+1 per row (same concern the permission resolver and notification list already had to solve — check how either currently batches its polymorphic lookups before writing a new one from scratch). A favorite on an item the user has since lost access to must not appear in the list or leak its name — apply the caller's effective permission the same way search results already do (FR-SRCH-04's "no result may leak..." principle applies here too, even though this isn't literally search). | M19 | M | FR-UI-11, FS §8.2 |
+| Not Started | M25.2 | FE | A star/pin toggle in the Document Details Sheet's Properties tab (extends M10.6) and on Site Home's site card (extends `site-home.tsx`); a new "Favorites" entry in the left nav (FR-UI-01) opening a flat list page grouped by object type, each row linking through to the real item. | M25.1, M10.5 | M | FR-UI-11 |
+| Not Started | M25.3 | Both | Unit test for the permission-filtered list (favorite an item, lose access, confirm it drops out of `GET /me/favorites`). Integration test for favorite/unfavorite round-trip across each `ObjectType`. Frontend test for the toggle's on/off states and the Favorites list page. | M25.1, M25.2 | S | TDS §12.1–§12.2 |
+
+### M26 — Recent / Cross-Site Activity View
+
+| Status | ID | Track | Task | Depends on | Size | Refs |
+|---|---|---|---|---|---|---|
+| Not Started | M26.1 | BE | New endpoint `GET /me/recent` returning the current user's most recently touched Documents across every Site they can access, derived from `audit_log_entries` (already indexed by user — `ix_audit_log_user`, TDS §6.2) rather than a new tracking table: query the caller's own `View`/`Upload`/`CheckIn`/`EditMetadata` entries, most recent per distinct `ObjectId`, newest N overall, permission-filtered the same way M25.1's favorites list is (an item the user can no longer access must not appear even if it's in their audit history). This reuses existing infrastructure rather than adding new "last viewed" state — note the choice inline in the PR description; it's a contained decision, not one that needs its own ADR. | M19 | M | FR-UI-09, TDS §6.2 |
+| Not Started | M26.2 | FE | A "Recent" section on `home.tsx`, alongside the existing "My Sites" list (FR-SITE-05) — not replacing it. Each row shows a type icon, name, containing Site/Library, last-touched time, and links straight to the item. | M26.1 | M | FR-UI-09 |
+| Not Started | M26.3 | Both | Integration test: a user's own recent-touch history returns in the right order and excludes items they've since lost access to. Frontend test for the Home page's new section (empty state included — a brand-new user has no recent activity yet). | M26.1, M26.2 | S | TDS §12.1–§12.2 |
+
+### M27 — Saved Library Views
+
+| Status | ID | Track | Task | Depends on | Size | Refs |
+|---|---|---|---|---|---|---|
+| Not Started | M27.1 | BE | New `LibraryView` entity: `Id, LibraryId (FK), OwnerId (nullable FK User — null means shared/library-wide, set means personal), Name, FilterConfig (text), SortConfig (text), GroupByColumn (nullable text), IsDefault (bool)`. Migration (all four provider sets). `FilterConfig`/`SortConfig` are stored as **plain `text` containing a serialized JSON string**, parsed application-side — not Postgres `jsonb`. **Record ADR-19** explaining why: this is UI-internal state (which columns, which operators, which values, sort direction) the application never needs to `WHERE`-query *inside* at the database level — the config is loaded whole and applied to the items query in code, unlike `audit_log_entries.details` (TDS §6.2), which genuinely benefits from native JSON querying and is deliberately Postgres-only for it. A plain `text` column keeps this table identical across all four providers (ADR-8) at zero cost, since there's no query pattern here that would ever want native JSON operators. Endpoints: `POST/GET/PUT/DELETE api/v1/libraries/{id}/views`, `POST api/v1/libraries/{id}/views/{viewId}/set-default` (Library Owner/FullControl only, per FR-UI-10's "Library Owner may mark a View as the default"). A user's own Views (`OwnerId` = caller) are always listed alongside the Library's shared Views regardless of who owns those. | M19 | L | ADR-19, FR-UI-10 |
+| Not Started | M27.2 | FE | A view picker in `library.tsx`'s toolbar (extends the M10.12 grid/list/sort/multi-select toolbar): a dropdown of available Views (shared + the user's own), "Save current as..." capturing the toolbar's live filter/sort/group-by state, and applying a selected View by setting that same state from its stored config. The Library's default View (if any) loads automatically on first visit instead of the current fixed sort. | M27.1, M10.12 | L | FR-UI-10 |
+| Not Started | M27.3 | Both | Unit test for `FilterConfig`/`SortConfig` round-tripping through serialize/deserialize without loss. Integration test for the default-View-requires-FullControl rule and for a personal View being invisible to other users while a shared View isn't. Frontend test for save/apply/switch-views interaction. | M27.1, M27.2 | M | TDS §12.1–§12.2 |
+
+### M28 — Follow Library & Site
+
+`INotificationService.FollowAsync`'s `ObjectType` parameter (`server/src/eDMS.Application/Notifications/INotificationService.cs`) and `NotificationsController`'s `{objectType}/objects/{id}/follow` route are already generic — verified no Folder/Document-only restriction at the controller or service-signature level. The gap is entirely in fan-out, not in subscription creation.
+
+| Status | ID | Track | Task | Depends on | Size | Refs |
+|---|---|---|---|---|---|---|
+| Not Started | M28.1 | BE | First, confirm there's genuinely no hidden restriction: check `FollowAsync`'s actual implementation and any validator on the command it dispatches to for an `ObjectType` allow-list, and remove one if found. Then the real work: `PublishFollowedChangeAsync(objectType, objectId, changeDescription, ct)` (same interface) is called by write paths "after their change has been persisted" for the exact object that changed (e.g. a Document upload publishes for that Document only) — it does not currently walk up to check whether an ancestor Folder/Library/Site also has subscribers. Change this **inside `PublishFollowedChangeAsync` itself**, not at every call site: given the changed object, walk Document→Folder→Library→Site (or Folder→Library→Site, or Library→Site) checking `AlertSubscription` at each level, mirroring `IPermissionResolver`'s hierarchy-walk shape (TDS §6.3) — reuse that query pattern rather than inventing a second traversal. Every existing call site keeps calling it exactly as today; the ancestor fan-out becomes automatic. Subscribers at multiple levels for the same event (e.g. following both the Document and its Library) get exactly one notification, not one per level. | M19 | M | FR-NOTIF-06, TDS §6.3 (hierarchy-walk pattern reused) |
+| Not Started | M28.2 | FE | Add the existing Follow toggle (built in M15.6, currently only in the Document Details Sheet) to Site Home (`site-home.tsx`) and to the library toolbar/library-level details, using the same component against `ObjectType.Site`/`ObjectType.Library`. | M28.1 | S | FR-NOTIF-06 |
+| Not Started | M28.3 | Both | Integration test: follow a Library, change a Document three folders deep inside it, assert exactly one notification/digest-eligible row is created for the Library follower (not zero, not duplicated if they also follow the Document directly). Frontend test for the new Follow toggle locations. | M28.1, M28.2 | S | TDS §12.1–§12.2 |
+
+### M29 — Bulk Metadata Edit
+
+| Status | ID | Track | Task | Depends on | Size | Refs |
+|---|---|---|---|---|---|---|
+| Not Started | M29.1 | BE | Extend `IDocumentService` (or add a sibling method following whatever pattern `UpdateMetadataAsync(documentId, title, description, ct)` — already in `IDocumentService.cs` — is wired to from its controller action) with a bulk-capable variant accepting multiple document IDs plus the fields to apply (Title/Description/Tags, and Content Type column values where a selected document's Content Type has a matching column). Apply per-item, in a single request, with **partial success** (mirroring FR-DOC-02's continue-on-error precedent for multi-file upload) — a document that's checked out by another user or where the caller lacks Contribute must fail only that item, with a clear per-item reason in the response, not abort the whole batch or silently skip it. | M19 | M | FR-DOC-13, TDS §5.2 |
+| Not Started | M29.2 | FE | A "Edit properties" bulk action in `library.tsx`'s multi-select toolbar (extends M10.12's existing bulk delete/move actions): a form/grid showing the fields common across the selection's Content Types, applying on submit, and surfacing per-item failures individually (a toast listing which items failed and why, not a single opaque "some items failed"). | M29.1, M10.12 | M | FR-DOC-13 |
+| Not Started | M29.3 | Both | Integration test for partial success (mixed batch of editable + checked-out-by-other-user documents, assert the editable ones changed and the others didn't, with the response identifying which is which). Frontend test for the bulk-edit form and its per-item failure surfacing. | M29.1, M29.2 | S | TDS §12.1–§12.2 |
+
+### M30 — Phase 4 Hardening & Sign-off
+
+| Status | ID | Track | Task | Depends on | Size | Refs |
+|---|---|---|---|---|---|---|
+| Not Started | M30.1 | Both | Extend the Playwright E2E suite: quota-blocked upload, favorite/unfavorite round trip, Home's Recent view populated by real activity, save-and-reapply a library View, follow a Library and see a descendant change trigger it, bulk-edit metadata across a multi-select including one partial-failure case. | M24 (all), M25 (all), M26 (all), M27 (all), M28 (all), M29 (all) | L | TDS §12.2 |
+| Not Started | M30.2 | BE | Validator-coverage re-audit including every Phase 4 command. | M24 (all)–M29 (all) | S | TDS §5.2 |
+| Not Started | M30.3 | FE | Accessibility pass on all new Phase 4 UI: Favorites toggle/list, Home's Recent section, the library View picker, the bulk-edit form, the Library/Site Follow toggle. | M24 (all)–M29 (all) | M | FS §7 NFR |
+| Not Started | M30.4 | FE | Responsive/mobile re-verification on the same new UI. | M24 (all)–M29 (all) | S | FS §7 NFR |
+| Not Started | M30.5 | BE | Perf sanity check (numbers written down, not just "passed", matching M11.2's precedent) on the two new query patterns most likely to scale badly: M26's Recent view (a per-user audit-log scan) and M28's Library/Site Follow fan-out (a hierarchy walk on every followed-object change) — realistic data volumes, not empty-table timings. | M26 (all), M28 (all) | S | TDS §14.1 |
+| Not Started | M30.6 | DOC | Update `AGENTS.md`/`README.md` prose (not pointers, already correct per §1) to reflect Phase 4 completion. If M23.7 (Phase 3's equivalent task) hasn't landed yet, touch only the Phase 4-related sentences and leave Phase 3's claims alone. Once **both** M23.7 and M30.6 have landed, whichever runs second should also confirm the combined statement reads as one coherent "Phase 3 and Phase 4 both done" paragraph rather than two disjoint edits stapled together — a small final consistency pass, not a new task. | M30.1–M30.5 | S | FS §15 |
+
+## 9. Sequencing Risks
+
+Distinct from TDS §14.1's technical risks — these are about order and handoff across many independent, stateless agent sessions, same framing V1.1 §8 used. Phase 3's risks are unchanged from this document's first version; Phase 4's are new.
 
 | Risk | Impact | Mitigation |
 |---|---|---|
@@ -167,15 +326,19 @@ Distinct from TDS §14.1's technical risks — these are about order and handoff
 | The redirect-heavy SSO flow puts a token in a URL, log line, or browser-history entry by accident | Credential leakage — far more severe than a typical bug, and easy to miss because the happy path still "works" visually | M20.4 states the no-token-in-URL rule as non-negotiable, not a style note; M23.5 re-verifies it explicitly rather than trusting the original implementation review |
 | M22.1's global SSO enforcement is shipped without the safety-rail, or the safety-rail is later removed "to simplify" | An admin locks out every administrator account in one settings change | Called out twice (M22.1's row and the callout beneath M22's table) specifically so it isn't quietly dropped under time pressure |
 | Containerized test IdPs (M20.3/M21.2) are hard to get working in CI even though they work locally (redirect URI mismatches, clock skew, discovery-document caching) | M20.5/M21.4/M23.1's integration and E2E tests become flaky or get skipped, silently weakening the highest-risk milestone's actual test coverage | ADR-16 names the risk explicitly; if a specific test-IdP image proves unworkable, record why in the ADR and pick the alternative named in M20.3/M21.2's task text rather than dropping the integration test tier entirely |
-| Two sessions work on M21 (SAML) and M22 (enforcement) in parallel, both correctly depending only on M20.1 | Low risk of conflict since they touch different files, but both may reasonably want to touch `login.tsx` and `GET /auth/sso/providers`'s response shape at the same time | Check recent git log before starting either — `GET /auth/sso/providers`'s shape is fixed by M20.2; M21.3 only adds a value to it, doesn't change its shape |
+| A future session treats §4.6's "not included by default" items (Site Templates, content approval) as implicitly approved because "the rest of Phase 4 was fine" | Scope creep exactly where this document went out of its way to require an explicit decision instead | §4.6 states the gate plainly; neither item has a milestone in §8 at all — their absence is the signal, not an oversight to "fix" by adding one |
+| M29's bulk-metadata-edit endpoint is implemented as a loop that applies changes first and checks permission/checkout-state second, or checks once for the batch instead of per item | A user with Contribute on 9 of 10 selected documents could have their edit silently applied to the 10th they don't have rights to — an authorization bypass hiding inside a UX convenience feature, not caught by a happy-path test | M29.1 states per-item partial success explicitly, mirroring FR-DOC-02's existing continue-on-error precedent; M29.3's test asserts the checked-out-by-other-user item in a mixed batch is excluded, not silently included |
+| M25/M26's polymorphic/permission-filtered list queries (Favorites, Recent) are implemented as N+1 lookups per row instead of batched | Works fine in dev with a handful of items, degrades badly against a real Site count — the same class of mistake the permission CTE (M10.1) was written specifically to avoid at the resolver level | M25.1/M26.1 call this out explicitly; M30.5 gives Recent (and the related M28 fan-out) a numbers-based perf check rather than trusting "it loaded fast on my machine" |
+| Two sessions pick up Phase 3 and Phase 4 simultaneously, both correctly depending only on M19 | Very low collision risk since the two phases touch almost entirely disjoint files (`server/src/eDMS.Api/Controllers/AuthController.cs` and friends vs. `DocumentsController.cs`/`NotificationsController.cs`/`library.tsx`), but both may want to touch `AGENTS.md`/`README.md`'s prose near the end | M23.7/M30.6 each scope themselves to their own phase's sentences explicitly, for exactly this reason |
 | This file's Status drifts from reality over many sessions | Wasted work re-doing or second-guessing already-finished tasks | "Trust the repo over the file" (§2) — fix the file, don't work around the discrepancy silently |
 
-## 8. Beyond Phase 3
+## 10. Beyond Phase 4
 
-FS §15 does not define a Phase 4. Once M23 is `Done`, every phase the functional spec currently describes is complete. This is a deliberate stopping point, not an oversight to fill in — per `AGENTS.md` §11 rule 3, any further work (the retention/legal-hold/workflow candidates FS §15's Phase 3 line names as explicitly out of scope, or anything else) requires a new functional-spec decision first, the same way Phase 2 and Phase 3 each did, before it gets its own `ImplementationPlan V1.3.md`. Don't infer scope here; surface the question to the user instead, per `AGENTS.md` §11 rule 3.
+FS §15 does not define a Phase 5. Once both M23 and M30 are `Done`, every phase the functional spec currently describes — including the Phase 4 this document itself added on 2026-08-17 — is complete. §4.6's two considered-but-not-committed items (Site Templates, lightweight content approval) are the most likely seeds of a future phase, precisely because they were named and reasoned about rather than dropped silently — but neither is approved scope, and neither should be inferred as such from this document existing. Per `AGENTS.md` §11 rule 3, any further work requires a new functional-spec decision first, the same way Phase 3 and Phase 4 each did, before it gets its own `ImplementationPlan V1.3.md`. Don't infer scope here; surface the question instead.
 
-## 9. Document History
+## 11. Document History
 
 | Version | Date | Change |
 |---|---|---|
-| 1.2 | 2026-08-17 | Phase 3 plan: M20 (SSO foundation + OIDC, FR-AUTH-10), M21 (SAML2, FR-AUTH-09), M22 (SSO enforcement, FR-AUTH-11), M23 (Phase 3 hardening/sign-off). Five new ADRs recorded (ADR-14–18): DB-backed SSO handoff-code exchange, OIDC library/flow, containerized test-IdP strategy, SAML library/flow, and the SSO-enforcement model with its lockout safety-rail. Verified Phase 1+2 (V1.1, M0–M19) fully `Done` against actual source before planning on top of it (§3). This is the functional spec's currently-final phase (§8) — no Phase 4 placeholder is included, unlike V1.1's Phase 3 placeholder, because FS §15 doesn't define one. |
+| 1.2 (Phase 3) | 2026-08-17 | Initial version of this document: Phase 3 plan (M20–M23) covering FR-AUTH-09/10/11. Five new ADRs (ADR-14–18). Verified Phase 1+2 (V1.1, M0–M19) fully `Done` against actual source before planning on top of it. |
+| 1.2 (Phase 4 added) | 2026-08-17 | Same day, following a request to compare eDMS against SharePoint Online and add what's genuinely valuable for daily use. Added §4 (the full comparison, its filtering method, and what was deliberately excluded or left for an explicit decision) and §8 (M24–M30, FR-SITE-07/FR-DOC-13/FR-NOTIF-06/FR-UI-09/FR-UI-10/FR-UI-11). One new ADR (ADR-19). FS bumped to v1.1 with the six new FRs *before* this plan was written against them, keeping the "spec defines scope, plan sequences it" discipline intact rather than inventing requirements inline in a plan document. §5–§10 renumbered and updated to cover both phases; §7's Phase 3 content is otherwise unchanged from the initial version. |

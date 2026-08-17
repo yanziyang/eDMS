@@ -4,9 +4,9 @@
 
 | | |
 |---|---|
-| **Version** | 1.0 |
+| **Version** | 1.1 |
 | **Status** | Draft for review |
-| **Date** | 2026-08-15 |
+| **Date** | 2026-08-15 (Phase 4 roadmap added 2026-08-17 — see §18) |
 | **Product name** | eDMS |
 | **Audience** | Engineering (human + coding agent), Product, Security review |
 
@@ -137,6 +137,7 @@ Each requirement has a stable ID, a phase tag, and a testable "shall" statement.
 | FR-SITE-04 | MVP | Site Owners/Admin shall be able to soft-delete (archive) a Site; this cascades to its libraries/folders/documents (they become inaccessible but are DB-recoverable by Admin, not exposed in a self-service recycle bin). |
 | FR-SITE-05 | MVP | The Home page shall list all Sites the current user has any level of access to ("My Sites"). |
 | FR-SITE-06 | MVP | Site Owners shall be able to add/remove Users and Groups to the Owners/Members/Visitors groups. |
+| FR-SITE-07 | P4 | The system shall reject an upload that would cause a Site's `StorageUsedBytes` to exceed its configured `StorageQuotaBytes`, with a clear error identifying the quota. Sites with no quota set (`StorageQuotaBytes` null) are unaffected. |
 
 ### 6.3 Libraries (`LIB`)
 
@@ -174,6 +175,7 @@ Each requirement has a stable ID, a phase tag, and a testable "shall" statement.
 | FR-DOC-10 | P2 | The system shall support in-browser preview of Office formats (docx/xlsx/pptx) by converting to PDF server-side (e.g. LibreOffice headless) for preview-only rendering (no editing). |
 | FR-DOC-11 | P2 | Users shall be able to select multiple items in a library view and bulk delete, bulk move, or download-as-zip. |
 | FR-DOC-12 | P2 | Large files (>100 MB) shall use chunked/resumable upload to tolerate network interruption. |
+| FR-DOC-13 | P4 | Users with Contribute+ shall be able to select multiple items in a library view and edit shared metadata fields (Title, Description, Tags, and any applicable Content Type columns) across the selection in one grid-style operation, rather than one item at a time. |
 
 ### 6.6 Versioning & Check-out/Check-in (`VER`)
 
@@ -241,6 +243,7 @@ Each requirement has a stable ID, a phase tag, and a testable "shall" statement.
 | FR-NOTIF-03 | P2 | Alert delivery frequency shall be configurable per subscription: Immediate, Daily digest, Weekly digest. |
 | FR-NOTIF-04 | P2 | An in-app notification bell shall list recent notifications (shared-with-me, followed-item activity). |
 | FR-NOTIF-05 | P2 | Users shall have a preferences page to manage/unsubscribe from alerts. |
+| FR-NOTIF-06 | P4 | Users shall be able to "Follow" a Library or Site, in addition to the Folder/Document scope FR-NOTIF-02 already covers, receiving the same alert types for activity anywhere within it. |
 
 ### 6.12 Audit Log & Activity (`AUDIT`)
 
@@ -275,6 +278,9 @@ Each requirement has a stable ID, a phase tag, and a testable "shall" statement.
 | FR-UI-06 | MVP | The UI shall show empty states, loading skeletons, and toast confirmations for all mutating actions. |
 | FR-UI-07 | MVP | Layout shall be responsive down to tablet width; mobile viewing shall be usable (editing/admin flows are not mobile-optimized). |
 | FR-UI-08 | P2 | The UI shall support light/dark theme, following shadcn theming conventions. |
+| FR-UI-09 | P4 | The Home page shall show a "Recent" view of documents the current user has recently viewed, uploaded, or modified, across all Sites they can access, in addition to the "My Sites" list (FR-SITE-05). |
+| FR-UI-10 | P4 | Library views shall support saving a named combination of filter, sort, and group-by settings as a reusable "View", switchable from a view picker; a Library Owner may mark a View as the default shown to other users, in addition to any personal Views a user saves for themselves. |
+| FR-UI-11 | P4 | Users shall be able to favorite/pin a Site, Library, Folder, or Document for quick access from a dedicated list, independent of that item's location in the navigation hierarchy. |
 
 ## 7. Non-Functional Requirements
 
@@ -518,7 +524,9 @@ Timestamps are `timestamptz` (UTC). Primary keys are app-generated `uuid` (`Guid
 
 *Immutable: no `UPDATE`/`DELETE` API exists for this table (FR-AUDIT-04).*
 
-#### AlertSubscription / FavoriteItem *(P2)*
+#### AlertSubscription *(P2)* / FavoriteItem *(P4 — see note)*
+
+> `FavoriteItem` was sketched here alongside `AlertSubscription` at the P2 tag from this document's first draft, but §6 never carried a matching functional requirement for it, so Phase 2 correctly built `AlertSubscription` (FR-NOTIF-02) and left `FavoriteItem` unbuilt — there was nothing to trace a task to. FR-UI-11 (§6.14, added 2026-08-17) now gives it one, tagged P4 to match when it's actually scheduled to be built. The shape below is unchanged from the original sketch.
 
 | Field | Type | Notes |
 |---|---|---|
@@ -737,9 +745,20 @@ Local DB authentication · Sites/Libraries/Folders/Documents CRUD · drag-drop &
 
 Content Types & custom metadata columns · Office document preview (server-side PDF conversion) · bulk actions & zip download · chunked upload for large files · email + in-app notifications/alerts ("Follow") · org-wide (non-anonymous) share links · full-text content indexing (PDF/Office text extraction) · CSV audit export · storage usage dashboard · dark theme.
 
-### Phase 3 — Federation & later
+### Phase 3 — Federation
 
-SAML2 SSO · OIDC SSO · SSO-enforcement admin controls · (candidates beyond this spec's scope: retention policies, legal hold, workflow/approval).
+SAML2 SSO · OIDC SSO · SSO-enforcement admin controls.
+
+### Phase 4 — SharePoint-parity daily-use enhancements
+
+Added 2026-08-17 following a direct comparison against SharePoint Online's document-library feature set, requested to identify gaps worth closing for everyday use (§16 assumption 9 records the provenance). Scope: storage quota enforcement (FR-SITE-07) · bulk metadata edit across a multi-select (FR-DOC-13) · Follow extended to Library/Site (FR-NOTIF-06) · a "Recent" cross-site view on Home (FR-UI-09) · saved/named library Views (FR-UI-10) · favorites/pinning (FR-UI-11, closing the FavoriteItem gap noted in §8.2).
+
+Two SharePoint features came up in the same comparison and were deliberately **not** given an FR here:
+
+- **Site templates** (a predefined library/folder/permission starter kit when creating a Site) — real SharePoint feature, but lower daily-use value than the six above and adds its own admin surface; noted as a candidate for a future phase rather than committed now.
+- **Lightweight per-Library content approval** (a lone "require approval before others can see it" toggle on top of existing major/minor versioning, distinct from a full workflow engine — see the implementation plan's comparison writeup for why it's a closer call than it first looks) — sits close enough to the explicitly excluded "workflow/approval engine" non-goal (§2.2) that it isn't included here without an explicit decision; see `doc/ImplementationPlan V1.2.md` §4 for the full reasoning.
+
+Everything else SharePoint Online offers beyond FR-AUTH-09/10/11 and this Phase 4 list remains excluded by §2.2's non-goals (real-time co-authoring, desktop sync/mobile apps, workflow/approval engine, e-signature, retention/legal hold/DLP/eDiscovery — Microsoft Purview's territory, anonymous/external sharing, wiki/lists/news/Teams integration) plus one not on that original list: AI/Copilot-driven search or authoring, which is out of scope for a different reason — it's not a document-library feature at all but a separate LLM-integration architecture this spec's tech stack (§3) never included, and adding it would be a materially larger decision than a roadmap addition.
 
 ## 16. Assumptions
 
@@ -753,6 +772,7 @@ Flagged explicitly since they were not specified by the user and were decided to
 6. Default file size limit 250 MB, recycle bin retention 90 days, access token TTL 15 min, refresh token TTL 7 days — all configurable, not hardcoded.
 7. Site-creation rights default to any authenticated user; Admin can restrict this later via a settings flag if desired (not itemized as its own FR, covered by FR-ADMIN-04's general settings surface).
 8. Database choice is a configuration concern, not a code fork: PostgreSQL is the production database; SQL Server and MySQL are supported for enterprise deployments; SQLite is the local-development default (no DB install required). PostgreSQL-specific schema (e.g. `citext`, `tsvector`) is Postgres-only; other providers get equivalent portable behavior (TDS ADR-8).
+9. Phase 4 (§15) was added after Phase 1–3 were already specified, not planned up front like the others — it originated from a 2026-08-17 request to compare eDMS against SharePoint Online and fold in what's "good to have" for daily use. Its six FRs (FR-SITE-07, FR-DOC-13, FR-NOTIF-06, FR-UI-09/10/11) were selected against two filters: not already covered by Phase 1–3, and not already excluded by §2.2's non-goals. Two items surfaced by the same comparison were deliberately left uncommitted rather than force-fit through those filters — see §15's Phase 4 note for both and why.
 
 ## 17. Glossary
 
@@ -772,3 +792,4 @@ Flagged explicitly since they were not specified by the user and were decided to
 | Version | Date | Change |
 |---|---|---|
 | 1.0 | 2026-08-15 | Initial draft functional specification. |
+| 1.1 | 2026-08-17 | Added Phase 4 (§15): six new FRs (FR-SITE-07, FR-DOC-13, FR-NOTIF-06, FR-UI-09/10/11) from a SharePoint Online comparison (§16 assumption 9); tightened the Phase 3 heading now that Phase 4 exists; clarified `FavoriteItem`'s phase tag in §8.2 (sketched P2, never given a requirement until now, formally P4 via FR-UI-11). No MVP/Phase 1/Phase 2/Phase 3 requirement changed. |
