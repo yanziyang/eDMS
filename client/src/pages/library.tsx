@@ -1113,13 +1113,36 @@ function MoveCopyDialog({
 }
 
 function uploadErrorText(error: unknown, fileName: string): string {
+  const quotaMessage = quotaErrorText(error);
+  if (quotaMessage) {
+    return `Failed to upload ${fileName}: ${quotaMessage}`;
+  }
+
   const detail = error instanceof ApiError ? error.problem.detail : null;
   return detail ? `Failed to upload ${fileName}: ${detail}` : `Failed to upload ${fileName}`;
 }
 
 function chunkedErrorText(error: unknown): string {
+  const quotaMessage = quotaErrorText(error);
+  if (quotaMessage) {
+    return `Upload failed: ${quotaMessage}`;
+  }
+
   const detail = error instanceof ApiError ? error.problem.detail : null;
   return detail ? `Upload failed: ${detail}` : "Upload failed. You can resume from where it stopped.";
+}
+
+function quotaErrorText(error: unknown): string | null {
+  if (!(error instanceof ApiError) || error.problem.type !== "urn:edms:quota-exceeded") {
+    return null;
+  }
+
+  const { siteName, quotaBytes, detail } = error.problem;
+  if (siteName && typeof quotaBytes === "number") {
+    return `Site "${siteName}" storage quota exceeded (${formatBytes(quotaBytes)} limit).`;
+  }
+
+  return detail ?? "The Site storage quota has been exceeded.";
 }
 
 interface LibrarySettingsDialogProps {

@@ -958,6 +958,36 @@ describe("LibraryBrowser", () => {
     expect(uploaded).toEqual(["bad.txt"]);
   });
 
+  it("identifies a quota-exceeded upload with the Site and configured limit", async () => {
+    const uploaded: string[] = [];
+    stubUploadFetch([], [], uploaded, () =>
+      new Response(
+        JSON.stringify({
+          type: "urn:edms:quota-exceeded",
+          title: "Storage quota exceeded",
+          detail: "The operation would exceed the Site quota.",
+          rejectionReason: "quota-exceeded",
+          siteName: "Finance",
+          quotaBytes: 1024,
+        }),
+        { status: 409, headers: { "Content-Type": "application/json" } },
+      ),
+    );
+
+    renderLibrary();
+    await screen.findByText("This folder is empty");
+    await openUploadDialog();
+
+    fireEvent.change(fileInput(), { target: { files: [new File(["x"], "over.txt")] } });
+
+    await waitFor(() =>
+      expect(mockedToast.error).toHaveBeenCalledWith(
+        'Failed to upload over.txt: Site "Finance" storage quota exceeded (1.0 KB limit).',
+      ),
+    );
+    expect(uploaded).toEqual(["over.txt"]);
+  });
+
   it("renders gigabyte sizes", async () => {
     mockNav();
     server.use(

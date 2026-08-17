@@ -34,6 +34,11 @@ export interface ProblemDetails {
   status?: number;
   detail?: string;
   errors?: Record<string, string[]>;
+  rejectionReason?: "quota-exceeded" | string;
+  siteName?: string;
+  quotaBytes?: number;
+  storageUsedBytes?: number;
+  incomingSizeBytes?: number;
 }
 
 export interface SiteDto {
@@ -96,6 +101,7 @@ export interface UploadResult {
   versionLabel: string;
   sizeBytes: number;
   status: string;
+  rejectionReason?: "file-too-large" | "blocked-extension" | "checked-out-by-other-user" | "quota-exceeded";
 }
 
 export interface UploadSessionDto {
