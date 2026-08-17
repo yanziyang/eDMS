@@ -69,6 +69,7 @@ public class Program
 
         builder.Services.AddApplication();
         builder.Services.AddInfrastructure(builder.Configuration, databaseProvider, builder.Environment.ContentRootPath);
+        builder.Services.AddSingleton<SamlConfigurationProvider>();
 
         var jwtOptions = builder.Configuration.GetSection(JwtOptions.SectionName).Get<JwtOptions>()
             ?? new JwtOptions();

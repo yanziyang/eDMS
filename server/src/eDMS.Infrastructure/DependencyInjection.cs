@@ -80,6 +80,7 @@ public static class DependencyInjection
         services.Configure<SmtpOptions>(configuration.GetSection(SmtpOptions.SectionName));
         services.Configure<ClientOptions>(configuration.GetSection(ClientOptions.SectionName));
         services.Configure<OidcOptions>(configuration.GetSection(OidcOptions.SectionName));
+        services.Configure<SamlOptions>(configuration.GetSection(SamlOptions.SectionName));
         services.Configure<StorageOptions>(configuration.GetSection(StorageOptions.SectionName));
         services.Configure<RecycleBinOptions>(configuration.GetSection(RecycleBinOptions.SectionName));
         services.Configure<OfficeConversionOptions>(configuration.GetSection(OfficeConversionOptions.SectionName));
