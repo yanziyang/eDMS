@@ -126,8 +126,8 @@ await ok("context menu favorite action", async () => {
 await ok("bulk metadata edit", async () => {
   await reloadAt("/sites/phoenix/documents/root");
   await waitVisible(page.locator("tbody tr").first());
-  await page.locator("tbody tr", { hasText: "Requirements Spec v2.docx" }).getByRole("checkbox").click();
   await page.locator("tbody tr", { hasText: "Meeting Notes - Aug 2026.docx" }).getByRole("checkbox").click();
+  await page.locator("tbody tr", { hasText: "Sprint Planning Board.xlsx" }).getByRole("checkbox").click();
   await waitVisible(page.getByRole("button", { name: "Edit properties", exact: true }));
   const selectedCount = await page.locator('tbody [role="checkbox"][aria-checked="true"]').count();
   if (selectedCount !== 2) throw new Error(`expected 2 selected rows, got ${selectedCount}`);
