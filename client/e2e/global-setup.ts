@@ -11,9 +11,13 @@ export default function globalSetup(): void {
   // Skipped when the API runs externally (E2E_API_EXTERNAL=1) — e.g. wrapped in
   // dotnet-coverage — because the running process locks the DLLs being rebuilt.
   if (process.env.E2E_API_EXTERNAL !== "1") {
-    execSync("dotnet build eDMS.sln --configuration Debug", {
-      cwd: serverDir,
-      stdio: "pipe",
-    });
+    execSync(
+      "dotnet build eDMS.sln --no-restore --configuration Debug -m:1 -p:UseSharedCompilation=false",
+      {
+        cwd: serverDir,
+        stdio: "pipe",
+        env: { ...process.env, MSBUILDUSESERVER: "0" },
+      },
+    );
   }
 }

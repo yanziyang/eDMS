@@ -246,7 +246,7 @@ FR-AUTH-11 states the outcome ("System Admin shall be able to enforce SSO-only l
 
 | Status | ID | Track | Task | Depends on | Size | Refs |
 |---|---|---|---|---|---|---|
-| Not Started | M23.1 | Both | Extend the Playwright E2E suite: full OIDC flow, full SAML flow, SSO-enforcement blocking local login while the break-glass exempt account still works, and the "provider not configured" case degrading gracefully (no button shown, no broken link) rather than erroring. | M20 (all), M21 (all), M22 (all) | L | TDS §12.2 |
+| Done | M23.1 | Both | Extend the Playwright E2E suite: full OIDC flow, full SAML flow, SSO-enforcement blocking local login while the break-glass exempt account still works, and the "provider not configured" case degrading gracefully (no button shown, no broken link) rather than erroring. | M20 (all), M21 (all), M22 (all) | L | TDS §12.2 |
 | Not Started | M23.2 | BE | Validator-coverage re-audit (the parameterized test from V1.1's M11.1/M19.4) including every Phase 3 command. | M20 (all), M21 (all), M22 (all) | S | TDS §5.2 |
 | Not Started | M23.3 | FE | Accessibility pass on all new SSO UI: login page's new buttons, `/sso/complete`'s loading/success/error states, the Admin Settings SSO section, the per-user toggles on Admin Users. | M20.4, M21.3, M22.2 | M | FS §7 NFR |
 | Not Started | M23.4 | FE | Responsive/mobile re-verification on the same new UI. | M20.4, M21.3, M22.2 | S | FS §7 NFR |
