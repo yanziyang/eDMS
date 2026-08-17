@@ -136,3 +136,59 @@ test.describe.serial("responsive key flow", () => {
     });
   }
 });
+
+test.describe.serial("responsive SSO surfaces", () => {
+  let session: AdminSession;
+
+  test.beforeAll(async ({ browser }) => {
+    session = await getAdminSession(browser);
+  });
+
+  for (const viewport of VIEWPORTS) {
+    test(`${viewport.name} (${viewport.width}x${viewport.height}): login and admin SSO surfaces`, async () => {
+      await session.page.setViewportSize({ width: viewport.width, height: viewport.height });
+      await session.page.route("**/api/v1/auth/sso/providers", (route) =>
+        route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({ oidc: true, saml: true }),
+        }));
+      try {
+        await session.page.goto("/login");
+        await expect(session.page.getByRole("button", { name: "Sign in with SSO" })).toBeVisible();
+        await expect(session.page.getByRole("button", { name: "Sign in with SAML SSO" })).toBeVisible();
+        await expectWithinViewport(session.page, "form", `${viewport.name} login form`, viewport.width);
+        await expectNoHorizontalScroll(session.page, `${viewport.name} login`);
+
+        await session.page.goto("/sso/complete?error=provider-error");
+        await expect(
+          session.page.getByRole("heading", { name: "Sign-in could not be completed" }),
+        ).toBeVisible();
+        await expectWithinViewport(
+          session.page,
+          'a[href="/login"]',
+          `${viewport.name} SSO completion error`,
+          viewport.width,
+        );
+        await expectNoHorizontalScroll(session.page, `${viewport.name} SSO completion`);
+
+        await session.page.goto("/admin/settings");
+        await expect(session.page.getByRole("switch", { name: "Require SSO for all local logins" })).toBeVisible();
+        await expectWithinViewport(session.page, "#require-sso", `${viewport.name} SSO switch`, viewport.width);
+        await expectNoHorizontalScroll(session.page, `${viewport.name} admin settings`);
+
+        await session.page.goto("/admin/users");
+        await expect(session.page.getByRole("switch", { name: /Disable local login for/ }).first()).toBeVisible();
+        await expectWithinViewport(
+          session.page,
+          "div.overflow-x-auto.rounded-lg.border",
+          `${viewport.name} admin users table`,
+          viewport.width,
+        );
+        await expectNoHorizontalScroll(session.page, `${viewport.name} admin users`);
+      } finally {
+        await session.page.unroute("**/api/v1/auth/sso/providers");
+      }
+    });
+  }
+});
