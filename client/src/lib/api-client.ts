@@ -76,9 +76,13 @@ export async function request<T>(path: string, init: RequestInit = {}): Promise<
     },
   });
 
-  const skipRefresh = ["/auth/login", "/auth/refresh", "/auth/forgot-password", "/auth/reset-password"].some(
-    (prefix) => path.startsWith(prefix),
-  );
+  const skipRefresh = [
+    "/auth/login",
+    "/auth/refresh",
+    "/auth/forgot-password",
+    "/auth/reset-password",
+    "/auth/sso/exchange",
+  ].some((prefix) => path.startsWith(prefix));
 
   if (response.status === 401 && !skipRefresh) {
     const refreshed = await refreshAccessToken();

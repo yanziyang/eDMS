@@ -18,6 +18,11 @@ export interface LoginResponse {
   user: CurrentUserDto;
 }
 
+export interface SsoProvidersDto {
+  oidc: boolean;
+  saml: boolean;
+}
+
 export interface RefreshResponse {
   accessToken: string;
   expiresInSeconds: number;

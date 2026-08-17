@@ -1,7 +1,7 @@
 import { http, HttpResponse } from "msw";
 import { describe, expect, it } from "vitest";
 import { server } from "@/test/server";
-import { forgotPassword, login, logout, me, resetPassword } from "./api";
+import { completeSso, forgotPassword, getSsoProviders, login, logout, me, resetPassword } from "./api";
 
 const base = "http://localhost:5080/api/v1";
 
@@ -21,6 +21,29 @@ describe("auth api", () => {
     expect(requests).toHaveLength(1);
     expect(requests[0].method).toBe("POST");
     await expect(requests[0].json()).resolves.toEqual({ email: "a@b.c", password: "secret" });
+  });
+
+  it("discovers configured SSO providers", async () => {
+    server.use(
+      http.get(`${base}/auth/sso/providers`, () => HttpResponse.json({ oidc: true, saml: false })),
+    );
+
+    await expect(getSsoProviders()).resolves.toEqual({ oidc: true, saml: false });
+  });
+
+  it("exchanges the one-time SSO code in the POST body", async () => {
+    const requests: Request[] = [];
+    server.use(
+      http.post(`${base}/auth/sso/exchange`, async ({ request }) => {
+        requests.push(request);
+        return HttpResponse.json({ accessToken: "token-sso", expiresInSeconds: 900, user: { id: "u1" } });
+      }),
+    );
+
+    await expect(completeSso("opaque-code")).resolves.toMatchObject({ accessToken: "token-sso" });
+    expect(requests).toHaveLength(1);
+    expect(requests[0].url).not.toContain("opaque-code");
+    await expect(requests[0].json()).resolves.toEqual({ code: "opaque-code" });
   });
 
   it("logout posts to /auth/logout", async () => {

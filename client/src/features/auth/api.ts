@@ -1,10 +1,21 @@
 import { request } from "@/lib/api-client";
-import type { CurrentUserDto, LoginResponse } from "@/types/api";
+import type { CurrentUserDto, LoginResponse, SsoProvidersDto } from "@/types/api";
 
 export async function login(email: string, password: string): Promise<LoginResponse> {
   return request<LoginResponse>("/auth/login", {
     method: "POST",
     body: JSON.stringify({ email, password }),
+  });
+}
+
+export async function getSsoProviders(): Promise<SsoProvidersDto> {
+  return request<SsoProvidersDto>("/auth/sso/providers");
+}
+
+export async function completeSso(code: string): Promise<LoginResponse> {
+  return request<LoginResponse>("/auth/sso/exchange", {
+    method: "POST",
+    body: JSON.stringify({ code }),
   });
 }
 

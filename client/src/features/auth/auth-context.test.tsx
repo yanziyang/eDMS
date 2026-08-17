@@ -5,7 +5,7 @@ import { describe, expect, it, vi } from "vitest";
 import { setAccessToken } from "@/lib/api-client";
 import { getShareToken, setShareToken } from "@/features/share-links/token";
 import { AuthProvider, useAuth } from "./auth-context";
-import { login, logout, me } from "./api";
+import { completeSso, login, logout, me } from "./api";
 
 vi.mock("@/lib/api-client", () => ({
   setAccessToken: vi.fn(),
@@ -13,11 +13,13 @@ vi.mock("@/lib/api-client", () => ({
 
 vi.mock("./api", () => ({
   login: vi.fn(),
+  completeSso: vi.fn(),
   logout: vi.fn(),
   me: vi.fn(),
 }));
 
 const mockedLogin = vi.mocked(login);
+const mockedCompleteSso = vi.mocked(completeSso);
 const mockedLogout = vi.mocked(logout);
 const mockedMe = vi.mocked(me);
 const mockedSetAccessToken = vi.mocked(setAccessToken);
@@ -39,12 +41,13 @@ class ErrorBoundary extends Component<{ onError: (error: unknown) => void; child
 }
 
 function Probe() {
-  const { user, status, login: doLogin, logout: doLogout } = useAuth();
+  const { user, status, login: doLogin, completeSso: doCompleteSso, logout: doLogout } = useAuth();
   return (
     <div>
       <span data-testid="status">{status}</span>
       <span data-testid="user">{user ? user.email : "none"}</span>
       <button onClick={() => doLogin("a@b.c", "pw")}>login</button>
+      <button onClick={() => doCompleteSso("opaque-code")}>sso</button>
       <button onClick={() => doLogout()}>logout</button>
     </div>
   );
@@ -166,6 +169,31 @@ describe("auth-context", () => {
     expect(screen.getByTestId("user")).toHaveTextContent("none");
     expect(mockedSetAccessToken).toHaveBeenLastCalledWith(null);
     expect(getShareToken()).toBeNull();
+  });
+
+  it("SSO completion shares login state-setting", async () => {
+    mockedMe.mockResolvedValue({
+      id: "u1",
+      email: "a@b.c",
+      displayName: "A",
+      isSystemAdmin: false,
+      siteMemberships: [],
+    });
+    mockedCompleteSso.mockResolvedValue({
+      accessToken: "tok-sso",
+      expiresInSeconds: 900,
+      user: { id: "u2", email: "sso@c.d", displayName: "SSO", isSystemAdmin: false, siteMemberships: [] },
+    });
+
+    const user = userEvent.setup();
+    renderProbe();
+    await waitFor(() => expect(screen.getByTestId("status")).toHaveTextContent("authenticated"));
+
+    await user.click(screen.getByRole("button", { name: "sso" }));
+
+    await waitFor(() => expect(screen.getByTestId("user")).toHaveTextContent("sso@c.d"));
+    expect(mockedCompleteSso).toHaveBeenCalledWith("opaque-code");
+    expect(mockedSetAccessToken).toHaveBeenCalledWith("tok-sso");
   });
 
   it("logout clears the session even when the API call fails", async () => {

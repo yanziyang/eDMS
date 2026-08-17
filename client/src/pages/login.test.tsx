@@ -1,19 +1,25 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { AuthProvider } from "@/features/auth/auth-context";
-import { login, me } from "@/features/auth/api";
+import { getSsoProviders, login, me } from "@/features/auth/api";
 import { Login } from "./login";
 
 vi.mock("@/features/auth/api", () => ({
   login: vi.fn(),
   logout: vi.fn(),
   me: vi.fn(),
+  getSsoProviders: vi.fn(),
 }));
 
 const mockedLogin = vi.mocked(login);
 const mockedMe = vi.mocked(me);
+const mockedSsoProviders = vi.mocked(getSsoProviders);
+
+beforeEach(() => {
+  mockedSsoProviders.mockResolvedValue({ oidc: false, saml: false });
+});
 
 function currentUser() {
   return { id: "u1", email: "a@b.c", displayName: "A", isSystemAdmin: false, siteMemberships: [] };
@@ -110,5 +116,24 @@ describe("Login", () => {
 
     await user.click(screen.getByRole("button", { name: "Show password" }));
     expect(passwordInput).toHaveAttribute("type", "password");
+  });
+
+  it("shows the OIDC SSO entry only when the provider is enabled", async () => {
+    mockedMe.mockResolvedValue(currentUser());
+    mockedSsoProviders.mockResolvedValue({ oidc: true, saml: false });
+
+    renderLogin();
+
+    expect(await screen.findByRole("button", { name: "Sign in with SSO" })).toBeInTheDocument();
+  });
+
+  it("shows the SAML SSO entry independently", async () => {
+    mockedMe.mockResolvedValue(currentUser());
+    mockedSsoProviders.mockResolvedValue({ oidc: false, saml: true });
+
+    renderLogin();
+
+    expect(await screen.findByRole("button", { name: "Sign in with SAML SSO" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Sign in with SSO" })).not.toBeInTheDocument();
   });
 });

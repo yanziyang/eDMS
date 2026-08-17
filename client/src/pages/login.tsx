@@ -1,8 +1,9 @@
 import { Eye, Lock, Mail } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { AuthShell } from "@/components/app/auth-shell";
 import { useAuth } from "@/features/auth/auth-context";
+import { getSsoProviders } from "@/features/auth/api";
 import { Button } from "@/components/ui/button";
 import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from "@/components/ui/input-group";
 import { Label } from "@/components/ui/label";
@@ -16,6 +17,23 @@ export function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [ssoProviders, setSsoProviders] = useState({ oidc: false, saml: false });
+
+  useEffect(() => {
+    let cancelled = false;
+    getSsoProviders()
+      .then((providers) => {
+        if (!cancelled) {
+          setSsoProviders(providers);
+        }
+      })
+      .catch(() => {
+        // SSO is optional; a provider discovery failure must not hide local login.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -112,6 +130,42 @@ export function Login() {
           {submitting ? "Signing in…" : "Sign in"}
         </Button>
       </form>
+
+      {(ssoProviders.oidc || ssoProviders.saml) && (
+        <div className="mt-6 flex flex-col gap-3">
+          <div className="relative flex items-center">
+            <div className="h-px flex-1 bg-border" />
+            <span className="px-3 text-xs text-muted-foreground">or continue with</span>
+            <div className="h-px flex-1 bg-border" />
+          </div>
+          {ssoProviders.oidc && (
+            <Button
+              type="button"
+              variant="outline"
+              size="lg"
+              className="w-full"
+              onClick={() => {
+                window.location.href = "/api/v1/auth/sso/oidc/challenge";
+              }}
+            >
+              Sign in with SSO
+            </Button>
+          )}
+          {ssoProviders.saml && (
+            <Button
+              type="button"
+              variant="outline"
+              size="lg"
+              className="w-full"
+              onClick={() => {
+                window.location.href = "/api/v1/auth/sso/saml/challenge";
+              }}
+            >
+              Sign in with SAML SSO
+            </Button>
+          )}
+        </div>
+      )}
     </AuthShell>
   );
 }

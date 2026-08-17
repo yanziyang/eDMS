@@ -55,6 +55,7 @@ describe("AppShell", () => {
       user: null,
       status: "loading",
       login: vi.fn(),
+      completeSso: vi.fn(),
       logout: vi.fn(),
     });
 
@@ -68,6 +69,7 @@ describe("AppShell", () => {
       user: null,
       status: "unauthenticated",
       login: vi.fn(),
+      completeSso: vi.fn(),
       logout: vi.fn(),
     });
 
@@ -81,6 +83,7 @@ describe("AppShell", () => {
       user: adminUser(),
       status: "authenticated",
       login: vi.fn(),
+      completeSso: vi.fn(),
       logout: vi.fn(),
     });
 
@@ -99,6 +102,7 @@ describe("AppShell", () => {
       user: adminUser({ isSystemAdmin: false }),
       status: "authenticated",
       login: vi.fn(),
+      completeSso: vi.fn(),
       logout: vi.fn(),
     });
 
@@ -113,6 +117,7 @@ describe("AppShell", () => {
       user: adminUser({ isSystemAdmin: true }),
       status: "authenticated",
       login: vi.fn(),
+      completeSso: vi.fn(),
       logout: vi.fn(),
     });
 
@@ -128,6 +133,7 @@ describe("AppShell", () => {
         user: null,
         status: "unauthenticated",
         login: vi.fn(),
+        completeSso: vi.fn(),
         logout,
       });
     });
@@ -135,6 +141,7 @@ describe("AppShell", () => {
       user: adminUser(),
       status: "authenticated",
       login: vi.fn(),
+      completeSso: vi.fn(),
       logout,
     });
 
@@ -152,6 +159,7 @@ describe("AppShell", () => {
       user: adminUser(),
       status: "authenticated",
       login: vi.fn(),
+      completeSso: vi.fn(),
       logout: vi.fn(),
     });
 
@@ -177,6 +185,7 @@ describe("AppShell", () => {
       user: adminUser({ isSystemAdmin: true }),
       status: "authenticated",
       login: vi.fn(),
+      completeSso: vi.fn(),
       logout: vi.fn(),
     });
 
@@ -193,6 +202,7 @@ describe("AppShell", () => {
       user: adminUser(),
       status: "authenticated",
       login: vi.fn(),
+      completeSso: vi.fn(),
       logout: vi.fn(),
     });
 
