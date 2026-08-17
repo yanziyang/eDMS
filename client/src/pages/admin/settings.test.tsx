@@ -22,11 +22,16 @@ function settingsDto(overrides: Record<string, unknown> = {}) {
     accessTokenLifetimeMinutes: 15,
     refreshTokenLifetimeDays: 7,
     appName: "eDMS",
+    ssoEnforcedGlobally: false,
     ...overrides,
   };
 }
 
 function renderSettings() {
+  server.use(
+    http.get(`${base}/auth/sso/providers`, () =>
+      HttpResponse.json({ oidc: false, saml: false })),
+  );
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
@@ -94,6 +99,7 @@ describe("AdminSettings", () => {
       maxUploadSizeBytes: 500 * 1024 * 1024,
       recycleBinRetentionDays: 30,
       siteCreationRestricted: true,
+      ssoEnforcedGlobally: false,
     });
     expect(mockedToast.success).toHaveBeenCalledWith("Settings saved");
     await waitFor(() => expect(gets).toBe(2));

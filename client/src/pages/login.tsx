@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from "@/components/ui/input-group";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
+import { ApiError } from "@/lib/api-client";
 
 export function Login() {
   const navigate = useNavigate();
@@ -42,8 +43,12 @@ export function Login() {
     try {
       await login(email.trim(), password);
       navigate("/", { replace: true });
-    } catch {
-      setError("Invalid email or password.");
+    } catch (error) {
+      setError(
+        error instanceof ApiError && error.problem.type === "urn:edms:sso-required"
+          ? "This account requires SSO — use the configured SSO button above."
+          : "Invalid email or password.",
+      );
     } finally {
       setSubmitting(false);
     }

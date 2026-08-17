@@ -14,8 +14,24 @@ export function updateAdminSettings(input: {
   maxUploadSizeBytes?: number;
   recycleBinRetentionDays?: number;
   siteCreationRestricted?: boolean;
+  ssoEnforcedGlobally?: boolean;
 }): Promise<void> {
   return request<void>("/admin/settings", { method: "PUT", body: JSON.stringify(input) });
+}
+
+export function updateUser(
+  userId: string,
+  input: {
+    displayName: string;
+    isSystemAdmin: boolean;
+    localLoginDisabled: boolean;
+    ssoExempt: boolean;
+  },
+): Promise<void> {
+  return request<void>(`/users/${userId}`, {
+    method: "PUT",
+    body: JSON.stringify(input),
+  });
 }
 
 export function getStorageReport(): Promise<StorageReportDto[]> {

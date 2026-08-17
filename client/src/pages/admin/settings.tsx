@@ -6,7 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { getSsoProviders } from "@/features/auth/api";
 import { getAdminSettings, updateAdminSettings } from "@/features/admin/api";
+import { ApiError } from "@/lib/api-client";
 import { queryKeys } from "@/lib/queryKeys";
 
 const MB = 1024 * 1024;
@@ -17,10 +19,16 @@ export function AdminSettings() {
     queryKey: queryKeys.admin.settings(),
     queryFn: getAdminSettings,
   });
+  const providers = useQuery({
+    queryKey: queryKeys.auth.ssoProviders(),
+    queryFn: getSsoProviders,
+  });
 
   const [maxUploadMb, setMaxUploadMb] = useState("");
   const [retentionDays, setRetentionDays] = useState("");
   const [restrictCreation, setRestrictCreation] = useState(false);
+  const [ssoEnforcedGlobally, setSsoEnforcedGlobally] = useState(false);
+  const [ssoSaveError, setSsoSaveError] = useState<string | null>(null);
   const [formLoaded, setFormLoaded] = useState(false);
 
   useEffect(() => {
@@ -28,22 +36,37 @@ export function AdminSettings() {
       setMaxUploadMb(String(Math.round(settings.data.maxUploadSizeBytes / MB)));
       setRetentionDays(String(settings.data.recycleBinRetentionDays));
       setRestrictCreation(settings.data.siteCreationRestricted);
+      setSsoEnforcedGlobally(settings.data.ssoEnforcedGlobally);
       setFormLoaded(true);
     }
   }, [settings.data, formLoaded]);
 
   const save = useMutation({
-    mutationFn: () =>
-      updateAdminSettings({
+    mutationFn: () => {
+      setSsoSaveError(null);
+      return updateAdminSettings({
         maxUploadSizeBytes: Number(maxUploadMb) * MB,
         recycleBinRetentionDays: Number(retentionDays),
         siteCreationRestricted: restrictCreation,
-      }),
+        ssoEnforcedGlobally,
+      });
+    },
     onSuccess: () => {
+      setSsoSaveError(null);
       toast.success("Settings saved");
       queryClient.invalidateQueries({ queryKey: queryKeys.admin.settings() });
     },
-    onError: () => toast.error("Failed to save settings"),
+    onError: (error) => {
+      if (error instanceof ApiError && error.problem.type === "urn:edms:sso-safety-rail") {
+        setSsoSaveError(
+          error.problem.detail
+            ?? "Add an active SSO-exempt system administrator before enabling global SSO.",
+        );
+      } else {
+        setSsoSaveError("Failed to save settings");
+      }
+      toast.error("Failed to save settings");
+    },
   });
 
   const maxUploadValid = maxUploadMb.trim() !== "" && Number(maxUploadMb) > 0;
@@ -115,7 +138,30 @@ export function AdminSettings() {
               onCheckedChange={setRestrictCreation}
             />
           </div>
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <div className="text-sm font-medium">Require SSO for all local logins</div>
+              <div className="text-xs text-muted-foreground">
+                Users without an exemption must use a configured federated provider.
+              </div>
+            </div>
+            <Switch
+              id="require-sso"
+              aria-label="Require SSO for all local logins"
+              checked={ssoEnforcedGlobally}
+              onCheckedChange={(checked) => {
+                setSsoSaveError(null);
+                setSsoEnforcedGlobally(checked);
+              }}
+            />
+          </div>
         </div>
+
+        {ssoSaveError && (
+          <div role="alert" className="mt-4 text-sm text-destructive">
+            {ssoSaveError}
+          </div>
+        )}
 
         <div className="mt-4 flex items-center gap-2">
           <Button type="submit" disabled={saveDisabled}>
@@ -127,6 +173,33 @@ export function AdminSettings() {
           )}
         </div>
       </form>
+
+      <section className="rounded-lg border bg-card p-4" aria-labelledby="sso-providers-heading">
+        <div id="sso-providers-heading" className="text-base font-medium">SSO providers</div>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Provider availability is configured by the deployment environment.
+        </p>
+        {providers.isLoading ? (
+          <div className="mt-4 text-sm text-muted-foreground">Loading providers…</div>
+        ) : providers.isError ? (
+          <div className="mt-4 text-sm text-destructive">Failed to load SSO providers.</div>
+        ) : (
+          <dl className="mt-4 grid max-w-md grid-cols-2 gap-4 text-sm">
+            <div>
+              <dt className="text-muted-foreground">OIDC</dt>
+              <dd className="mt-0.5 font-medium">
+                {providers.data?.oidc ? "Configured" : "Not configured"}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-muted-foreground">SAML2</dt>
+              <dd className="mt-0.5 font-medium">
+                {providers.data?.saml ? "Configured" : "Not configured"}
+              </dd>
+            </div>
+          </dl>
+        )}
+      </section>
 
       <div className="rounded-lg border bg-card p-4">
         <div className="text-base font-medium">Session &amp; security</div>

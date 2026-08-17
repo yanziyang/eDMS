@@ -69,4 +69,8 @@ export const queryKeys = {
     list: (unreadOnly = false) => [...queryKeys.notifications.all, "list", unreadOnly] as const,
     subscriptions: () => [...queryKeys.notifications.all, "subscriptions"] as const,
   },
+  auth: {
+    all: ["auth"] as const,
+    ssoProviders: () => [...queryKeys.auth.all, "sso-providers"] as const,
+  },
 } as const;

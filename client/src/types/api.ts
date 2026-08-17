@@ -61,6 +61,8 @@ export interface UserDto {
   displayName: string;
   isActive: boolean;
   isSystemAdmin: boolean;
+  localLoginDisabled: boolean;
+  ssoExempt: boolean;
   createdAt: string;
   lastLoginAt: string | null;
 }
@@ -174,6 +176,7 @@ export interface AdminSettingsDto {
   accessTokenLifetimeMinutes: number;
   refreshTokenLifetimeDays: number;
   appName: string;
+  ssoEnforcedGlobally: boolean;
 }
 
 export interface StorageReportDto {

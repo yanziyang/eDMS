@@ -21,6 +21,8 @@ function userDto(overrides: Record<string, unknown> = {}) {
     displayName: "Alice",
     isActive: true,
     isSystemAdmin: false,
+    localLoginDisabled: false,
+    ssoExempt: false,
     createdAt: "2026-01-01T00:00:00Z",
     lastLoginAt: null,
     ...overrides,
