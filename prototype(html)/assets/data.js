@@ -128,7 +128,7 @@ const SEARCH_INDEX = Object.entries(LIBRARY_CONTENTS).flatMap(([key, data]) => {
 });
 
 const SAMPLE_USERS = [
-  { name: "Jordan Reyes", email: "jordan.reyes@edms-demo.local", title: "IT Systems Manager", dept: "IT Operations", role: "System Administrator", status: "Active", lastActive: "Just now" },
+  { name: "Jordan Reyes", email: "jordan.reyes@edms-demo.local", title: "IT Systems Manager", dept: "IT Operations", role: "System Administrator", status: "Active", lastActive: "Just now", localLoginDisabled: false, ssoExempt: true },
   { name: "Sarah Chen", email: "sarah.chen@edms-demo.local", title: "Finance Manager", dept: "Finance", role: "Site Owner", status: "Active", lastActive: "12 min ago" },
   { name: "Marcus Johnson", email: "marcus.johnson@edms-demo.local", title: "Financial Analyst", dept: "Finance", role: "Member", status: "Active", lastActive: "1 hour ago" },
   { name: "Priya Patel", email: "priya.patel@edms-demo.local", title: "Legal Counsel", dept: "Finance", role: "Member", status: "Active", lastActive: "3 hours ago" },
@@ -220,6 +220,41 @@ const QUICK_ACCESS = [
   { site: "hr", lib: "documents", folder: "root", name: "Employee Handbook 2026.docx", ext: "docx" },
   { site: "marketing", lib: "documents", folder: "root", name: "Brand Guidelines 2026.pdf", ext: "pdf" }
 ];
+
+/* Phase 3/4 prototype state. These fixtures mirror the latest functional
+   spec and are intentionally small enough to be easy to walk through. */
+const FAVORITE_SEED = [
+  { key: "Site:finance", objectType: "Site", name: "Finance", location: "Site", icon: "landmark", href: "site-home.html?site=finance" },
+  { key: "Library:finance/documents", objectType: "Library", name: "Documents", location: "Finance", icon: "folder", href: "library.html?site=finance&lib=documents&folder=root" },
+  { key: "Folder:finance/documents/root/invoices", objectType: "Folder", name: "Invoices", location: "Finance / Documents", icon: "folder", href: "library.html?site=finance&lib=documents&folder=invoices" },
+  { key: "Document:finance/documents/root/Q3 Financial Report.xlsx", objectType: "Document", name: "Q3 Financial Report.xlsx", location: "Finance / Documents", ext: "xlsx", href: "library.html?site=finance&lib=documents&folder=root" },
+  { key: "Document:phoenix/documents/root/Project Phoenix Roadmap.pptx", objectType: "Document", name: "Project Phoenix Roadmap.pptx", location: "Project Phoenix / Documents", ext: "pptx", href: "library.html?site=phoenix&lib=documents&folder=root" }
+];
+
+const RECENT_DOCUMENTS = [
+  { site: "finance", lib: "documents", folder: "root", name: "Q3 Financial Report.xlsx", ext: "xlsx", action: "Viewed", touchedAt: "Today, 09:02" },
+  { site: "phoenix", lib: "documents", folder: "root", name: "Requirements Spec v2.docx", ext: "docx", action: "Modified", touchedAt: "Yesterday, 16:55" },
+  { site: "it", lib: "documents", folder: "root", name: "Server Runbook.docx", ext: "docx", action: "Checked in", touchedAt: "Yesterday, 11:18" },
+  { site: "marketing", lib: "documents", folder: "root", name: "Q3 Campaign Plan.pptx", ext: "pptx", action: "Viewed", touchedAt: "Aug 14, 14:02" },
+  { site: "hr", lib: "documents", folder: "root", name: "Org Directory.xlsx", ext: "xlsx", action: "Uploaded", touchedAt: "Aug 13, 18:22" }
+];
+
+const LIBRARY_VIEWS = {
+  "finance/documents": [
+    { id: "all-items", name: "All items", owner: "Shared", shared: true, filter: "", sortKey: "name", sortDir: "asc", groupBy: "none", isDefault: true },
+    { id: "finance-reports", name: "Finance reports", owner: "You", shared: false, filter: "report", sortKey: "modified", sortDir: "desc", groupBy: "type", isDefault: false }
+  ],
+  "phoenix/documents": [
+    { id: "all-items", name: "All items", owner: "Shared", shared: true, filter: "", sortKey: "name", sortDir: "asc", groupBy: "none", isDefault: true },
+    { id: "project-deliverables", name: "Project deliverables", owner: "Shared", shared: true, filter: "", sortKey: "modified", sortDir: "desc", groupBy: "type", isDefault: false }
+  ],
+  "hr/documents": [
+    { id: "all-items", name: "All items", owner: "Shared", shared: true, filter: "", sortKey: "name", sortDir: "asc", groupBy: "none", isDefault: true }
+  ]
+};
+
+const SSO_PROVIDERS = { oidc: true, saml: true };
+const SSO_SETTINGS = { enforcedGlobally: false };
 
 /* Storage usage report data */
 const STORAGE_TREND = [ 68, 74, 81, 90, 101, 108, 118 ]; /* GB, last 7 months incl. current */

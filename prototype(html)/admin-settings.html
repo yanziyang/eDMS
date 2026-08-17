@@ -76,21 +76,35 @@
       </div>
 
       <div class="card">
-        <div class="card-header"><div><div class="card-title">Authentication providers</div><div class="card-description">Database authentication is enabled by default. SSO federation is on the roadmap.</div></div></div>
+        <div class="card-header"><div><div class="card-title">Authentication providers</div><div class="card-description">Configured federation providers are available on the sign-in page.</div></div></div>
         <div class="card-content flex flex-col gap-3">
           <div class="flex items-center justify-between p-3 border rounded">
             <div class="flex items-center gap-3"><svg class="icon" data-icon="key"></svg><div><div class="text-sm font-medium">Database authentication</div><div class="text-xs text-muted">Email + password, managed in eDMS</div></div></div>
             <span class="badge badge-success">Enabled</span>
           </div>
-          <div class="flex items-center justify-between p-3 border rounded" style="opacity:.6;">
+          <div class="flex items-center justify-between p-3 border rounded">
             <div class="flex items-center gap-3"><svg class="icon" data-icon="shieldCheck"></svg><div><div class="text-sm font-medium">SAML 2.0</div><div class="text-xs text-muted">Federate with your identity provider</div></div></div>
-            <span class="badge badge-outline">Planned</span>
+            <span class="badge badge-success">Configured</span>
           </div>
-          <div class="flex items-center justify-between p-3 border rounded" style="opacity:.6;">
+          <div class="flex items-center justify-between p-3 border rounded">
             <div class="flex items-center gap-3"><svg class="icon" data-icon="globe"></svg><div><div class="text-sm font-medium">OpenID Connect (OIDC)</div><div class="text-xs text-muted">Sign in with Azure AD, Okta, or Google Workspace</div></div></div>
-            <span class="badge badge-outline">Planned</span>
+            <span class="badge badge-success">Configured</span>
           </div>
         </div>
+      </div>
+
+      <div class="card mt-6">
+        <div class="card-header"><div><div class="card-title">SSO enforcement</div><div class="card-description">Require federated login for users while preserving a break-glass administrator account.</div></div><span class="badge badge-warning">Admin only</span></div>
+        <form id="ssoSettingsForm">
+          <div class="card-content">
+            <div class="flex items-center justify-between p-3 border rounded">
+              <div><div class="text-sm font-medium">Require SSO for local login</div><div class="text-xs text-muted">Users with local login disabled see a distinct SSO-required message. At least one active System Administrator must remain SSO-exempt.</div></div>
+              <label class="switch"><input type="checkbox" id="ssoEnforcedToggle"><span class="slider"></span></label>
+            </div>
+            <div class="error-text hidden mt-3" id="ssoSettingsError"><svg class="icon icon-sm" data-icon="alertTriangle"></svg></div>
+          </div>
+          <div class="card-footer"><button type="submit" class="btn btn-primary">Save SSO policy</button></div>
+        </form>
       </div>
 
     </main>

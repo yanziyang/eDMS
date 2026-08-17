@@ -38,7 +38,7 @@
         <div class="card-content tight">
           <div class="table-wrap" style="border:none;border-radius:0;border-top:1px solid hsl(var(--border));">
             <table class="data-table">
-              <thead><tr><th>Name</th><th>Title</th><th>Department</th><th>Role</th><th>Last active</th><th>Active</th></tr></thead>
+            <thead><tr><th>Name</th><th>Title</th><th>Department</th><th>Role</th><th>Last active</th><th>Active</th><th class="actions-col">Login policy</th></tr></thead>
               <tbody id="adminUsersBody"></tbody>
             </table>
           </div>
@@ -64,6 +64,20 @@
         </div>
       </div>
       <div class="dialog-footer"><button type="button" class="btn btn-secondary" data-dialog-close>Cancel</button><button type="submit" class="btn btn-primary">Send invitation</button></div>
+    </form>
+  </div>
+</div>
+
+<div class="overlay" id="userSsoDialog">
+  <div class="dialog">
+    <div class="dialog-header"><div class="dialog-title">SSO login policy<button class="dialog-close btn btn-icon btn-ghost btn-sm" data-dialog-close><svg class="icon" data-icon="x"></svg></button></div><div class="dialog-description"><strong id="userSsoName">User</strong> · <span id="userSsoEmail">email</span></div></div>
+    <form id="userSsoForm">
+      <div class="dialog-body">
+        <input type="hidden" id="userSsoIndex">
+        <div class="flex items-center justify-between p-3 border rounded mb-3"><div><div class="text-sm font-medium">Disable local password login</div><div class="text-xs text-muted">This account must use a configured SSO provider.</div></div><label class="switch"><input type="checkbox" id="userLocalLoginDisabled"><span class="slider"></span></label></div>
+        <div class="flex items-center justify-between p-3 border rounded"><div><div class="text-sm font-medium">SSO-exempt / break-glass</div><div class="text-xs text-muted">This account may use local login even when global enforcement is enabled.</div></div><label class="switch"><input type="checkbox" id="userSsoExempt"><span class="slider"></span></label></div>
+      </div>
+      <div class="dialog-footer"><button type="button" class="btn btn-secondary" data-dialog-close>Cancel</button><button type="submit" class="btn btn-primary">Save policy</button></div>
     </form>
   </div>
 </div>

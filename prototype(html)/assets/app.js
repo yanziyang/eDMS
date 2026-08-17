@@ -31,6 +31,115 @@ function tagBadges(tags) { return (tags || []).map(t => `<span class="badge badg
 function siteIconName(icon) { return icon || "building2"; }
 
 /* ---------------------------------------------------------------------- */
+/*  Latest-spec prototype state                                            */
+/* ---------------------------------------------------------------------- */
+function loadPrototypeState() {
+  const defaults = {
+    favorites: FAVORITE_SEED.slice(0, 4).map(f => f.key),
+    favoriteEntries: {},
+    follows: {
+      Site: ["finance"],
+      Library: ["finance/documents"],
+      Folder: [],
+      Document: []
+    },
+    savedViews: {},
+    ssoEnforcedGlobally: SSO_SETTINGS.enforcedGlobally
+  };
+  try {
+    const saved = JSON.parse(localStorage.getItem("edms-prototype-state") || "null");
+    if (!saved) return defaults;
+    return {
+      ...defaults,
+      ...saved,
+      favorites: Array.isArray(saved.favorites) ? saved.favorites : defaults.favorites,
+      favoriteEntries: saved.favoriteEntries || {},
+      follows: { ...defaults.follows, ...(saved.follows || {}) },
+      savedViews: saved.savedViews || {}
+    };
+  } catch (e) { return defaults; }
+}
+const prototypeState = loadPrototypeState();
+function savePrototypeState() {
+  try { localStorage.setItem("edms-prototype-state", JSON.stringify(prototypeState)); } catch (e) {}
+}
+function favoriteKeyForItem(item, context) {
+  const ctx = context || {};
+  const site = item.site || ctx.site || getParam("site", "finance");
+  const lib = item.lib || ctx.lib || getParam("lib", "documents");
+  const folder = item.folder || ctx.folder || getParam("folder", "root");
+  return item.type === "folder"
+    ? `Folder:${site}/${lib}/${folder}/${item.id || item.name}`
+    : `Document:${site}/${lib}/${folder}/${item.name}`;
+}
+function favoriteEntryForItem(item, context) {
+  const key = favoriteKeyForItem(item, context);
+  const existing = FAVORITE_SEED.find(f => f.key === key);
+  if (existing) return existing;
+  const site = item.site || (context && context.site) || getParam("site", "finance");
+  const lib = item.lib || (context && context.lib) || getParam("lib", "documents");
+  const folder = item.folder || (context && context.folder) || getParam("folder", "root");
+  const siteName = findSite(site).name;
+  const library = findSite(site).libraries.find(l => l.id === lib);
+  return {
+    key,
+    objectType: item.type === "folder" ? "Folder" : "Document",
+    name: item.name,
+    location: `${siteName} / ${library ? library.name : lib}${folder !== "root" ? ` / ${folder}` : ""}`,
+    ext: item.ext,
+    href: item.type === "folder"
+      ? `library.html?site=${site}&lib=${lib}&folder=${item.id}`
+      : `library.html?site=${site}&lib=${lib}&folder=${folder}`
+  };
+}
+function isFavorite(key) { return prototypeState.favorites.includes(key); }
+function registerFavoriteEntry(entry) {
+  if (entry && entry.key) prototypeState.favoriteEntries[entry.key] = entry;
+}
+function toggleFavorite(key, entry) {
+  registerFavoriteEntry(entry);
+  const i = prototypeState.favorites.indexOf(key);
+  if (i >= 0) prototypeState.favorites.splice(i, 1);
+  else prototypeState.favorites.push(key);
+  savePrototypeState();
+  return i < 0;
+}
+function favoriteButtonHtml(key, label) {
+  const active = isFavorite(key);
+  return `<button class="btn btn-ghost btn-icon btn-sm favorite-toggle${active ? " active" : ""}" data-favorite-toggle="${esc(key)}" aria-label="${active ? "Remove from favorites" : "Add to favorites"}" data-tooltip="${active ? "Remove from favorites" : "Add to favorites"}"><svg class="icon icon-sm" data-icon="star"></svg></button>`;
+}
+function getFavoriteCatalog() {
+  const dynamic = Object.values(prototypeState.favoriteEntries || {});
+  const merged = FAVORITE_SEED.concat(dynamic);
+  return merged.filter((entry, i, all) => all.findIndex(other => other.key === entry.key) === i);
+}
+function followKey(type, site, lib, item) {
+  if (type === "Site") return site;
+  if (type === "Library") return `${site}/${lib}`;
+  return favoriteKeyForItem(item, { site, lib });
+}
+function isFollowing(type, key) { return (prototypeState.follows[type] || []).includes(key); }
+function toggleFollow(type, key) {
+  prototypeState.follows[type] = prototypeState.follows[type] || [];
+  const i = prototypeState.follows[type].indexOf(key);
+  if (i >= 0) prototypeState.follows[type].splice(i, 1);
+  else prototypeState.follows[type].push(key);
+  savePrototypeState();
+  return i < 0;
+}
+function followButtonHtml(type, key, compact) {
+  const active = isFollowing(type, key);
+  return `<button class="btn ${compact ? "btn-ghost btn-sm" : "btn-outline btn-sm"} follow-toggle${active ? " active" : ""}" data-follow-toggle="${esc(key)}" data-follow-type="${type}"><svg class="icon icon-sm" data-icon="bell"></svg>${active ? "Following" : "Follow"}</button>`;
+}
+function getLibraryViews(site, lib) {
+  const key = `${site}/${lib}`;
+  const base = (LIBRARY_VIEWS[key] || [{ id: "all-items", name: "All items", owner: "Shared", shared: true, filter: "", sortKey: "name", sortDir: "asc", groupBy: "none", isDefault: true }]).map(v => ({ ...v }));
+  const personal = Array.isArray(prototypeState.savedViews[key]) ? prototypeState.savedViews[key] : [];
+  return base.concat(personal);
+}
+function currentLibraryViewKey() { return `${getParam("site", "finance")}/${getParam("lib", "documents")}`; }
+
+/* ---------------------------------------------------------------------- */
 /*  Icon system — inline SVG paths injected into <svg data-icon="name">    */
 /* ---------------------------------------------------------------------- */
 const ICONS = {
@@ -97,6 +206,8 @@ const ICONS = {
   palette: '<circle cx="13.5" cy="6.5" r=".6"/><circle cx="17.5" cy="10.5" r=".6"/><circle cx="8.5" cy="7.5" r=".6"/><circle cx="6.5" cy="12.5" r=".6"/><path d="M12 2a10 10 0 1 0 0 20 2 2 0 0 0 1.5-3.3 1.6 1.6 0 0 1 1.2-2.7H17a5 5 0 0 0 5-5A10 10 0 0 0 12 2z"/>',
   key: '<circle cx="7.5" cy="15.5" r="5.5"/><path d="M21 2l-9.6 9.6"/><path d="M15.5 7.5 19 4"/><path d="M18 8l3-3"/>',
   inbox: '<polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/>',
+  archive: '<polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5" rx="1"/><line x1="10" y1="12" x2="14" y2="12"/>',
+  save: '<path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/>',
   panelLeft: '<rect x="3" y="4" width="18" height="16" rx="2"/><line x1="9" y1="4" x2="9" y2="20"/>'
 };
 function hydrateIcons(root) {
@@ -165,6 +276,13 @@ function ensurePortals() {
     document.body.appendChild(c);
     hydrateIcons(c);
   }
+  if (!qs("#contextMenuPortal")) {
+    const c = document.createElement("div");
+    c.id = "contextMenuPortal";
+    c.className = "context-menu-portal";
+    c.setAttribute("role", "menu");
+    document.body.appendChild(c);
+  }
 }
 function showToast(opts) {
   ensurePortals();
@@ -195,6 +313,40 @@ function showToast(opts) {
 /*  ancestor's overflow:auto — e.g. a scrollable table)                    */
 /* ---------------------------------------------------------------------- */
 function closeAllDropdowns() { qsa(".dropdown-menu.open").forEach(m => m.classList.remove("open")); }
+function closeContextMenu() {
+  const menu = qs("#contextMenuPortal");
+  if (menu) { menu.classList.remove("open"); menu.innerHTML = ""; }
+}
+function contextMenuItemsFor(item, scope) {
+  if (scope === "recycle") return [
+    ["restore", "rotateCcw", "Restore"],
+    ["purge", "trash2", "Permanently delete"]
+  ];
+  if (scope === "favorite") return [
+    ["open-favorite", "externalLink", "Open"],
+    ["unfavorite", "star", "Remove from favorites"]
+  ];
+  const isFolder = item && item.type === "folder";
+  return isFolder
+    ? [["open", "eye", "Open"], ["rename", "pencil", "Rename"], ["move", "move", "Move to"], ["follow", "bell", "Follow / unfollow"], ["permissions", "shieldCheck", "Manage access"], ["share", "share2", "Share"], ["delete", "trash2", "Delete"]]
+    : [["open", "eye", "Open"], ["preview", "fileSearch", "Preview"], ["download", "download", "Download"], ["rename", "pencil", "Rename"], ["move", "move", "Move to"], ["copy", "copy", "Copy to"], ["versions", "history", "Version history"], ["checkout", "lock", "Check out / in"], ["follow", "bell", "Follow / unfollow"], ["favorite", "star", "Favorite / unfavorite"], ["permissions", "shieldCheck", "Manage access"], ["share", "share2", "Share"], ["delete", "trash2", "Delete"]];
+}
+function openContextMenu(event, options) {
+  event.preventDefault();
+  event.stopPropagation();
+  ensurePortals();
+  closeAllDropdowns();
+  const menu = qs("#contextMenuPortal");
+  const items = contextMenuItemsFor(options.item, options.scope);
+  menu.innerHTML = items.map(([action, icon, label], i) => `<button class="context-menu-item${action === "delete" || action === "purge" ? " destructive" : ""}" role="menuitem" data-context-action="${action}" data-context-index="${options.index == null ? "" : options.index}" data-context-scope="${options.scope || "library"}" data-context-key="${esc(options.key || "")}" data-context-position="${i}"><svg class="icon icon-sm" data-icon="${icon}"></svg>${label}</button>`).join("");
+  menu.classList.add("open");
+  const mw = menu.offsetWidth || 220, mh = menu.offsetHeight || 300;
+  const x = Math.min(event.clientX || 8, window.innerWidth - mw - 8);
+  const y = Math.min(event.clientY || 8, window.innerHeight - mh - 8);
+  menu.style.left = Math.max(8, x) + "px";
+  menu.style.top = Math.max(8, y) + "px";
+  hydrateIcons(menu);
+}
 function openDropdown(trigger) {
   const menu = trigger.parentElement.querySelector(".dropdown-menu");
   if (!menu) return;
@@ -263,6 +415,10 @@ let sheetBreakInherit = false;
 function renderDocSheet(item, activeTab) {
   activeTab = activeTab || "properties";
   sheetBreakInherit = false;
+  const favoriteEntry = favoriteEntryForItem(item);
+  registerFavoriteEntry(favoriteEntry);
+  item._favoriteKey = favoriteEntry.key;
+  const itemFollowKey = followKey("Document", item.site || getParam("site", "finance"), item.lib || getParam("lib", "documents"), item);
   const versions = generateVersions(item);
   const activity = generateActivity(item);
   const tab = key => activeTab === key ? " active" : "";
@@ -274,7 +430,10 @@ function renderDocSheet(item, activeTab) {
           <div class="font-semibold text-base truncate" title="${esc(item.name)}">${esc(item.name)}</div>
           <div class="text-muted text-xs mt-1">${esc(item.size || "")} &middot; v${esc(item.version || "1.0")} &middot; modified ${fmtDate(item.modified)}</div>
         </div>
-        <button class="btn btn-ghost btn-icon btn-sm" onclick="closeSheet()"><svg class="icon" data-icon="x"></svg></button>
+        <div class="flex items-center gap-1">
+          ${favoriteButtonHtml(favoriteEntry.key)}
+          <button class="btn btn-ghost btn-icon btn-sm" onclick="closeSheet()"><svg class="icon" data-icon="x"></svg></button>
+        </div>
       </div>
       ${item.checkedOutBy ? `<div class="alert alert-warning mt-3"><svg class="icon" data-icon="lock"></svg><div><div class="alert-title">Checked out</div>This file is checked out by ${item.checkedOutBy === CURRENT_USER.name ? "you" : esc(item.checkedOutBy)}. Others cannot upload a new version until it's checked in.</div></div>` : ""}
       <div class="tabs-list mt-3" data-tabs="docsheet">
@@ -289,6 +448,7 @@ function renderDocSheet(item, activeTab) {
         <div class="field"><label class="label">Title</label><input class="input" value="${esc(item.name.replace(/\.[^.]+$/, ""))}"></div>
         <div class="field"><label class="label">Description</label><textarea class="textarea" placeholder="Add a description…" rows="3"></textarea></div>
         <div class="field"><label class="label">Tags</label><div class="flex flex-wrap gap-2">${tagBadges(item.tags) || '<span class="text-muted text-xs">No tags yet</span>'}</div></div>
+        <div class="flex items-center justify-between p-3 border rounded mt-3"><div><div class="text-sm font-medium">Follow this document</div><div class="text-xs text-muted">Get alerts for new versions, deletes, or permission changes.</div></div>${followButtonHtml("Document", itemFollowKey)}</div>
         <div class="separator"></div>
         <div class="grid" style="grid-template-columns:1fr 1fr;gap:.75rem;font-size:12.5px;">
           <div><div class="text-muted text-xs">File size</div><div class="font-medium mt-1">${esc(item.size || "—")}</div></div>
@@ -328,6 +488,7 @@ function renderDocSheet(item, activeTab) {
       </div>
     </div>
     <div class="sheet-footer">
+      ${followButtonHtml("Document", itemFollowKey)}
       <button class="btn btn-outline btn-sm" data-row-action="share-sheet"><svg class="icon icon-sm" data-icon="share2"></svg>Share</button>
       <button class="btn btn-outline btn-sm" data-row-action="download-sheet"><svg class="icon icon-sm" data-icon="download"></svg>Download</button>
       <button class="btn btn-primary btn-sm" onclick="closeSheet()">Done</button>
@@ -373,6 +534,7 @@ function buildCommandItems() {
   const nav = [
     { group: "Navigate", icon: "home", label: "Home", href: "home.html" },
     { group: "Navigate", icon: "search", label: "Advanced search", href: "search.html" },
+    { group: "Navigate", icon: "star", label: "Favorites", href: "favorites.html" },
     { group: "Navigate", icon: "trash2", label: "Recycle Bin", href: "recycle-bin.html" },
     { group: "Navigate", icon: "user", label: "My Profile & Preferences", href: "profile.html" },
     { group: "Navigate", icon: "users", label: "Admin: Users", href: "admin-users.html" },
@@ -469,6 +631,7 @@ function buildSidebar() {
       <div class="sidebar-section-label">Sites</div>
       ${sitesHtml}
       <div class="sidebar-section-label">Library</div>
+      ${link("favorites", "favorites.html", "star", "Favorites", `<span class="badge-count">${prototypeState.favorites.length}</span>`)}
       ${link("recycle-bin", "recycle-bin.html", "trash2", "Recycle Bin")}
       <div class="sidebar-section-label">Admin Center</div>
       ${link("admin-users", "admin-users.html", "users", "Users")}
@@ -552,6 +715,7 @@ document.addEventListener("click", function (e) {
   const ddTrigger = e.target.closest("[data-dropdown-trigger]");
   if (ddTrigger) { e.stopPropagation(); openDropdown(ddTrigger); return; }
   if (!e.target.closest(".dropdown-menu")) closeAllDropdowns();
+  if (!e.target.closest("#contextMenuPortal")) closeContextMenu();
 
   const dialogTrigger = e.target.closest("[data-dialog-trigger]");
   if (dialogTrigger) { openDialog(dialogTrigger.getAttribute("data-dialog-trigger")); return; }
@@ -560,6 +724,60 @@ document.addEventListener("click", function (e) {
   if (e.target.classList.contains("overlay")) { closeDialog(e.target); return; }
   if (e.target.id === "sheetPortal") { closeSheet(); return; }
   if (e.target.id === "cmdkOverlay") { closeCmdk(); return; }
+
+  const favoriteToggle = e.target.closest("[data-favorite-toggle]");
+  if (favoriteToggle) {
+    const key = favoriteToggle.getAttribute("data-favorite-toggle");
+    const entry = window._sheetItem && window._sheetItem._favoriteKey === key ? favoriteEntryForItem(window._sheetItem) : getFavoriteCatalog().find(f => f.key === key);
+    const active = toggleFavorite(key, entry);
+    qsa(`[data-favorite-toggle="${CSS.escape(key)}"]`).forEach(btn => {
+      btn.classList.toggle("active", active);
+      btn.setAttribute("aria-label", active ? "Remove from favorites" : "Add to favorites");
+      btn.setAttribute("data-tooltip", active ? "Remove from favorites" : "Add to favorites");
+    });
+    if (document.body.dataset.page === "favorites") renderFavoritesPage();
+    if (window._sheetItem && window._sheetItem._favoriteKey === key) renderDocSheet(window._sheetItem, "properties");
+    showToast({ title: active ? "Added to favorites" : "Removed from favorites", desc: active ? "You can find it in Favorites." : "The item is no longer pinned." });
+    return;
+  }
+  const followToggle = e.target.closest("[data-follow-toggle]");
+  if (followToggle) {
+    const type = followToggle.getAttribute("data-follow-type");
+    const key = followToggle.getAttribute("data-follow-toggle");
+    const active = toggleFollow(type, key);
+    qsa(`[data-follow-toggle="${CSS.escape(key)}"]`).forEach(btn => {
+      btn.classList.toggle("active", active);
+      btn.innerHTML = `<svg class="icon icon-sm" data-icon="bell"></svg>${active ? "Following" : "Follow"}`;
+    });
+    hydrateIcons();
+    showToast({ title: active ? `Following ${type.toLowerCase()}` : `Unfollowed ${type.toLowerCase()}`, desc: active ? "You will receive activity alerts within this scope." : "Alerts for this scope are turned off." });
+    return;
+  }
+
+  const contextAction = e.target.closest("[data-context-action]");
+  if (contextAction) {
+    const action = contextAction.getAttribute("data-context-action");
+    const scope = contextAction.getAttribute("data-context-scope");
+    const idx = contextAction.getAttribute("data-context-index");
+    closeContextMenu();
+    if (scope === "favorite") {
+      const key = contextAction.getAttribute("data-context-key");
+      if (action === "open-favorite") {
+        const favorite = getFavoriteCatalog().find(f => f.key === key);
+        if (favorite) location.href = favorite.href;
+      } else if (action === "unfavorite") {
+        toggleFavorite(key);
+        renderFavoritesPage();
+      }
+      return;
+    }
+    if (scope === "recycle") {
+      handleRecycleAction(action, parseInt(idx, 10));
+      return;
+    }
+    if (idx !== "") handleRowAction(action, contextAction);
+    return;
+  }
 
   const tabTrigger = e.target.closest("[data-tab-trigger]");
   if (tabTrigger) {
@@ -601,7 +819,7 @@ document.addEventListener("change", function (e) {
   }
 });
 document.addEventListener("keydown", function (e) {
-  if (e.key === "Escape") { closeAllDropdowns(); closeTopOverlay(); closeSheet(); closeCmdk(); }
+  if (e.key === "Escape") { closeAllDropdowns(); closeContextMenu(); closeTopOverlay(); closeSheet(); closeCmdk(); }
   if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") { e.preventDefault(); openCmdk(); }
   if (e.key === "Enter" && e.target.id === "quickInputField") { e.preventDefault(); qs("#quickInputConfirmBtn").click(); }
   if (qs("#cmdkOverlay")?.classList.contains("open")) {
@@ -612,6 +830,47 @@ document.addEventListener("keydown", function (e) {
 });
 document.addEventListener("input", function (e) {
   if (e.target.id === "cmdkInput") renderCmdk(e.target.value);
+});
+
+let contextLongPressTimer = null;
+function contextTargetOptions(target) {
+  const scope = target.getAttribute("data-context-scope") || "library";
+  const index = target.getAttribute("data-context-index");
+  if (scope === "recycle") return { scope, index, item: recycleItems[parseInt(index, 10)] };
+  if (scope === "favorite") {
+    const key = target.getAttribute("data-context-key");
+    return { scope, index, key, item: getFavoriteCatalog().find(f => f.key === key) };
+  }
+  return { scope, index, item: currentItems[parseInt(index, 10)] };
+}
+document.addEventListener("contextmenu", function (e) {
+  const target = e.target.closest("[data-context-index]");
+  if (!target) return;
+  const options = contextTargetOptions(target);
+  if (options.item) openContextMenu(e, options);
+});
+document.addEventListener("pointerdown", function (e) {
+  if (e.pointerType !== "touch") return;
+  const target = e.target.closest("[data-context-index]");
+  if (!target) return;
+  const options = contextTargetOptions(target);
+  if (!options.item) return;
+  contextLongPressTimer = setTimeout(() => openContextMenu({
+    preventDefault() {}, stopPropagation() {}, clientX: e.clientX, clientY: e.clientY
+  }, options), 650);
+});
+document.addEventListener("pointerup", () => clearTimeout(contextLongPressTimer));
+document.addEventListener("pointercancel", () => clearTimeout(contextLongPressTimer));
+document.addEventListener("pointermove", () => clearTimeout(contextLongPressTimer));
+document.addEventListener("keydown", function (e) {
+  if (!(e.key === "ContextMenu" || (e.key === "F10" && e.shiftKey))) return;
+  const target = e.target.closest?.("[data-context-index]");
+  if (!target) return;
+  const rect = target.getBoundingClientRect();
+  const options = contextTargetOptions(target);
+  if (!options.item) return;
+  e.preventDefault();
+  openContextMenu({ preventDefault() {}, stopPropagation() {}, clientX: rect.left + 24, clientY: rect.top + 24 }, options);
 });
 
 /* ---------------------------------------------------------------------- */
@@ -652,6 +911,20 @@ function handleRowAction(action, el) {
     case "share": case "share-sheet":
       openShareDialog(item);
       break;
+    case "favorite": {
+      const entry = favoriteEntryForItem(item);
+      const active = toggleFavorite(entry.key, entry);
+      showToast({ title: active ? "Added to favorites" : "Removed from favorites", desc: active ? `${item.name} is pinned for quick access.` : `${item.name} was unpinned.` });
+      if (window._sheetItem === item) renderDocSheet(item, "properties");
+      break;
+    }
+    case "follow": {
+      const type = item.type === "folder" ? "Folder" : "Document";
+      const key = followKey(type, item.site || getParam("site", "finance"), item.lib || getParam("lib", "documents"), item);
+      const active = toggleFollow(type, key);
+      showToast({ title: active ? `Following ${type.toLowerCase()}` : `Unfollowed ${type.toLowerCase()}`, desc: active ? "Activity alerts are enabled." : "Activity alerts are disabled." });
+      break;
+    }
     case "checkout":
       toggleCheckout(idx);
       break;
@@ -775,7 +1048,7 @@ document.addEventListener("DOMContentLoaded", function () {
   hydrateIcons();
   const page = document.body.dataset.page;
   const initFns = {
-    home: initHomePage, "site-home": initSiteHomePage, library: initLibraryPage, search: initSearchPage,
+    home: initHomePage, "site-home": initSiteHomePage, library: initLibraryPage, search: initSearchPage, favorites: initFavoritesPage,
     "recycle-bin": initRecycleBinPage, profile: initProfilePage, "admin-users": initAdminUsersPage,
     "admin-groups": initAdminGroupsPage, "admin-sites": initAdminSitesPage, "admin-settings": initAdminSettingsPage,
     "admin-storage": initAdminStoragePage, "admin-audit-log": initAdminAuditLogPage
@@ -809,6 +1082,16 @@ function initHomePage() {
       <svg class="icon icon-sm text-muted" data-icon="chevronRight"></svg>
     </a>`).join("");
 
+  const recentEl = qs("#recentDocumentsList");
+  if (recentEl) {
+    recentEl.innerHTML = RECENT_DOCUMENTS.map(d => `
+      <a class="recent-item" href="library.html?site=${d.site}&lib=${d.lib}&folder=${d.folder}">
+        ${fileIconBlock({ type: "file", ext: d.ext })}
+        <div class="min-w-0 flex-1"><div class="text-sm font-medium truncate">${esc(d.name)}</div><div class="text-muted text-xs">${esc(findSite(d.site).name)} / ${esc(d.action.toLowerCase())}</div></div>
+        <span class="text-muted text-xs flex-none">${esc(d.touchedAt)}</span>
+      </a>`).join("");
+  }
+
   qs("#recentActivityList").innerHTML = AUDIT_LOG.slice(0, 6).map(a => `
     <div class="flex items-center gap-3 py-2 border-b" style="border-color:hsl(var(--border));">
       <div class="avatar avatar-sm">${initialsOf(a.user)}</div>
@@ -836,14 +1119,22 @@ function initSiteHomePage() {
   qs("#siteHeaderStorage").textContent = site.storageUsedGB.toFixed(1) + " GB of " + site.storageQuotaGB + " GB used";
   qs("#siteStorageBar").style.width = Math.min(100, (site.storageUsedGB / site.storageQuotaGB) * 100) + "%";
   qs("#siteBreadcrumbName").textContent = site.name;
+  const siteFavoriteKey = `Site:${site.slug}`;
+  const siteFollowKey = followKey("Site", site.slug);
+  if (qs("#siteFavoriteControl")) qs("#siteFavoriteControl").innerHTML = favoriteButtonHtml(siteFavoriteKey);
+  if (qs("#siteFollowControl")) qs("#siteFollowControl").innerHTML = followButtonHtml("Site", siteFollowKey);
 
   qs("#siteLibraryGrid").innerHTML = site.libraries.map(l => {
     const data = getLibraryContents(site.slug, l.id, "root");
-    return `<a class="card" style="padding:1.1rem;display:flex;gap:.85rem;align-items:center;" href="library.html?site=${site.slug}&lib=${l.id}&folder=root">
-      <div class="file-ico folder" style="width:44px;height:44px;"><svg class="icon" data-icon="folder"></svg></div>
-      <div class="flex-1 min-w-0"><div class="font-medium text-sm">${esc(l.name)}</div><div class="text-muted text-xs mt-1">${data.items.length} items</div></div>
-      <svg class="icon text-muted" data-icon="chevronRight"></svg>
-    </a>`;
+    const libraryFollowKey = followKey("Library", site.slug, l.id);
+    return `<div class="card site-library-card" style="padding:1.1rem;display:flex;gap:.85rem;align-items:center;">
+      <a class="flex items-center gap-3 flex-1 min-w-0" href="library.html?site=${site.slug}&lib=${l.id}&folder=root">
+        <div class="file-ico folder" style="width:44px;height:44px;"><svg class="icon" data-icon="folder"></svg></div>
+        <div class="flex-1 min-w-0"><div class="font-medium text-sm">${esc(l.name)}</div><div class="text-muted text-xs mt-1">${data.items.length} items</div></div>
+        <svg class="icon text-muted" data-icon="chevronRight"></svg>
+      </a>
+      ${followButtonHtml("Library", libraryFollowKey, true)}
+    </div>`;
   }).join("");
 
   const siteActivity = AUDIT_LOG.filter(a => a.site === site.name).slice(0, 8);
@@ -871,6 +1162,9 @@ let currentItems = [];
 let currentSort = { key: "name", dir: "asc" };
 let selectedIndexes = new Set();
 let libView = "list";
+let currentLibraryFilter = "";
+let currentLibraryGroupBy = "none";
+let currentLibraryViewId = "all-items";
 
 function initLibraryPage() {
   const site = findSite(getParam("site", "finance"));
@@ -879,6 +1173,10 @@ function initLibraryPage() {
   const lib = site.libraries.find(l => l.id === libId) || site.libraries[0];
   const data = getLibraryContents(site.slug, lib.id, folder);
   currentItems = data.items.slice();
+  currentSort = { key: "name", dir: "asc" };
+  currentLibraryFilter = "";
+  currentLibraryGroupBy = "none";
+  currentLibraryViewId = "all-items";
 
   document.title = `${lib.name} · ${site.name} — eDMS`;
   qs("#libPageTitle").textContent = folder === "root" ? lib.name : data.name;
@@ -892,6 +1190,11 @@ function initLibraryPage() {
     crumbExtra.innerHTML = `<svg class="icon icon-sm sep" data-icon="chevronRight"></svg><span class="current">${esc(data.name)}</span>`;
   } else { crumbExtra.innerHTML = ""; }
 
+  if (qs("#libraryFollowControl")) qs("#libraryFollowControl").innerHTML = followButtonHtml("Library", followKey("Library", site.slug, lib.id));
+  renderLibraryViewPicker(site.slug, lib.id);
+  const defaultView = getLibraryViews(site.slug, lib.id).find(v => v.isDefault);
+  if (defaultView) applyLibraryView(defaultView, false);
+
   renderLibraryItems();
   initUploadDropzone();
 
@@ -903,7 +1206,19 @@ function initLibraryPage() {
   });
   qs("#bulkDeleteBtn")?.addEventListener("click", bulkDelete);
   qs("#bulkDownloadBtn")?.addEventListener("click", () => showToast({ title: `Preparing ${selectedIndexes.size} item(s) for download…`, variant: "info" }));
+  qs("#bulkZipBtn")?.addEventListener("click", () => showToast({ title: `Preparing ZIP for ${selectedIndexes.size} item(s)…`, desc: "Folders and documents will keep their library structure.", variant: "info" }));
+  qs("#bulkMoveBtn")?.addEventListener("click", () => showToast({ title: `Move ${selectedIndexes.size} item(s)`, desc: "The production app opens a destination picker here.", variant: "info" }));
+  qs("#bulkEditBtn")?.addEventListener("click", openBulkEditDialog);
+  qs("#bulkEditForm")?.addEventListener("submit", submitBulkEdit);
   qs("#clearSelectionBtn")?.addEventListener("click", clearSelection);
+  qs("#libraryViewPicker")?.addEventListener("change", e => {
+    const view = getLibraryViews(site.slug, lib.id).find(v => v.id === e.target.value);
+    if (view) applyLibraryView(view);
+  });
+  qs("#libraryFilterInput")?.addEventListener("input", e => { currentLibraryFilter = e.target.value.trim().toLowerCase(); currentLibraryViewId = "custom"; renderLibraryItems(); });
+  qs("#groupBySelect")?.addEventListener("change", e => { currentLibraryGroupBy = e.target.value; currentLibraryViewId = "custom"; renderLibraryItems(); });
+  qs("#saveViewBtn")?.addEventListener("click", openSaveViewDialog);
+  qs("#saveViewForm")?.addEventListener("submit", submitSaveView);
 
   const action = getParam("action", "");
   if (action === "upload") openDialog("uploadDialog");
@@ -920,27 +1235,107 @@ function setLibView(v) {
   qs("#viewGridBtn").classList.toggle("active", v === "grid");
 }
 
+function renderLibraryViewPicker(site, lib) {
+  const picker = qs("#libraryViewPicker");
+  if (!picker) return;
+  const views = getLibraryViews(site, lib);
+  picker.innerHTML = views.map(v => `<option value="${esc(v.id)}">${esc(v.name)}${v.isDefault ? " · default" : v.owner === "You" ? " · personal" : ""}</option>`).join("");
+  picker.value = currentLibraryViewId === "custom" ? "" : currentLibraryViewId;
+}
+function applyLibraryView(view, render) {
+  currentLibraryViewId = view.id;
+  currentLibraryFilter = (view.filter || "").toLowerCase();
+  currentLibraryGroupBy = view.groupBy || "none";
+  currentSort = { key: view.sortKey || "name", dir: view.sortDir || "asc" };
+  if (qs("#libraryFilterInput")) qs("#libraryFilterInput").value = view.filter || "";
+  if (qs("#groupBySelect")) qs("#groupBySelect").value = currentLibraryGroupBy;
+  if (qs("#libraryViewPicker")) qs("#libraryViewPicker").value = view.id;
+  sortLibraryItems();
+  if (render !== false) renderLibraryItems();
+}
+function sortLibraryItems() {
+  const key = currentSort.key;
+  currentItems.sort((a, b) => {
+    if (a.type !== b.type) return a.type === "folder" ? -1 : 1;
+    let av, bv;
+    if (key === "size") { av = parseSizeVal(a); bv = parseSizeVal(b); return currentSort.dir === "asc" ? av - bv : bv - av; }
+    av = a[key] || ""; bv = b[key] || "";
+    const cmp = String(av).localeCompare(String(bv), undefined, { numeric: true });
+    return currentSort.dir === "asc" ? cmp : -cmp;
+  });
+}
+function visibleLibraryEntries() {
+  const q = currentLibraryFilter;
+  return currentItems.map((item, index) => ({ item, index })).filter(({ item }) => {
+    if (!q) return true;
+    return [item.name, item.modifiedBy, ...(item.tags || [])].some(v => String(v || "").toLowerCase().includes(q));
+  });
+}
+function groupLabelFor(item) {
+  if (currentLibraryGroupBy === "type") return item.type === "folder" ? "Folders" : "Documents";
+  if (currentLibraryGroupBy === "modifiedBy") return item.modifiedBy || "Unknown owner";
+  return "";
+}
+function renderGrouped(entries, rowRenderer, separatorRenderer) {
+  if (currentLibraryGroupBy === "none") return entries.map(rowRenderer).join("");
+  let lastGroup = null;
+  return entries.map(entry => {
+    const group = groupLabelFor(entry.item);
+    const prefix = group !== lastGroup ? separatorRenderer(group) : "";
+    lastGroup = group;
+    return prefix + rowRenderer(entry);
+  }).join("");
+}
+function openSaveViewDialog() {
+  if (!qs("#saveViewDialog")) return;
+  qs("#saveViewName").value = "";
+  qs("#saveViewShared").checked = false;
+  qs("#saveViewDefault").checked = false;
+  qs("#saveViewState").textContent = `Filter: ${currentLibraryFilter || "none"} · Sort: ${currentSort.key} ${currentSort.dir} · Group: ${currentLibraryGroupBy === "none" ? "none" : currentLibraryGroupBy}`;
+  openDialog("saveViewDialog");
+}
+function submitSaveView(e) {
+  e.preventDefault();
+  const name = qs("#saveViewName").value.trim();
+  if (!name) return;
+  const key = currentLibraryViewKey();
+  prototypeState.savedViews[key] = prototypeState.savedViews[key] || [];
+  if (qs("#saveViewDefault").checked) {
+    (LIBRARY_VIEWS[key] || []).forEach(v => { v.isDefault = false; });
+    prototypeState.savedViews[key].forEach(v => { v.isDefault = false; });
+  }
+  const view = { id: `personal-${Date.now()}`, name, owner: qs("#saveViewShared").checked ? "Shared" : "You", shared: qs("#saveViewShared").checked, filter: currentLibraryFilter, sortKey: currentSort.key, sortDir: currentSort.dir, groupBy: currentLibraryGroupBy, isDefault: qs("#saveViewDefault").checked };
+  prototypeState.savedViews[key].push(view);
+  savePrototypeState();
+  renderLibraryViewPicker(getParam("site", "finance"), getParam("lib", "documents"));
+  currentLibraryViewId = view.id;
+  qs("#libraryViewPicker").value = view.id;
+  closeDialog(qs("#saveViewDialog"));
+  showToast({ title: `View "${name}" saved`, desc: view.isDefault ? "It is now the default view for this Library." : view.shared ? "Shared with people who can access this Library." : "Saved to your personal Views." });
+}
+
 function renderLibraryItems() {
   const tbody = qs("#libTableBody"), cards = qs("#libCardsBody"), grid = qs("#libGridBody"), empty = qs("#libEmptyState");
   if (!tbody || !cards || !grid || !empty) return;
   selectedIndexes.clear();
-  const has = currentItems.length > 0;
+  const entries = visibleLibraryEntries();
+  const has = entries.length > 0;
   qs("#libListWrap").classList.toggle("hidden", !has || libView !== "list");
   qs("#libGridWrap").classList.toggle("hidden", !has || libView !== "grid");
   empty.classList.toggle("hidden", has);
   if (!has) { updateSelectionUI(); return; }
 
-  tbody.innerHTML = currentItems.map((item, i) => libTableRow(item, i)).join("");
-  cards.innerHTML = currentItems.map((item, i) => libCardRow(item, i)).join("");
-  grid.innerHTML = currentItems.map((item, i) => libGridTile(item, i)).join("");
+  tbody.innerHTML = renderGrouped(entries, entry => libTableRow(entry.item, entry.index), group => `<tr class="group-row"><td colspan="6">${esc(group)}</td></tr>`);
+  cards.innerHTML = renderGrouped(entries, entry => libCardRow(entry.item, entry.index), group => `<div class="group-label">${esc(group)}</div>`);
+  grid.innerHTML = renderGrouped(entries, entry => libGridTile(entry.item, entry.index), group => `<div class="group-label">${esc(group)}</div>`);
   hydrateIcons();
   updateSelectionUI();
 }
 
 function libRowMenu(idx, isFolder) {
   const items = isFolder
-    ? [["open", "eye", "Open"], ["rename", "pencil", "Rename"], ["move", "move", "Move to"], ["permissions", "shieldCheck", "Manage access"], ["share", "share2", "Share"], ["__sep", "", ""], ["delete", "trash2", "Delete"]]
-    : [["open", "eye", "Open"], ["preview", "fileSearch", "Preview"], ["download", "download", "Download"], ["__sep", "", ""], ["rename", "pencil", "Rename"], ["move", "move", "Move to"], ["copy", "copy", "Copy to"], ["__sep", "", ""], ["versions", "history", "Version history"], ["checkout", "lock", "Check out / in"], ["permissions", "shieldCheck", "Manage access"], ["share", "share2", "Share"], ["__sep", "", ""], ["delete", "trash2", "Delete"]];
+    ? [["open", "eye", "Open"], ["rename", "pencil", "Rename"], ["move", "move", "Move to"], ["follow", "bell", "Follow / unfollow"], ["permissions", "shieldCheck", "Manage access"], ["share", "share2", "Share"], ["__sep", "", ""], ["delete", "trash2", "Delete"]]
+    : [["open", "eye", "Open"], ["preview", "fileSearch", "Preview"], ["download", "download", "Download"], ["__sep", "", ""], ["rename", "pencil", "Rename"], ["move", "move", "Move to"], ["copy", "copy", "Copy to"], ["__sep", "", ""], ["versions", "history", "Version history"], ["checkout", "lock", "Check out / in"], ["follow", "bell", "Follow / unfollow"], ["favorite", "star", "Favorite / unfavorite"], ["permissions", "shieldCheck", "Manage access"], ["share", "share2", "Share"], ["__sep", "", ""], ["delete", "trash2", "Delete"]];
   return `<div class="dropdown">
     <button class="btn btn-ghost btn-icon btn-sm" data-dropdown-trigger aria-label="More actions"><svg class="icon icon-sm" data-icon="moreHorizontal"></svg></button>
     <div class="dropdown-menu">
@@ -954,7 +1349,7 @@ function libTableRow(item, i) {
   const nameCell = isFolder
     ? `<a href="${folderHrefFor(item)}" class="row-name"><span></span>${fileIconBlock(item)}<span class="name-text">${esc(item.name)}</span></a>`
     : `<button class="row-name" style="text-align:left;width:100%;" data-row-action="open" data-index="${i}">${fileIconBlock(item)}<span class="name-text">${esc(item.name)}</span>${checkoutBadge(item)}</button>`;
-  return `<tr class="${selectedIndexes.has(i) ? "selected" : ""}">
+  return `<tr tabindex="0" class="${selectedIndexes.has(i) ? "selected" : ""}" data-context-index="${i}" data-context-scope="library">
     <td class="checkbox-col"><input type="checkbox" class="row-check" data-index="${i}"></td>
     <td style="max-width:340px;">${nameCell}${item.tags && item.tags.length ? `<div class="flex gap-1 mt-1" style="padding-left:2.75rem;">${tagBadges(item.tags)}</div>` : ""}</td>
     <td class="text-muted">${esc(item.modifiedBy)}</td>
@@ -965,7 +1360,7 @@ function libTableRow(item, i) {
 }
 function libCardRow(item, i) {
   const isFolder = item.type === "folder";
-  return `<div class="lib-item-card ${selectedIndexes.has(i) ? "selected" : ""}">
+  return `<div tabindex="0" class="lib-item-card ${selectedIndexes.has(i) ? "selected" : ""}" data-context-index="${i}" data-context-scope="library">
     <input type="checkbox" class="row-check" data-index="${i}">
     ${isFolder ? `<a href="${folderHrefFor(item)}" class="flex items-center gap-3 flex-1 min-w-0">${fileIconBlock(item)}<div class="meta"><div class="title">${esc(item.name)}</div><div class="sub">${esc(item.modifiedBy)} &middot; ${fmtDate(item.modified)}</div></div></a>`
       : `<button data-row-action="open" data-index="${i}" class="flex items-center gap-3 flex-1 min-w-0" style="text-align:left;">${fileIconBlock(item)}<div class="meta"><div class="title">${esc(item.name)} ${checkoutBadge(item)}</div><div class="sub">${esc(item.size)} &middot; ${fmtDate(item.modified)}</div></div></button>`}
@@ -975,7 +1370,7 @@ function libCardRow(item, i) {
 function libGridTile(item, i) {
   const isFolder = item.type === "folder";
   const inner = `${fileIconBlock(item)}<div class="tile-name">${esc(item.name)}</div><div class="tile-sub">${isFolder ? fmtDate(item.modified) : esc(item.size)}</div>`;
-  return `<div class="file-tile ${selectedIndexes.has(i) ? "selected" : ""}">
+  return `<div tabindex="0" class="file-tile ${selectedIndexes.has(i) ? "selected" : ""}" data-context-index="${i}" data-context-scope="library">
     <input type="checkbox" class="row-check tile-check" data-index="${i}">
     <div class="tile-menu">${libRowMenu(i, isFolder)}</div>
     ${isFolder ? `<a href="${folderHrefFor(item)}">${inner}</a>` : `<button data-row-action="open" data-index="${i}" style="width:100%;">${inner}</button>`}
@@ -1012,6 +1407,45 @@ function bulkDelete() {
   idxs.forEach(i => currentItems.splice(i, 1));
   renderLibraryItems();
   showToast({ title: `${n} item(s) moved to Recycle Bin`, variant: "default" });
+}
+function bulkEditTargets() {
+  return Array.from(selectedIndexes).sort((a, b) => a - b).map(index => ({ index, item: currentItems[index] })).filter(entry => entry.item);
+}
+function renderBulkEditPreview(results) {
+  const el = qs("#bulkEditResults");
+  if (!el) return;
+  el.innerHTML = results.map(result => `<div class="bulk-result-row"><div class="min-w-0 flex-1"><div class="text-sm font-medium truncate">${esc(result.item.name)}</div><div class="text-xs text-muted">${esc(result.reason)}</div></div><span class="badge ${result.ok ? "badge-success" : "badge-destructive"}">${result.ok ? "Updated" : "Not updated"}</span></div>`).join("");
+}
+function openBulkEditDialog() {
+  const targets = bulkEditTargets();
+  if (!targets.length) return;
+  qs("#bulkEditSelectionSummary").textContent = `${targets.length} selected · ${targets.filter(t => t.item.type === "file").length} documents can be edited`;
+  renderBulkEditPreview(targets.map(({ item }) => ({ item, ok: !(item.type === "folder" || (item.checkedOutBy && item.checkedOutBy !== CURRENT_USER.name)), reason: item.type === "folder" ? "Folders are skipped by metadata edit" : item.checkedOutBy && item.checkedOutBy !== CURRENT_USER.name ? `Checked out by ${item.checkedOutBy}` : "Ready to update" })));
+  openDialog("bulkEditDialog");
+}
+function submitBulkEdit(e) {
+  e.preventDefault();
+  const title = qs("#bulkEditTitle").value.trim();
+  const description = qs("#bulkEditDescription").value.trim();
+  const tags = qs("#bulkEditTags").value.split(",").map(t => t.trim()).filter(Boolean);
+  if (!title && !description && !tags.length) {
+    showToast({ title: "Choose at least one field", desc: "Leave a field blank to keep its existing value.", variant: "destructive" });
+    return;
+  }
+  const results = bulkEditTargets().map(({ item }) => {
+    if (item.type === "folder") return { item, ok: false, reason: "Folders are skipped by metadata edit" };
+    if (item.checkedOutBy && item.checkedOutBy !== CURRENT_USER.name) return { item, ok: false, reason: `Checked out by ${item.checkedOutBy}` };
+    if (title) item.name = title + (item.ext ? `.${item.ext}` : "");
+    if (description) item.description = description;
+    if (tags.length) item.tags = tags.slice();
+    item.modified = todayStr(); item.modifiedBy = CURRENT_USER.name;
+    return { item, ok: true, reason: "Metadata saved" };
+  });
+  renderBulkEditPreview(results);
+  renderLibraryItems();
+  const updated = results.filter(r => r.ok).length, failed = results.length - updated;
+  showToast({ title: `${updated} item(s) updated`, desc: failed ? `${failed} item(s) were not changed. See the per-item results.` : "Shared metadata was applied to the selection." , variant: failed ? "info" : "default" });
+  qs("#bulkEditForm").reset();
 }
 function deleteItem(idx) {
   const item = currentItems[idx];
@@ -1051,14 +1485,8 @@ function parseSizeVal(item) {
 function sortLibrary(key) {
   if (currentSort.key === key) currentSort.dir = currentSort.dir === "asc" ? "desc" : "asc";
   else { currentSort.key = key; currentSort.dir = "asc"; }
-  currentItems.sort((a, b) => {
-    if (a.type !== b.type) return a.type === "folder" ? -1 : 1;
-    let av, bv;
-    if (key === "size") { av = parseSizeVal(a); bv = parseSizeVal(b); return currentSort.dir === "asc" ? av - bv : bv - av; }
-    av = a[key] || ""; bv = b[key] || "";
-    const cmp = String(av).localeCompare(String(bv), undefined, { numeric: true });
-    return currentSort.dir === "asc" ? cmp : -cmp;
-  });
+  currentLibraryViewId = "custom";
+  sortLibraryItems();
   renderLibraryItems();
   qsa("[data-sort-key]").forEach(h => {
     const arrow = h.querySelector(".sort-arrow");
@@ -1072,6 +1500,9 @@ function initUploadDropzone() {
   const dz = qs("#dropzone"); const input = qs("#fileInput");
   if (!dz || dz.dataset.wired === "1") return;
   dz.dataset.wired = "1";
+  const uploadSite = findSite(getParam("site", "finance"));
+  const remaining = Math.max(0, uploadSite.storageQuotaGB - uploadSite.storageUsedGB);
+  if (qs("#uploadQuotaStatus")) qs("#uploadQuotaStatus").innerHTML = `<svg class="icon icon-sm" data-icon="database"></svg><span><strong>${remaining.toFixed(1)} GB remaining</strong> in ${esc(uploadSite.name)} · files that exceed the configured quota are rejected individually.</span>`;
   dz.addEventListener("dragover", e => { e.preventDefault(); dz.classList.add("drag-over"); });
   dz.addEventListener("dragleave", () => dz.classList.remove("drag-over"));
   dz.addEventListener("drop", e => { e.preventDefault(); dz.classList.remove("drag-over"); handleFiles(e.dataTransfer.files); });
@@ -1089,26 +1520,37 @@ function handleFiles(fileList) {
   const files = Array.from(fileList).slice(0, 8);
   if (!files.length) return;
   qs("#uploadDoneBtn").disabled = true;
+  const uploadSite = findSite(getParam("site", "finance"));
+  const remainingBytes = Math.max(0, uploadSite.storageQuotaGB - uploadSite.storageUsedGB) * 1024 * 1024 * 1024;
   files.forEach(f => {
     pendingUploads++;
     const ext = (f.name.split(".").pop() || "").toLowerCase();
     const row = document.createElement("div");
     row.className = "upload-row";
     row.innerHTML = `<div class="file-ico ${fileIcoClass(ext)}" style="width:30px;height:30px;flex-shrink:0;"><svg class="icon icon-sm" data-icon="fileText"></svg></div>
-      <div class="upload-info"><div class="upload-name"><span class="truncate">${esc(f.name)}</span><span class="pct">0%</span></div><div class="progress mt-1"><div class="progress-bar" style="width:0%"></div></div></div>`;
+      <div class="upload-info"><div class="upload-name"><span class="truncate">${esc(f.name)}</span><span class="pct">0%</span></div><div class="progress mt-1"><div class="progress-bar" style="width:0%"></div></div><div class="upload-error"></div></div>`;
     list.appendChild(row);
     hydrateIcons(row);
-    animateUploadRow(row, f, ext);
+    let rejectionReason = "";
+    if (f.size > 250 * 1024 * 1024) rejectionReason = "File exceeds the 250 MB maximum size.";
+    if (["exe", "bat", "cmd", "msi", "scr"].includes(ext)) rejectionReason = `.${ext} files are blocked by Admin settings.`;
+    if (f.size > remainingBytes || f.name.toLowerCase().includes("quota")) rejectionReason = `${uploadSite.name} has only ${Math.max(0, uploadSite.storageQuotaGB - uploadSite.storageUsedGB).toFixed(1)} GB remaining; this file would exceed the configured quota.`;
+    animateUploadRow(row, f, ext, rejectionReason);
   });
 }
-function animateUploadRow(row, file, ext) {
-  const bar = row.querySelector(".progress-bar"), pct = row.querySelector(".pct");
+function animateUploadRow(row, file, ext, rejectionReason) {
+  const bar = row.querySelector(".progress-bar"), pct = row.querySelector(".pct"), error = row.querySelector(".upload-error");
   let p = 0;
   const timer = setInterval(() => {
     p += Math.random() * 24 + 14;
     if (p >= 100) {
-      p = 100; clearInterval(timer); bar.classList.add("success"); pct.textContent = "Done";
-      currentItems.unshift({ type: "file", name: file.name, ext: ext || "generic", size: fmtSize(file.size || 245000), modified: todayStr(), modifiedBy: CURRENT_USER.name, version: "1.0", tags: [], checkedOutBy: null });
+      p = 100; clearInterval(timer);
+      if (rejectionReason) {
+        bar.classList.add("error"); pct.textContent = "Rejected"; error.textContent = rejectionReason; error.classList.add("visible");
+      } else {
+        bar.classList.add("success"); pct.textContent = "Done";
+        currentItems.unshift({ type: "file", name: file.name, ext: ext || "generic", size: fmtSize(file.size || 245000), modified: todayStr(), modifiedBy: CURRENT_USER.name, version: "1.0", tags: [], checkedOutBy: null });
+      }
       pendingUploads--;
       if (pendingUploads <= 0) qs("#uploadDoneBtn").disabled = false;
     } else { pct.textContent = Math.round(p) + "%"; }
@@ -1173,6 +1615,42 @@ function renderSearchResults() {
 }
 
 /* ======================================================================= *
+ *  PAGE: favorites.html                                                    *
+ * ======================================================================= */
+function initFavoritesPage() {
+  qsa("[data-favorite-filter]").forEach(btn => btn.addEventListener("click", () => {
+    qsa("[data-favorite-filter]").forEach(b => b.classList.toggle("active", b === btn));
+    renderFavoritesPage(btn.getAttribute("data-favorite-filter"));
+  }));
+  renderFavoritesPage("all");
+}
+function renderFavoritesPage(filter) {
+  const list = qs("#favoritesList");
+  if (!list) return;
+  const activeFilter = filter || qs("[data-favorite-filter].active")?.getAttribute("data-favorite-filter") || "all";
+  const catalog = getFavoriteCatalog().filter(entry => isFavorite(entry.key));
+  const entries = activeFilter === "all" ? catalog : catalog.filter(entry => entry.objectType.toLowerCase() === activeFilter);
+  qs("#favoritesCount") && (qs("#favoritesCount").textContent = catalog.length);
+  qs("#favoritesEmptyState")?.classList.toggle("hidden", entries.length > 0);
+  if (!entries.length) { list.innerHTML = ""; return; }
+  const groups = ["Site", "Library", "Folder", "Document"].filter(type => entries.some(entry => entry.objectType === type));
+  list.innerHTML = groups.map(type => `
+    <section class="favorite-group">
+      <div class="flex items-center justify-between mb-2"><h2 class="text-sm font-semibold">${type === "Library" ? "Libraries" : `${type}s`}</h2><span class="text-xs text-muted">${entries.filter(entry => entry.objectType === type).length}</span></div>
+      <div class="card favorite-list">${entries.filter(entry => entry.objectType === type).map((entry, i) => `
+        <div tabindex="0" class="favorite-row" data-context-scope="favorite" data-context-index="${i}" data-context-key="${esc(entry.key)}">
+          <a class="flex items-center gap-3 min-w-0 flex-1" href="${entry.href}">
+            ${entry.objectType === "Document" ? fileIconBlock({ type: "file", ext: entry.ext }) : `<div class="file-ico ${entry.objectType === "Site" ? "site-favorite" : "folder"}"><svg class="icon" data-icon="${entry.icon || "folder"}"></svg></div>`}
+            <div class="min-w-0"><div class="text-sm font-medium truncate">${esc(entry.name)}</div><div class="text-xs text-muted truncate">${esc(entry.location)}</div></div>
+          </a>
+          <span class="badge badge-secondary">${esc(entry.objectType)}</span>
+          ${favoriteButtonHtml(entry.key)}
+        </div>`).join("")}</div>
+    </section>`).join("");
+  hydrateIcons();
+}
+
+/* ======================================================================= *
  *  PAGE: recycle-bin.html                                                 *
  * ======================================================================= */
 let recycleItems = [];
@@ -1195,7 +1673,7 @@ function renderRecycleBin() {
   qs("#recycleEmptyState").classList.toggle("hidden", has);
   qs("#recycleCount").textContent = recycleItems.length;
   tbody.innerHTML = recycleItems.map((item, i) => `
-    <tr>
+    <tr tabindex="0" data-context-scope="recycle" data-context-index="${i}">
       <td class="checkbox-col"><input type="checkbox" class="recycle-check" data-index="${i}"></td>
       <td><div class="row-name">${fileIconBlock(item)}<span class="name-text">${esc(item.name)}</span></div></td>
       <td class="text-muted">${esc(item.site)}</td>
@@ -1211,14 +1689,16 @@ function renderRecycleBin() {
     </tr>`).join("");
   hydrateIcons();
   qsa("[data-recycle-action]").forEach(btn => btn.addEventListener("click", () => {
-    const i = parseInt(btn.getAttribute("data-index"), 10);
-    const action = btn.getAttribute("data-recycle-action");
-    const item = recycleItems[i];
-    recycleItems.splice(i, 1);
-    renderRecycleBin();
-    if (action === "restore") showToast({ title: `"${item.name}" restored`, desc: `Back in ${item.site} / ${item.originalPath}` });
-    else showToast({ title: `"${item.name}" permanently deleted`, variant: "destructive" });
+    handleRecycleAction(btn.getAttribute("data-recycle-action"), parseInt(btn.getAttribute("data-index"), 10));
   }));
+}
+function handleRecycleAction(action, index) {
+  const item = recycleItems[index];
+  if (!item) return;
+  recycleItems.splice(index, 1);
+  renderRecycleBin();
+  if (action === "restore") showToast({ title: `"${item.name}" restored`, desc: `Back in ${item.site} / ${item.originalPath}` });
+  else showToast({ title: `"${item.name}" permanently deleted`, variant: "destructive" });
 }
 
 /* ======================================================================= *
@@ -1270,6 +1750,7 @@ function initAdminUsersPage() {
   adminUsers = SAMPLE_USERS.slice();
   renderAdminUsers();
   qs("#userSearchInput")?.addEventListener("input", renderAdminUsers);
+  qs("#userSsoForm")?.addEventListener("submit", submitUserSsoSettings);
   qs("#addUserForm")?.addEventListener("submit", e => {
     e.preventDefault();
     const name = qs("#newUserName").value.trim(); if (!name) return;
@@ -1279,6 +1760,27 @@ function initAdminUsersPage() {
     e.target.reset();
     showToast({ title: `Invitation sent to ${name}` });
   });
+}
+function openUserSsoDialog(index) {
+  const user = adminUsers[index];
+  if (!user) return;
+  qs("#userSsoName").textContent = user.name;
+  qs("#userSsoEmail").textContent = user.email;
+  qs("#userLocalLoginDisabled").checked = user.localLoginDisabled === true;
+  qs("#userSsoExempt").checked = user.ssoExempt === true;
+  qs("#userSsoIndex").value = index;
+  openDialog("userSsoDialog");
+}
+function submitUserSsoSettings(e) {
+  e.preventDefault();
+  const index = parseInt(qs("#userSsoIndex").value, 10);
+  const user = adminUsers[index];
+  if (!user) return;
+  user.localLoginDisabled = qs("#userLocalLoginDisabled").checked;
+  user.ssoExempt = qs("#userSsoExempt").checked;
+  closeDialog(qs("#userSsoDialog"));
+  renderAdminUsers();
+  showToast({ title: "SSO settings updated", desc: `${user.name}'s local-login and break-glass settings were saved.` });
 }
 function renderAdminUsers() {
   const q = (qs("#userSearchInput")?.value || "").toLowerCase();
@@ -1293,6 +1795,7 @@ function renderAdminUsers() {
       <td><span class="badge ${u.role === "System Administrator" ? "badge-default" : u.role === "Site Owner" ? "badge-warning" : "badge-secondary"}">${esc(u.role)}</span></td>
       <td class="text-muted">${esc(u.lastActive)}</td>
       <td><label class="switch"><input type="checkbox" ${u.status === "Active" ? "checked" : ""} data-user-toggle="${realIdx}"><span class="slider"></span></label></td>
+      <td class="actions-col"><button class="btn btn-outline btn-sm" data-user-sso-edit="${realIdx}">SSO</button></td>
     </tr>`;
   }).join("");
   qsa("[data-user-toggle]").forEach(sw => sw.addEventListener("change", () => {
@@ -1300,6 +1803,7 @@ function renderAdminUsers() {
     adminUsers[i].status = sw.checked ? "Active" : "Inactive";
     showToast({ title: `${adminUsers[i].name} ${sw.checked ? "reactivated" : "deactivated"}`, desc: sw.checked ? "Account access restored." : "All active sessions revoked." });
   }));
+  qsa("[data-user-sso-edit]").forEach(btn => btn.addEventListener("click", () => openUserSsoDialog(parseInt(btn.getAttribute("data-user-sso-edit"), 10))));
 }
 
 /* ======================================================================= *
@@ -1383,6 +1887,23 @@ function initAdminSitesPage() {
  * ======================================================================= */
 function initAdminSettingsPage() {
   qsa(".settings-form").forEach(f => f.addEventListener("submit", e => { e.preventDefault(); showToast({ title: "Settings saved" }); }));
+  const toggle = qs("#ssoEnforcedToggle");
+  if (toggle) toggle.checked = prototypeState.ssoEnforcedGlobally === true;
+  qs("#ssoSettingsForm")?.addEventListener("submit", e => {
+    e.preventDefault();
+    const enabled = qs("#ssoEnforcedToggle").checked;
+    const exemptAdmins = SAMPLE_USERS.filter(u => u.role === "System Administrator" && u.status === "Active" && u.ssoExempt === true);
+    const error = qs("#ssoSettingsError");
+    if (enabled && !exemptAdmins.length) {
+      error.textContent = "Keep at least one active System Administrator exempt from SSO-only login before enabling this safeguard.";
+      error.classList.remove("hidden");
+      return;
+    }
+    error.classList.add("hidden");
+    prototypeState.ssoEnforcedGlobally = enabled;
+    savePrototypeState();
+    showToast({ title: enabled ? "SSO-only login enforced" : "SSO-only login disabled", desc: enabled ? "Local login remains available to break-glass administrators." : "Users may sign in with either configured provider." });
+  });
 }
 
 /* ======================================================================= *

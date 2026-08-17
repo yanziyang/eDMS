@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Favorites — eDMS</title>
+<script>(function(){try{document.documentElement.setAttribute('data-theme', localStorage.getItem('edms-theme')||'default');}catch(e){}})();</script>
+<link rel="stylesheet" href="assets/styles.css">
+</head>
+<body data-page="favorites">
+<div class="app-shell">
+  <aside class="app-sidebar" id="appSidebar"><div id="sidebarRoot"></div></aside>
+  <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+  <div class="app-content">
+    <div id="topbarRoot"></div>
+    <main class="app-main" id="appMain">
+      <div class="page-header">
+        <div><div class="page-title">Favorites</div><div class="page-subtitle"><span id="favoritesCount">0</span> pinned Sites, Libraries, Folders, and Documents, independent of their location in the hierarchy.</div></div>
+      </div>
+
+      <div class="pill-tabs mb-5" role="tablist" aria-label="Favorite types">
+        <button class="pill-tab active" data-favorite-filter="all">All</button>
+        <button class="pill-tab" data-favorite-filter="site">Sites</button>
+        <button class="pill-tab" data-favorite-filter="library">Libraries</button>
+        <button class="pill-tab" data-favorite-filter="folder">Folders</button>
+        <button class="pill-tab" data-favorite-filter="document">Documents</button>
+      </div>
+
+      <div id="favoritesList" class="flex flex-col gap-5"></div>
+      <div class="card hidden" id="favoritesEmptyState">
+        <div class="empty-state"><div class="empty-icon"><svg class="icon icon-lg" data-icon="star"></svg></div><h3>No favorites yet</h3><p>Use the star on a Site, Library, Folder, or Document to pin it here for quick access.</p></div>
+      </div>
+    </main>
+  </div>
+</div>
+<script src="assets/data.js"></script>
+<script src="assets/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Completing SSO — eDMS</title>
+<script>(function(){try{document.documentElement.setAttribute('data-theme', localStorage.getItem('edms-theme')||'default');}catch(e){}})();</script>
+<link rel="stylesheet" href="assets/styles.css">
+</head>
+<body data-page="sso-complete">
+<div class="auth-shell">
+  <div class="auth-panel-form">
+    <div class="auth-form-inner">
+      <div class="flex items-center gap-2 mb-8"><div class="mark" style="width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary) / .65));display:flex;align-items:center;justify-content:center;color:hsl(var(--primary-foreground));font-weight:700;">DM</div><div><div class="font-bold text-lg">eDMS</div><div class="text-muted text-xs">Enterprise Document Management</div></div></div>
+      <div id="ssoLoadingState">
+        <div class="empty-icon" style="margin-bottom:1rem;"><svg class="icon icon-lg" data-icon="shieldCheck"></svg></div>
+        <h1 class="text-2xl font-bold mb-1">Completing SSO sign-in…</h1>
+        <p class="text-muted text-sm">Verifying the one-time callback and preparing your eDMS session.</p>
+      </div>
+      <div id="ssoSuccessState" class="hidden">
+        <div class="empty-icon" style="margin-bottom:1rem;color:hsl(var(--success));background:hsl(var(--success-soft));"><svg class="icon icon-lg" data-icon="checkCircle2"></svg></div>
+        <h1 class="text-2xl font-bold mb-1">You’re signed in</h1>
+        <p class="text-muted text-sm mb-5">Your federated identity was verified. Redirecting to Home…</p>
+        <a class="btn btn-primary btn-block" href="home.html">Continue to eDMS</a>
+      </div>
+      <div id="ssoErrorState" class="hidden">
+        <div class="alert alert-destructive mb-4"><svg class="icon" data-icon="alertTriangle"></svg><div><div class="alert-title">SSO sign-in could not be completed</div><div id="ssoErrorMessage">The identity provider returned an error or the callback expired.</div></div></div>
+        <a class="btn btn-outline btn-block" href="index.html">Back to sign in</a>
+      </div>
+    </div>
+  </div>
+  <div class="auth-panel-brand"><div class="content"><div class="auth-logo"><div class="mark"><svg class="icon" data-icon="database" style="color:#fff;"></svg></div>eDMS</div></div><div class="content"><div class="auth-quote">Secure federation without putting access tokens in the redirect URL.</div><div class="flex flex-col gap-3 mt-8" style="font-size:13.5px;"><div class="flex items-center gap-2"><svg class="icon icon-sm" data-icon="checkCircle2"></svg>OIDC and SAML 2.0 providers</div><div class="flex items-center gap-2"><svg class="icon icon-sm" data-icon="checkCircle2"></svg>One-time callback exchange</div><div class="flex items-center gap-2"><svg class="icon icon-sm" data-icon="checkCircle2"></svg>New accounts start with no site access</div></div></div><div class="content text-xs" style="opacity:.75;">&copy; 2026 eDMS — Internal enterprise prototype</div></div>
+</div>
+<script src="assets/data.js"></script>
+<script src="assets/app.js"></script>
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const params = new URLSearchParams(location.search);
+    const provider = (params.get("provider") || "oidc").toUpperCase();
+    document.querySelector("#ssoLoadingState p").textContent = `Verifying the ${provider} callback and preparing your eDMS session.`;
+    hydrateIcons();
+    setTimeout(function () {
+      if (params.get("error")) {
+        qs("#ssoLoadingState").classList.add("hidden");
+        qs("#ssoErrorState").classList.remove("hidden");
+        qs("#ssoErrorMessage").textContent = params.get("error");
+      } else {
+        qs("#ssoLoadingState").classList.add("hidden");
+        qs("#ssoSuccessState").classList.remove("hidden");
+        setTimeout(() => { location.href = "home.html"; }, 1200);
+      }
+    }, 850);
+  });
+</script>
+</body>
+</html>

@@ -28,6 +28,7 @@
           <div class="page-subtitle">Upload, organize, and manage documents with version history and permissions.</div>
         </div>
         <div class="page-actions">
+          <span id="libraryFollowControl"></span>
           <button class="btn btn-outline" id="newFolderBtn"><svg class="icon icon-sm" data-icon="folderPlus"></svg>New folder</button>
           <button class="btn btn-primary" data-dialog-trigger="uploadDialog"><svg class="icon icon-sm" data-icon="uploadCloud"></svg>Upload</button>
         </div>
@@ -37,16 +38,23 @@
         <svg class="icon icon-sm" data-icon="checkCircle2"></svg>
         <span id="selectionCount">0 selected</span>
         <div class="spacer"></div>
+        <button class="btn btn-ghost btn-sm" id="bulkEditBtn"><svg class="icon icon-sm" data-icon="pencil"></svg>Edit properties</button>
+        <button class="btn btn-ghost btn-sm" id="bulkMoveBtn"><svg class="icon icon-sm" data-icon="move"></svg>Move</button>
         <button class="btn btn-ghost btn-sm" id="bulkDownloadBtn"><svg class="icon icon-sm" data-icon="download"></svg>Download</button>
+        <button class="btn btn-ghost btn-sm" id="bulkZipBtn"><svg class="icon icon-sm" data-icon="archive"></svg>Download ZIP</button>
         <button class="btn btn-ghost btn-sm" id="bulkDeleteBtn"><svg class="icon icon-sm" data-icon="trash2"></svg>Delete</button>
         <button class="btn btn-ghost btn-sm" id="clearSelectionBtn"><svg class="icon icon-sm" data-icon="x"></svg>Clear</button>
       </div>
 
       <div class="toolbar">
         <div class="toolbar-left">
-          <span class="text-muted text-xs desktop-only">Drag and drop files anywhere on this page to upload</span>
+          <label class="toolbar-control"><span class="text-xs text-muted">View</span><select class="select select-sm" id="libraryViewPicker" aria-label="Saved library view"></select></label>
+          <button class="btn btn-outline btn-sm" id="saveViewBtn"><svg class="icon icon-sm" data-icon="save"></svg>Save view</button>
+          <div class="input-icon-wrap library-filter-control"><svg class="icon icon-sm" data-icon="filter"></svg><input class="input input-sm" id="libraryFilterInput" placeholder="Filter this view…" aria-label="Filter library items"></div>
+          <label class="toolbar-control"><span class="text-xs text-muted">Group</span><select class="select select-sm" id="groupBySelect" aria-label="Group library items"><option value="none">None</option><option value="type">Type</option><option value="modifiedBy">Modified by</option></select></label>
         </div>
         <div class="toolbar-right">
+          <span class="text-muted text-xs desktop-only">Right-click or long-press a row for actions</span>
           <div class="btn-group">
             <button class="btn btn-ghost btn-sm active" id="viewListBtn" data-tooltip="List view"><svg class="icon icon-sm" data-icon="list"></svg></button>
             <button class="btn btn-ghost btn-sm" id="viewGridBtn" data-tooltip="Grid view"><svg class="icon icon-sm" data-icon="grid3x3"></svg></button>
@@ -101,9 +109,10 @@
   <div class="dialog">
     <div class="dialog-header">
       <div class="dialog-title">Upload files<button class="dialog-close btn btn-icon btn-ghost btn-sm" data-dialog-close><svg class="icon" data-icon="x"></svg></button></div>
-      <div class="dialog-description">Files are versioned automatically if a document with the same name already exists here.</div>
+      <div class="dialog-description">Files are versioned automatically if a document with the same name already exists here. Quota, size, and extension rules are enforced per file.</div>
     </div>
     <div class="dialog-body">
+      <div class="alert alert-info mb-3" id="uploadQuotaStatus"></div>
       <label class="dropzone" id="dropzone">
         <svg class="icon icon-xl" data-icon="uploadCloud"></svg>
         <div><span style="font-weight:600;color:hsl(var(--primary));">Click to browse</span> or drag files here</div>
@@ -184,6 +193,43 @@
       </div>
     </div>
     <div class="dialog-footer"><button class="btn btn-secondary" data-dialog-close>Close</button><button class="btn btn-primary"><svg class="icon icon-sm" data-icon="download"></svg>Download</button></div>
+  </div>
+</div>
+
+<!-- Saved library view dialog -->
+<div class="overlay" id="saveViewDialog">
+  <div class="dialog dialog-sm">
+    <div class="dialog-header"><div class="dialog-title">Save library view<button class="dialog-close btn btn-icon btn-ghost btn-sm" data-dialog-close><svg class="icon" data-icon="x"></svg></button></div><div class="dialog-description">Save the current filter, sort, and grouping as a reusable View.</div></div>
+    <form id="saveViewForm">
+      <div class="dialog-body">
+        <div class="field"><label class="label" for="saveViewName">View name</label><input class="input" id="saveViewName" placeholder="e.g. My open items" required></div>
+        <div class="alert alert-info mb-3"><svg class="icon icon-sm" data-icon="sliders"></svg><span id="saveViewState">Filter: none · Sort: name asc · Group: none</span></div>
+        <div class="checkbox-row"><input type="checkbox" id="saveViewShared"><label for="saveViewShared">Share this View with other Library members</label></div>
+        <div class="checkbox-row"><input type="checkbox" id="saveViewDefault"><label for="saveViewDefault">Make this the Library default <span class="text-muted">(Owner/Admin)</span></label></div>
+      </div>
+      <div class="dialog-footer"><button type="button" class="btn btn-secondary" data-dialog-close>Cancel</button><button type="submit" class="btn btn-primary">Save View</button></div>
+    </form>
+  </div>
+</div>
+
+<!-- Bulk metadata edit dialog -->
+<div class="overlay" id="bulkEditDialog">
+  <div class="dialog dialog-lg">
+    <div class="dialog-header"><div class="dialog-title">Edit properties in bulk<button class="dialog-close btn btn-icon btn-ghost btn-sm" data-dialog-close><svg class="icon" data-icon="x"></svg></button></div><div class="dialog-description">Apply shared metadata to the selected Documents. Blank fields are left unchanged; failures are reported per item.</div></div>
+    <form id="bulkEditForm">
+      <div class="dialog-body">
+        <div class="alert alert-info mb-4"><svg class="icon icon-sm" data-icon="checkCircle2"></svg><span id="bulkEditSelectionSummary">0 selected</span></div>
+        <div class="grid responsive-2col" style="grid-template-columns:1fr 1fr;gap:1rem;">
+          <div class="field"><label class="label" for="bulkEditTitle">Title</label><input class="input" id="bulkEditTitle" placeholder="Leave unchanged"></div>
+          <div class="field"><label class="label" for="bulkEditTags">Tags</label><input class="input" id="bulkEditTags" placeholder="Comma-separated tags"></div>
+        </div>
+        <div class="field"><label class="label" for="bulkEditDescription">Description</label><textarea class="textarea" id="bulkEditDescription" rows="3" placeholder="Leave unchanged"></textarea></div>
+        <div class="separator"></div>
+        <div class="text-xs font-semibold text-muted mb-2">Per-item result</div>
+        <div class="bulk-results" id="bulkEditResults"></div>
+      </div>
+      <div class="dialog-footer"><button type="button" class="btn btn-secondary" data-dialog-close>Cancel</button><button type="submit" class="btn btn-primary">Apply changes</button></div>
+    </form>
   </div>
 </div>
 
