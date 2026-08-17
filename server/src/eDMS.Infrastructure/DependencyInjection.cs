@@ -27,7 +27,9 @@ using eDMS.Application.Uploads;
 using eDMS.Infrastructure.Notifications;
 using eDMS.Application.Notifications;
 using eDMS.Infrastructure.Favorites;
+using eDMS.Infrastructure.Recent;
 using eDMS.Application.Favorites;
+using eDMS.Application.Recent;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Configuration;
@@ -117,6 +119,7 @@ public static class DependencyInjection
         services.AddScoped<IShareLinkService, ShareLinkService>();
         services.AddScoped<INotificationService, NotificationService>();
         services.AddScoped<IFavoritesService, FavoritesService>();
+        services.AddScoped<IRecentService, RecentService>();
         services.AddScoped<ContentTextIndexer>();
         services.AddSingleton<IFileStorageProvider, LocalDiskFileStorageProvider>();
         services.AddMemoryCache();
