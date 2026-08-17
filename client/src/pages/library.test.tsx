@@ -70,12 +70,13 @@ function library(overrides: Record<string, unknown> = {}) {
   };
 }
 
-function mockNav(overrides: { sites?: unknown; libraries?: unknown } = {}) {
+function mockNav(overrides: { sites?: unknown; libraries?: unknown; views?: unknown } = {}) {
   server.use(
     http.get(`${base}/sites`, () => HttpResponse.json(overrides.sites ?? [site()])),
     http.get(`${base}/sites/s1/libraries`, () =>
       HttpResponse.json(overrides.libraries ?? [library(), library({ id: "l2", name: "Finance" })]),
     ),
+    http.get(`${base}/libraries/l1/views`, () => HttpResponse.json(overrides.views ?? [])),
     http.get(`${base}/admin/content-types`, () => HttpResponse.json([])),
   );
 }
@@ -1030,6 +1031,104 @@ describe("LibraryBrowser", () => {
     await user.click(screen.getByRole("combobox", { name: "Sort items" }));
     await user.click(await screen.findByRole("option", { name: "Oldest first" }));
     expect(itemNameRows()).toEqual(["apple.pdf", "contract.pdf", "big.mp4"]);
+  });
+
+  it("saves the live filter, sort, and grouping state as a view", async () => {
+    mockNav({ views: [] });
+    const createdBodies: Record<string, unknown>[] = [];
+    server.use(
+      http.get(`${base}/libraries/l1/items`, () =>
+        HttpResponse.json([
+          item(),
+          item({ kind: "folder", id: "i2", name: "Archive", documentId: null, folderId: "f2" }),
+        ]),
+      ),
+      http.post(`${base}/libraries/l1/views`, async ({ request }) => {
+        const body = (await request.json()) as Record<string, unknown>;
+        createdBodies.push(body);
+        return HttpResponse.json(
+          { id: "v-created", libraryId: "l1", ownerId: "u1", isDefault: false, ...body },
+          { status: 201 },
+        );
+      }),
+    );
+
+    const user = userEvent.setup();
+    renderLibrary();
+    await screen.findByText("contract.pdf");
+
+    await user.type(screen.getByRole("textbox", { name: "Filter items" }), "contract");
+    await user.click(screen.getByRole("combobox", { name: "Sort items" }));
+    await user.click(await screen.findByRole("option", { name: "Newest first" }));
+    await user.click(screen.getByRole("combobox", { name: "Group items" }));
+    await user.click(await screen.findByRole("option", { name: "By type" }));
+    await user.click(screen.getByRole("combobox", { name: "Saved view" }));
+    await user.click(await screen.findByRole("option", { name: "Save current as…" }));
+    await user.type(screen.getByRole("textbox", { name: "View name" }), "My current view");
+    await user.click(screen.getByRole("button", { name: "Save view" }));
+
+    await waitFor(() => expect(createdBodies).toHaveLength(1));
+    expect(createdBodies[0]).toMatchObject({
+      name: "My current view",
+      groupByColumn: "kind",
+      isShared: false,
+    });
+    expect(JSON.parse(String(createdBodies[0].filterConfig))).toEqual({ text: "contract" });
+    expect(JSON.parse(String(createdBodies[0].sortConfig))).toEqual({
+      key: "modifiedAt",
+      descending: true,
+    });
+  }, 15000);
+
+  it("applies and switches between shared and personal views", async () => {
+    mockNav({
+      views: [
+        {
+          id: "v-pdf",
+          libraryId: "l1",
+          ownerId: null,
+          name: "PDF documents",
+          filterConfig: JSON.stringify({ text: ".pdf" }),
+          sortConfig: JSON.stringify({ key: "name", descending: false }),
+          groupByColumn: null,
+          isDefault: false,
+        },
+        {
+          id: "v-recent",
+          libraryId: "l1",
+          ownerId: "u1",
+          name: "Recent contracts",
+          filterConfig: JSON.stringify({ text: "contract" }),
+          sortConfig: JSON.stringify({ key: "modifiedAt", descending: true }),
+          groupByColumn: "kind",
+          isDefault: false,
+        },
+      ],
+    });
+    server.use(
+      http.get(`${base}/libraries/l1/items`, () =>
+        HttpResponse.json([
+          item(),
+          item({ id: "i2", name: "notes.docx", documentId: "d2" }),
+          item({ kind: "folder", id: "i3", name: "Archive", documentId: null, folderId: "f3" }),
+        ]),
+      ),
+    );
+
+    const user = userEvent.setup();
+    renderLibrary();
+    await screen.findByText("notes.docx");
+
+    await user.click(screen.getByRole("combobox", { name: "Saved view" }));
+    await user.click(await screen.findByRole("option", { name: "PDF documents" }));
+    expect(screen.getByText("contract.pdf")).toBeInTheDocument();
+    expect(screen.queryByText("notes.docx")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("combobox", { name: "Saved view" }));
+    await user.click(await screen.findByRole("option", { name: "Recent contracts" }));
+    expect(screen.getByRole("textbox", { name: "Filter items" })).toHaveValue("contract");
+    expect(screen.getByText("Documents")).toBeInTheDocument();
+    expect(screen.queryByText("notes.docx")).not.toBeInTheDocument();
   });
 
   it("switches to grid view", async () => {
