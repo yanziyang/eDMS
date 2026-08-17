@@ -475,7 +475,7 @@ function MetadataSection({ documentId }: { documentId: string }) {
     return (
       <div className="rounded-lg border bg-muted/50 p-3">
         <div className="text-sm font-medium">Metadata</div>
-        <div className="mt-1 text-sm text-muted-foreground">No custom metadata fields.</div>
+      <div className="mt-1 text-sm text-foreground">No custom metadata fields.</div>
       </div>
     );
   }

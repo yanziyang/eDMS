@@ -26,7 +26,6 @@ export default defineConfig({
   timeout: 60_000,
   retries: process.env.CI ? 1 : 0,
   reporter: [["list"]],
-  globalSetup: "./e2e/global-setup.ts",
   use: {
     baseURL: `http://localhost:${WEB_PORT}`,
     channel: "msedge",
@@ -40,10 +39,10 @@ export default defineConfig({
     ...(process.env.E2E_API_EXTERNAL === "1"
       ? []
       : [{
-        // Run the built DLL directly (not `dotnet run`) so the server process is the
-        // one Playwright manages and no orphaned apphost survives a stopped run.
-        command: "dotnet bin/Debug/net10.0/eDMS.Api.dll",
-        cwd: path.resolve(here, "..", "server", "src", "eDMS.Api"),
+        // Build and run from one managed process so Playwright cannot start the
+        // API while a separate setup build still has its DLLs locked.
+        command: "node e2e/start-api.mjs",
+        cwd: here,
         url: `http://localhost:${API_PORT}/health`,
         reuseExistingServer: false,
         timeout: 120_000,

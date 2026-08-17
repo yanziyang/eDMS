@@ -77,6 +77,61 @@ test.describe.serial("WCAG 2.1 AA axe scans", () => {
     await scanAndExpectClean(session.page, "login");
   });
 
+  test("login page with configured SSO providers", async () => {
+    await session.page.route("**/api/v1/auth/sso/providers", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ oidc: true, saml: true }),
+      }));
+    try {
+      await session.page.goto("/login");
+      await expect(
+        session.page.getByRole("button", { name: "Sign in with SSO" }),
+      ).toBeVisible();
+      await expect(
+        session.page.getByRole("button", { name: "Sign in with SAML SSO" }),
+      ).toBeVisible();
+      await scanAndExpectClean(session.page, "login with SSO providers");
+    } finally {
+      await session.page.unroute("**/api/v1/auth/sso/providers");
+    }
+  });
+
+  test("SSO completion loading and error states", async () => {
+    await session.page.route("**/api/v1/auth/sso/exchange", async (route) => {
+      await new Promise((resolve) => setTimeout(resolve, 750));
+      await route.fulfill({
+        status: 401,
+        contentType: "application/problem+json",
+        body: JSON.stringify({ title: "Unauthorized", status: 401 }),
+      });
+    });
+    try {
+      await session.page.goto("/sso/complete?code=opaque-e2e-code");
+      await expect(
+        session.page.getByRole("heading", { name: "Completing sign-in…" }),
+      ).toBeVisible();
+      await scanAndExpectClean(session.page, "SSO completion loading");
+      await expect(
+        session.page.getByRole("heading", { name: "Sign-in could not be completed" }),
+      ).toBeVisible();
+      await scanAndExpectClean(session.page, "SSO completion exchange error");
+    } finally {
+      await session.page.unroute("**/api/v1/auth/sso/exchange");
+    }
+
+    await session.page.goto("/sso/complete?error=provider-error");
+    await expect(
+      session.page.getByRole("heading", { name: "Sign-in could not be completed" }),
+    ).toBeVisible();
+    await scanAndExpectClean(session.page, "SSO completion provider error");
+
+    await session.page.goto("/sso/complete");
+    await expect(session.page.getByText(/missing or has expired/i)).toBeVisible();
+    await scanAndExpectClean(session.page, "SSO completion missing code");
+  });
+
   test("home", async () => {
     await session.page.goto("/");
     await expect(session.page.getByRole("heading", { name: "My Sites" })).toBeVisible();
@@ -145,12 +200,22 @@ test.describe.serial("WCAG 2.1 AA axe scans", () => {
     await session.page.goto("/admin/users");
     await expect(session.page.getByRole("heading", { name: "Admin Center" })).toBeVisible();
     await expect(session.page.locator("tbody tr").first()).toBeVisible();
+    await expect(
+      session.page.getByRole("switch", { name: /Disable local login for/ }).first(),
+    ).toBeVisible();
+    await expect(
+      session.page.getByRole("switch", { name: /Allow local login exemption for/ }).first(),
+    ).toBeVisible();
     await scanAndExpectClean(session.page, "admin users");
   });
 
   test("admin settings", async () => {
     await session.page.goto("/admin/settings");
     await expect(session.page.locator("#max-upload-mb")).toHaveValue(/\d+/);
+    await expect(
+      session.page.getByRole("switch", { name: "Require SSO for all local logins" }),
+    ).toBeVisible();
+    await expect(session.page.getByText("SSO providers")).toBeVisible();
     await scanAndExpectClean(session.page, "admin settings");
   });
 
