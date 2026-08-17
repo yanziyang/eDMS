@@ -573,6 +573,14 @@ namespace eDMS.Infrastructure.Migrations.Sqlite.Migrations
                         .HasColumnType("TEXT")
                         .HasColumnName("description");
 
+                    b.Property<string>("ExtractedText")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("extracted_text");
+
+                    b.Property<Guid?>("ExtractedTextVersionId")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("extracted_text_version_id");
+
                     b.Property<Guid?>("FolderId")
                         .HasColumnType("TEXT")
                         .HasColumnName("folder_id");

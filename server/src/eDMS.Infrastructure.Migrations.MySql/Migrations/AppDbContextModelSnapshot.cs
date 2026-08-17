@@ -578,6 +578,14 @@ namespace eDMS.Infrastructure.Migrations.MySql.Migrations
                         .HasColumnType("longtext")
                         .HasColumnName("description");
 
+                    b.Property<string>("ExtractedText")
+                        .HasColumnType("longtext")
+                        .HasColumnName("extracted_text");
+
+                    b.Property<Guid?>("ExtractedTextVersionId")
+                        .HasColumnType("char(36)")
+                        .HasColumnName("extracted_text_version_id");
+
                     b.Property<Guid?>("FolderId")
                         .HasColumnType("char(36)")
                         .HasColumnName("folder_id");

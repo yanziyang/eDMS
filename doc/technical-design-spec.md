@@ -90,6 +90,7 @@ Dependency direction is enforced by project references, not convention: `Domain`
 | ADR-10 | Resumable uploads (FR-DOC-12) use a custom session-based protocol, not the tus standard | A custom protocol keeps the API surface consistent with the rest of the app (~4 endpoints), needs no extra client library, and the append-only session semantics (offset must continue exactly where the last chunk ended) give resume without per-chunk server state beyond a counter and a temp file. Chunks are 8 MiB; sessions expire after 24h and are swept by the orphaned-upload background job | tus — rejected: full tus server implementation is heavyweight for an internal tool; S3 multipart — rejected: local-disk storage (ADR-6) has no native multipart |
 | ADR-11 | Office preview (FR-DOC-10) converts via a dedicated LibreOffice-headless HTTP container, behind `IOfficeConversionService` | Keeps the heavyweight native dependency out of the API process (mirrors ADR-6's interface pattern; the converter container is a separate compose service). The API falls back to serving the original bytes when the converter is unreachable, so preview never breaks the request | Shelling out to a locally-installed LibreOffice binary inside the API container — rejected: fragile, hard to deploy, couples API lifecycle to a heavyweight dependency; in-process .NET converters (e.g. Aspose) — rejected: licensing and binary size |
 | ADR-12 | Notifications use on-write fan-out into a durable `notifications` inbox row per recipient; subscription frequency is snapshotted on each followed-item event, and a scoped background worker sends rows due for daily/weekly digest delivery | The bell can read durable state without reconstructing historical events, share notifications are visible immediately, and digest delivery is bounded and restart-safe because `email_sent_at` is the delivery watermark | On-read fan-out — rejected: it makes inbox pagination and read state expensive; a separate message broker — deferred: the modular monolith does not yet justify another operational dependency |
+| ADR-13 | PDF/Office text extraction runs asynchronously through a dedicated Apache Tika HTTP container; extracted text and the source version ID are persisted on `documents`, and a bounded hosted-worker pass retries versions whose text is stale or unavailable | Keeps upload/check-in latency independent of heavyweight parsing, avoids a native/JVM dependency inside the API process, and makes indexing restart-safe because `extracted_text_version_id` is the durable work watermark. Postgres' generated `search_vector` includes the persisted text while the application query remains portable across all four providers | Synchronous inline extraction — rejected: large files would block writes and couple request availability to Tika; shelling out from the API — rejected: fragile process lifecycle and deployment coupling; a separate search engine — deferred: PostgreSQL GIN remains sufficient for the current corpus |
 
 **ADR-8 implementation rules** (normative, not prose):
 
@@ -367,6 +368,7 @@ Matches the RFC 7807 envelope fixed in FS §10.1.
 |---|---|---|
 | `RecycleBinPurgeService` | Daily, 02:00 local | Hard-deletes soft-deleted Folders/Documents past the configured retention window (default 90 days, FR-BIN-04) and their blobs via `IFileStorageProvider.DeleteAsync` |
 | `OrphanedUploadSweepService` | Hourly | Removes temp upload files older than 24h that never completed a transaction (§5.4 step 4 backstop) |
+| `ContentTextIndexingService` | Every minute, bounded batch | Sends current PDF/Office versions through Apache Tika and persists extracted text; a version mismatch remains pending for retry (FR-SRCH-07, ADR-13) |
 | `PermissionCacheWarmupService` *(optional, P2)* | On startup | Pre-populates the permission cache for active sessions after a deploy, to avoid a cold-cache latency spike |
 
 ## 6. Database Technical Design
@@ -475,10 +477,13 @@ CREATE TABLE documents (
     created_at          timestamptz NOT NULL DEFAULT now(),
     modified_by         uuid,
     modified_at         timestamptz,
+    extracted_text      text,
+    extracted_text_version_id uuid,
     search_vector       tsvector GENERATED ALWAYS AS (
         setweight(to_tsvector('english', coalesce(name, '')), 'A') ||
         setweight(to_tsvector('english', coalesce(title, '')), 'A') ||
-        setweight(to_tsvector('english', coalesce(description, '')), 'B')
+        setweight(to_tsvector('english', coalesce(description, '')), 'B') ||
+        setweight(to_tsvector('english', coalesce(extracted_text, '')), 'C')
     ) STORED
 );
 CREATE INDEX ix_documents_folder ON documents(library_id, folder_id) WHERE NOT is_deleted;

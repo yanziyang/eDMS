@@ -24,12 +24,18 @@ services:
       # LibreOffice needs a writable HOME for its profile
       HOME: /tmp
 
+  text-extractor:
+    image: apache/tika:3.2.3.0-full
+    ports:
+      - "9998:9998"
+
   api:
     build: ./server
     environment:
       Database__Provider: "Postgres"
       ConnectionStrings__Default: "Host=postgres;Port=5432;Database=edms;Username=postgres;Password=devonly"
       OfficeConversion__BaseUrl: "http://office-converter:8100"
+      TextExtraction__BaseUrl: "http://text-extractor:9998"
       Jwt__PrivateKey: ""
       Jwt__PublicKey: ""
       Seed__AdminEmail: "admin@edms.local"
@@ -42,6 +48,7 @@ services:
       - postgres
       - mailhog
       - office-converter
+      - text-extractor
 
   web:
     build:

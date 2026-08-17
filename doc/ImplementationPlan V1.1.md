@@ -111,7 +111,7 @@ M12–M18 have no dependency on each other beyond M10 and may be worked in any o
 | [M14](#m14--chunked-upload--minor-version-retention) | Large-file resilience + version hygiene | A >100MB upload resumes after a network interruption; a Library with a minor-version cap auto-trims old minors on check-in | Done |
 | [M15](#m15--notifications--alerts) | Notifications/alerts ("Follow") | Sharing a document emails + in-app-notifies the recipient; following a folder delivers a digest at the configured frequency | Done |
 | [M16](#m16--org-wide-share-links) | Non-anonymous org-wide links | A generated link opens for any authenticated internal user without an individual ACL entry; revoking it blocks further access | Done |
-| [M17](#m17--full-text-content-indexing) | Search inside PDF/Office content | A phrase that only appears in a PDF's body text (not name/title/description) is found by search | Not Started |
+| [M17](#m17--full-text-content-indexing) | Search inside PDF/Office content | A phrase that only appears in a PDF's body text (not name/title/description) is found by search | Done |
 | [M18](#m18--dark-theme) | Light/dark theme | Toggling dark mode re-themes the whole app and the choice persists across reloads | Done |
 | [M19](#m19--phase-2-hardening--sign-off) | Phase 2 sign-off | FS §15 Phase 2 checklist fully satisfied; same staging→production path M11 proved, re-run for Phase 2's additions | Not Started |
 
@@ -216,8 +216,8 @@ FS §8.2 already sketches `ShareLink` — use that shape.
 
 | Status | ID | Track | Task | Depends on | Size | Refs |
 |---|---|---|---|---|---|---|
-| Not Started | M17.1 | BE | Text-extraction for PDF/Office content (Apache Tika or iText — pick one and record it, plus the sync-inline-vs-background-async choice, as **ADR-13** in TDS §2.4), feeding into `search_vector` alongside the existing name/title/description indexing (V1.0's M7.1). If the tool needs its own server process (e.g. `tika-server`), add it to `docker-compose.yml` as its own container, same pattern as M13.1 — don't shell out from inside the API process. | M10 (all), M7.1 (done) | L | FR-SRCH-07 |
-| Not Started | M17.2 | BE | Background re-index job so large-file extraction doesn't block the upload request, mirroring `RecycleBinPurgeService`'s existing pattern. | M17.1 | M | TDS §5.8 |
+| Done | M17.1 | BE | Text-extraction for PDF/Office content (Apache Tika or iText — pick one and record it, plus the sync-inline-vs-background-async choice, as **ADR-13** in TDS §2.4), feeding into `search_vector` alongside the existing name/title/description indexing (V1.0's M7.1). If the tool needs its own server process (e.g. `tika-server`), add it to `docker-compose.yml` as its own container, same pattern as M13.1 — don't shell out from inside the API process. | M10 (all), M7.1 (done) | L | FR-SRCH-07 |
+| Done | M17.2 | BE | Background re-index job so large-file extraction doesn't block the upload request, mirroring `RecycleBinPurgeService`'s existing pattern. | M17.1 | M | TDS §5.8 |
 
 ### M18 — Dark Theme
 

@@ -586,6 +586,14 @@ namespace eDMS.Infrastructure.Migrations.Postgres
                         .HasColumnType("text")
                         .HasColumnName("description");
 
+                    b.Property<string>("ExtractedText")
+                        .HasColumnType("text")
+                        .HasColumnName("extracted_text");
+
+                    b.Property<Guid?>("ExtractedTextVersionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("extracted_text_version_id");
+
                     b.Property<Guid?>("FolderId")
                         .HasColumnType("uuid")
                         .HasColumnName("folder_id");

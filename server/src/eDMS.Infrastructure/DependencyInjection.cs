@@ -82,9 +82,15 @@ public static class DependencyInjection
         services.Configure<StorageOptions>(configuration.GetSection(StorageOptions.SectionName));
         services.Configure<RecycleBinOptions>(configuration.GetSection(RecycleBinOptions.SectionName));
         services.Configure<OfficeConversionOptions>(configuration.GetSection(OfficeConversionOptions.SectionName));
+        services.Configure<TextExtractionOptions>(configuration.GetSection(TextExtractionOptions.SectionName));
         services.AddHttpClient<IOfficeConversionService, HttpOfficeConversionService>((services, client) =>
         {
             var options = services.GetRequiredService<IOptions<OfficeConversionOptions>>().Value;
+            client.Timeout = options.Timeout;
+        });
+        services.AddHttpClient<IContentTextExtractor, HttpContentTextExtractor>((services, client) =>
+        {
+            var options = services.GetRequiredService<IOptions<TextExtractionOptions>>().Value;
             client.Timeout = options.Timeout;
         });
         services.AddSingleton(TimeProvider.System);
@@ -104,11 +110,13 @@ public static class DependencyInjection
         services.AddScoped<IChunkedUploadService, ChunkedUploadService>();
         services.AddScoped<IShareLinkService, ShareLinkService>();
         services.AddScoped<INotificationService, NotificationService>();
+        services.AddScoped<ContentTextIndexer>();
         services.AddSingleton<IFileStorageProvider, LocalDiskFileStorageProvider>();
         services.AddMemoryCache();
         services.AddHostedService<OrphanedUploadSweepService>();
         services.AddHostedService<RecycleBinPurgeService>();
         services.AddHostedService<NotificationDigestService>();
+        services.AddHostedService<ContentTextIndexingService>();
 
         return services;
     }

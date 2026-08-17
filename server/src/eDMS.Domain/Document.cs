@@ -14,6 +14,20 @@ public sealed class Document : SoftDeletableEntity
 
     public string? Description { get; set; }
 
+    /// <summary>
+    /// Text extracted from the current document version for full-text search.
+    /// The background indexer updates this asynchronously so uploads are not
+    /// blocked by PDF/Office parsing (FR-SRCH-07, ADR-13).
+    /// </summary>
+    public string? ExtractedText { get; set; }
+
+    /// <summary>
+    /// The document version that produced <see cref="ExtractedText"/>. A
+    /// mismatch with <see cref="CurrentVersionId"/> marks the document pending
+    /// for background indexing.
+    /// </summary>
+    public Guid? ExtractedTextVersionId { get; set; }
+
     public string ContentType { get; set; } = string.Empty;
 
     /// <summary>

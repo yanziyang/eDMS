@@ -29,7 +29,8 @@ public sealed class SearchService(
             documents = documents.Where(document =>
                 document.Name.ToLower().Contains(lowered)
                 || (document.Title != null && document.Title.ToLower().Contains(lowered))
-                || (document.Description != null && document.Description.ToLower().Contains(lowered)));
+                || (document.Description != null && document.Description.ToLower().Contains(lowered))
+                || (document.ExtractedText != null && document.ExtractedText.ToLower().Contains(lowered)));
         }
 
         if (libraryId is { } libId)

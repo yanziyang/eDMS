@@ -55,6 +55,26 @@ public sealed class SearchServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task Search_matches_extracted_content_case_insensitively()
+    {
+        var document = new Document
+        {
+            LibraryId = _libraryId,
+            Name = "ordinary-name.pdf",
+            ContentType = "application/pdf",
+            ExtractedText = "Only the body contains the compliance phrase",
+        };
+        document.SetCreator(_currentUser.UserId!.Value);
+        _db.Documents.Add(document);
+        await _db.SaveChangesAsync();
+
+        var results = await _service.SearchAsync("COMPLIANCE PHRASE", null, null, default);
+
+        var result = Assert.Single(results);
+        Assert.Equal("ordinary-name.pdf", result.Name);
+    }
+
+    [Fact]
     public async Task Search_filters_by_site_and_library()
     {
         await SeedDocumentAsync("doc-in-library.txt", null, null);
