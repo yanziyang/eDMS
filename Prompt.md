@@ -87,7 +87,14 @@ Prompt:
 
 The coding agent has basically finished the implementation plan, refer to the updated document. Rename existing Implementation Plan as 'doc\ImplementationPlan V1.0.md'
 
-Netx, plan the next phase Implementation Plan and save as 'doc\ImplementationPlan V1.1.md'. Please note that the implementation will be done by other AI Coding Agent such as OpenCode + DeepSeek.
+Next, plan the next phase Implementation Plan and save as 'doc\ImplementationPlan V1.1.md'. Please note that the implementation will be done by other AI Coding Agent such as OpenCode + DeepSeek.
+
+-------------------------------------------------------
+Prompt:
+
+The coding agent has basically finished the implementation plan V1.1, refer to the updated document.
+
+Next, plan the next phase Implementation Plan and save as 'doc\ImplementationPlan V1.2.md'. Please note that the implementation will be done by other AI Coding Agent such as OpenCode + DeepSeek.
 
 =======================================================
 -------------------------------------------------------
@@ -145,5 +152,8 @@ Prompt:
 
 I will go away for several hours. You just continue yesterday's work and proceed to finish all milestones in the implementation plan version V1.1, Commit and git push each milestone before proceed.
 
+--------------------------------------------------------
+Prompt:
 
+Please fix the GitHub error.
 
