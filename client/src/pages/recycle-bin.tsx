@@ -6,6 +6,7 @@ import { useParams } from "react-router-dom";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { ItemContextMenu } from "@/components/common/ItemContextMenu";
 import {
   Dialog,
   DialogContent,
@@ -173,7 +174,20 @@ export function RecycleBin() {
             </thead>
             <tbody>
               {items.data.map((item) => (
-                <tr key={item.id} className="border-b last:border-0">
+                <ItemContextMenu
+                  key={item.id}
+                  item={recycleContextItem(item)}
+                  permissionLevel="Contribute"
+                  actions={["restore", "permanently-delete"]}
+                  onAction={(action) => {
+                    if (action === "restore") {
+                      restore.mutate(item);
+                    } else if (action === "permanently-delete") {
+                      setConfirmDelete(item);
+                    }
+                  }}
+                >
+                <tr className="border-b last:border-0">
                   <td className="px-4 py-2">
                     <span className="flex items-center gap-2 font-medium">
                       {item.kind === "folder" ? (
@@ -215,6 +229,7 @@ export function RecycleBin() {
                     </div>
                   </td>
                 </tr>
+                </ItemContextMenu>
               ))}
             </tbody>
           </table>
@@ -255,4 +270,17 @@ export function RecycleBin() {
       </Dialog>
     </div>
   );
+}
+
+function recycleContextItem(item: RecycleBinItemDto) {
+  return {
+    kind: item.kind,
+    id: item.id,
+    name: item.name,
+    sizeBytes: 0,
+    modifiedAt: item.deletedAt,
+    folderId: item.kind === "folder" ? item.id : null,
+    documentId: item.kind === "document" ? item.id : null,
+    checkedOutBy: null,
+  } as const;
 }
