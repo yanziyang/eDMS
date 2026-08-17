@@ -18,5 +18,8 @@ fi
 # The generated pair below is only for SAML assertion signing.
 cp /shared/server.crt /var/simplesamlphp/cert/server.crt
 cp /shared/server.pem /var/simplesamlphp/cert/server.pem
+# The SimpleSAMLphp web process is not root. This fixture key is generated for
+# the ephemeral CI container only, so it must be readable by that process.
+chmod 644 /var/simplesamlphp/cert/server.crt /var/simplesamlphp/cert/server.pem
 
 exec /opt/simplesaml/ssp-startup.sh
