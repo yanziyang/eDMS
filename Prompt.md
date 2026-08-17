@@ -33,6 +33,11 @@ Requirement for the html prototype:
 - Use shadcn for UI/UX design.
 - Provide four different themes. User can change themes from My Profile or Preference web page.
 
+-------------------------------------------------------
+Prompt:
+
+Update html prototype based on latest function spec 'doc\functional-spec.md'.HTML prototype is in 'prototype(html)' folder.
+
 =======================================================
 -------------------------------------------------------
 React Prototype
@@ -49,6 +54,11 @@ Requirement for the html prototype:
 - The UI need responsive, support mobile device such as tablet etc.
 - Use shadcn for UI/UX design.
 - Provide four different themes. User can change themes from My Profile or Preference web page.
+
+-------------------------------------------------------
+Prompt:
+
+Update React prototype based on latest function spec 'doc\functional-spec.md'.React prototype is in 'prototype(React)' folder.
 
 =======================================================
 -------------------------------------------------------
@@ -162,5 +172,16 @@ Prompt:
 
 Please fix the GitHub error.
 
+========================================================
 --------------------------------------------------------
+GitHub
+--------------------------------------------------------
+Prompt:
+
+Delete the following commit from Gitub history:
+d64c4d324bc58dd7d2b12da51759dd2abb88b17c
+cbc62d628d24ada6e4986864862827135d9febc9
+d3026dfebd355813824804aa242f9cbc3998bbb6
+
+Remove the commits from history but preserve the current final code by rewriting them into replacement commit(s).
 
