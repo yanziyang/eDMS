@@ -21,8 +21,8 @@ internal static class MockOidcProvider
               "issuerId": "default",
               "requestMappings": [
                 {
-                  "requestParam": "subject",
-                  "match": "demo-user",
+                  "requestParam": "code",
+                  "match": "*",
                   "claims": {
                     "sub": "oidc-demo-user",
                     "aud": ["edms-demo-client"],
