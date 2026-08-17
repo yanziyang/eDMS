@@ -58,6 +58,7 @@ nunit-*.xml
 
 # Local secrets / credentials — never commit
 DEV-Credentials.md
+.secrets/
 
 # Node / Vite / frontend
 node_modules/

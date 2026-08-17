@@ -2,18 +2,19 @@ services:
   postgres:
     image: postgres:17
     environment:
-      POSTGRES_DB: edms
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: devonly
+      POSTGRES_DB: ${POSTGRES_DB:-edms}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-devonly}
     ports:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d edms"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-edms}"]
       interval: 10s
       timeout: 5s
       retries: 10
+      start_period: 10s
 
   mailhog:
     image: mailhog/mailhog
@@ -97,8 +98,8 @@ services:
     image: cirrusid/simplesamlphp:v2.5.0
     entrypoint: ["bash", "/opt/edms-saml/entrypoint.sh"]
     environment:
-      SSP_ADMIN_PASSWORD: secret1
-      SSP_SECRET_SALT: edms-saml-demo-secret
+      SSP_ADMIN_PASSWORD: ${SAML_IDP_ADMIN_PASSWORD:-secret1}
+      SSP_SECRET_SALT: ${SAML_IDP_SECRET_SALT:-edms-saml-demo-secret}
       SSP_APACHE_ALIAS: simplesaml/
       APACHE_CERT_NAME: local-stack-dev
     volumes:
@@ -111,29 +112,34 @@ services:
       interval: 10s
       timeout: 5s
       retries: 10
+      start_period: 20s
     restart: unless-stopped
     mem_limit: 512m
     cpus: 0.5
 
   api:
+    image: ${API_IMAGE:-edms-api:local}
     build: ./server
     environment:
       Database__Provider: "Postgres"
-      ConnectionStrings__Default: "Host=postgres;Port=5432;Database=edms;Username=postgres;Password=devonly"
+      ConnectionStrings__Default: "Host=postgres;Port=5432;Database=${POSTGRES_DB:-edms};Username=${POSTGRES_USER:-postgres};Password=${POSTGRES_PASSWORD:-devonly}"
       OfficeConversion__BaseUrl: "http://office-converter:8100"
       TextExtraction__BaseUrl: "http://text-extractor:9998"
-      Oidc__Authority: "http://host.docker.internal:4011/default"
-      Oidc__ClientId: "edms-demo-client"
-      Oidc__ClientSecret: "edms-demo-secret"
-      Oidc__CallbackPath: "/api/v1/auth/sso/oidc/callback"
-      Oidc__RequireHttpsMetadata: "false"
-      Saml__IdpEntityId: "urn:edms:test-saml-idp"
-      Saml__IdpSingleSignOnUrl: "https://localhost:4443/simplesaml/saml2/idp/SSOService.php"
-      Saml__IdpSigningCertificate: "/run/saml/server.crt"
-      Saml__EntityId: "urn:edms:saml"
-      Saml__CallbackPath: "/api/v1/auth/sso/saml/acs"
-      Saml__MetadataPath: "/api/v1/auth/sso/saml/metadata"
-      Saml__EmailAttributeName: "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress"
+      Oidc__Authority: "${OIDC_AUTHORITY:-http://host.docker.internal:4011/default}"
+      Oidc__ClientId: "${OIDC_CLIENT_ID:-edms-demo-client}"
+      Oidc__ClientSecret: "${OIDC_CLIENT_SECRET:-edms-demo-secret}"
+      Oidc__CallbackPath: "${OIDC_CALLBACK_PATH:-/api/v1/auth/sso/oidc/callback}"
+      Oidc__RequireHttpsMetadata: "${OIDC_REQUIRE_HTTPS_METADATA:-false}"
+      Saml__IdpEntityId: "${SAML_IDP_ENTITY_ID:-urn:edms:test-saml-idp}"
+      Saml__IdpSingleSignOnUrl: "${SAML_IDP_SSO_URL:-https://localhost:4443/simplesaml/saml2/idp/SSOService.php}"
+      Saml__IdpSigningCertificate: "${SAML_IDP_SIGNING_CERT_PATH:-/run/saml/server.crt}"
+      Saml__SigningCertificate: "${SAML_SP_SIGNING_CERT_PATH:-}"
+      Saml__SigningCertificatePassword: "${SAML_SP_SIGNING_CERT_PASSWORD:-}"
+      Saml__SignAuthnRequest: "${SAML_SIGN_AUTHN_REQUEST:-false}"
+      Saml__EntityId: "${SAML_ENTITY_ID:-urn:edms:saml}"
+      Saml__CallbackPath: "${SAML_CALLBACK_PATH:-/api/v1/auth/sso/saml/acs}"
+      Saml__MetadataPath: "${SAML_METADATA_PATH:-/api/v1/auth/sso/saml/metadata}"
+      Saml__EmailAttributeName: "${SAML_EMAIL_ATTRIBUTE_NAME:-http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress}"
       Client__BaseUrl: "http://localhost:5173"
       Jwt__PrivateKey: ""
       Jwt__PublicKey: ""
@@ -160,8 +166,12 @@ services:
         condition: service_healthy
     volumes:
       - saml-certs:/run/saml:ro
+      # Production/staging writes certificate material here from the deploy
+      # secret manager. The local directory is gitignored and optional.
+      - ${SAML_SECRETS_DIR:-./.secrets/saml}:/run/saml-secrets:ro
 
   web:
+    image: ${WEB_IMAGE:-edms-web:local}
     build:
       context: ./client
       args:
