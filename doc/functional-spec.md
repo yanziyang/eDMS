@@ -281,6 +281,7 @@ Each requirement has a stable ID, a phase tag, and a testable "shall" statement.
 | FR-UI-09 | P4 | The Home page shall show a "Recent" view of documents the current user has recently viewed, uploaded, or modified, across all Sites they can access, in addition to the "My Sites" list (FR-SITE-05). |
 | FR-UI-10 | P4 | Library views shall support saving a named combination of filter, sort, and group-by settings as a reusable "View", switchable from a view picker; a Library Owner may mark a View as the default shown to other users, in addition to any personal Views a user saves for themselves. |
 | FR-UI-11 | P4 | Users shall be able to favorite/pin a Site, Library, Folder, or Document for quick access from a dedicated list, independent of that item's location in the navigation hierarchy. |
+| FR-UI-12 | P4 | Right-clicking (desktop) or long-pressing (touch) a Document or Folder row/tile shall open a context menu of the actions available to the user's permission level for that item, without requiring the item to be opened or selected first. |
 
 ## 7. Non-Functional Requirements
 
@@ -751,7 +752,7 @@ SAML2 SSO · OIDC SSO · SSO-enforcement admin controls.
 
 ### Phase 4 — SharePoint-parity daily-use enhancements
 
-Added 2026-08-17 following a direct comparison against SharePoint Online's document-library feature set, requested to identify gaps worth closing for everyday use (§16 assumption 9 records the provenance). Scope: storage quota enforcement (FR-SITE-07) · bulk metadata edit across a multi-select (FR-DOC-13) · Follow extended to Library/Site (FR-NOTIF-06) · a "Recent" cross-site view on Home (FR-UI-09) · saved/named library Views (FR-UI-10) · favorites/pinning (FR-UI-11, closing the FavoriteItem gap noted in §8.2).
+Added 2026-08-17 following a direct comparison against SharePoint Online's document-library feature set, requested to identify gaps worth closing for everyday use (§16 assumption 9 records the provenance). Scope: storage quota enforcement (FR-SITE-07) · bulk metadata edit across a multi-select (FR-DOC-13) · Follow extended to Library/Site (FR-NOTIF-06) · a "Recent" cross-site view on Home (FR-UI-09) · saved/named library Views (FR-UI-10) · favorites/pinning (FR-UI-11, closing the FavoriteItem gap noted in §8.2) · right-click/long-press context menus (FR-UI-12, added the same day via a direct follow-up question rather than the original comparison pass).
 
 Two SharePoint features came up in the same comparison and were deliberately **not** given an FR here:
 
@@ -772,7 +773,7 @@ Flagged explicitly since they were not specified by the user and were decided to
 6. Default file size limit 250 MB, recycle bin retention 90 days, access token TTL 15 min, refresh token TTL 7 days — all configurable, not hardcoded.
 7. Site-creation rights default to any authenticated user; Admin can restrict this later via a settings flag if desired (not itemized as its own FR, covered by FR-ADMIN-04's general settings surface).
 8. Database choice is a configuration concern, not a code fork: PostgreSQL is the production database; SQL Server and MySQL are supported for enterprise deployments; SQLite is the local-development default (no DB install required). PostgreSQL-specific schema (e.g. `citext`, `tsvector`) is Postgres-only; other providers get equivalent portable behavior (TDS ADR-8).
-9. Phase 4 (§15) was added after Phase 1–3 were already specified, not planned up front like the others — it originated from a 2026-08-17 request to compare eDMS against SharePoint Online and fold in what's "good to have" for daily use. Its six FRs (FR-SITE-07, FR-DOC-13, FR-NOTIF-06, FR-UI-09/10/11) were selected against two filters: not already covered by Phase 1–3, and not already excluded by §2.2's non-goals. Two items surfaced by the same comparison were deliberately left uncommitted rather than force-fit through those filters — see §15's Phase 4 note for both and why.
+9. Phase 4 (§15) was added after Phase 1–3 were already specified, not planned up front like the others — it originated from a 2026-08-17 request to compare eDMS against SharePoint Online and fold in what's "good to have" for daily use. Its first six FRs (FR-SITE-07, FR-DOC-13, FR-NOTIF-06, FR-UI-09/10/11) were selected against two filters: not already covered by Phase 1–3, and not already excluded by §2.2's non-goals. Two items surfaced by the same comparison were deliberately left uncommitted rather than force-fit through those filters — see §15's Phase 4 note for both and why. A seventh, FR-UI-12 (right-click/long-press context menus), was added the same day from a direct follow-up question rather than the comparison pass itself, after confirming no such interaction exists anywhere in the client (`onContextMenu`/`ContextMenu` — zero hits) — same two filters applied, just triggered differently.
 
 ## 17. Glossary
 
@@ -792,4 +793,4 @@ Flagged explicitly since they were not specified by the user and were decided to
 | Version | Date | Change |
 |---|---|---|
 | 1.0 | 2026-08-15 | Initial draft functional specification. |
-| 1.1 | 2026-08-17 | Added Phase 4 (§15): six new FRs (FR-SITE-07, FR-DOC-13, FR-NOTIF-06, FR-UI-09/10/11) from a SharePoint Online comparison (§16 assumption 9); tightened the Phase 3 heading now that Phase 4 exists; clarified `FavoriteItem`'s phase tag in §8.2 (sketched P2, never given a requirement until now, formally P4 via FR-UI-11). No MVP/Phase 1/Phase 2/Phase 3 requirement changed. |
+| 1.1 | 2026-08-17 | Added Phase 4 (§15): seven new FRs from a SharePoint Online comparison (§16 assumption 9) plus a same-day follow-up — six from the comparison itself (FR-SITE-07, FR-DOC-13, FR-NOTIF-06, FR-UI-09/10/11), one (FR-UI-12, right-click/long-press context menus) from a direct follow-up question afterward; tightened the Phase 3 heading now that Phase 4 exists; clarified `FavoriteItem`'s phase tag in §8.2 (sketched P2, never given a requirement until now, formally P4 via FR-UI-11). No MVP/Phase 1/Phase 2/Phase 3 requirement changed. |
