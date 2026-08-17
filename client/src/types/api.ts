@@ -103,6 +103,7 @@ export interface ItemDto {
   folderId: string | null;
   documentId: string | null;
   checkedOutBy: string | null;
+  permissionLevel?: PermissionLevel;
 }
 
 export interface UploadResult {

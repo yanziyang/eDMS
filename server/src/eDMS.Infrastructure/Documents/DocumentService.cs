@@ -46,25 +46,44 @@ public sealed class DocumentService(
             .Select(group => new { DocumentId = group.Key, Size = group.Max(version => version.SizeBytes) })
             .ToDictionaryAsync(item => item.DocumentId, item => item.Size, cancellationToken);
 
-        var items = new List<ItemDto>();
-        items.AddRange(folders.Select(folder => new ItemDto(
-            "folder",
-            folder.Id,
-            folder.Name,
-            0,
-            folder.ModifiedAt ?? folder.CreatedAt,
-            folder.Id,
-            null,
-            null)));
-        items.AddRange(documents.Select(document => new ItemDto(
-            "document",
-            document.Id,
-            document.Name,
-            documentSizes.GetValueOrDefault(document.Id),
-            document.ModifiedAt ?? document.CreatedAt,
-            null,
-            document.Id,
-            document.CheckedOutBy)));
+        var items = new List<ItemDto>(folders.Count + documents.Count);
+        foreach (var folder in folders)
+        {
+            var level = await permissions.GetEffectiveLevelAsync(
+                userId,
+                ObjectType.Folder,
+                folder.Id,
+                cancellationToken);
+            items.Add(new ItemDto(
+                "folder",
+                folder.Id,
+                folder.Name,
+                0,
+                folder.ModifiedAt ?? folder.CreatedAt,
+                folder.Id,
+                null,
+                null,
+                level.ToString()));
+        }
+
+        foreach (var document in documents)
+        {
+            var level = await permissions.GetEffectiveLevelAsync(
+                userId,
+                ObjectType.Document,
+                document.Id,
+                cancellationToken);
+            items.Add(new ItemDto(
+                "document",
+                document.Id,
+                document.Name,
+                documentSizes.GetValueOrDefault(document.Id),
+                document.ModifiedAt ?? document.CreatedAt,
+                null,
+                document.Id,
+                document.CheckedOutBy,
+                level.ToString()));
+        }
 
         return items;
     }

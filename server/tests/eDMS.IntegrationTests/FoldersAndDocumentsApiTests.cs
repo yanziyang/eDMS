@@ -235,5 +235,6 @@ public sealed class FoldersAndDocumentsApiTests : IClassFixture<ApiFactory>
             .Content.ReadFromJsonAsync<List<ItemDto>>();
         Assert.Contains(items!, item => item.Kind == "folder" && item.Name == "My Folder");
         Assert.Contains(items!, item => item.Kind == "document" && item.Name == "my-doc.txt");
+        Assert.All(items!, item => Assert.Equal(nameof(PermissionLevel.FullControl), item.PermissionLevel));
     }
 }

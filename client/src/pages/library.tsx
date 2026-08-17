@@ -43,8 +43,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { ItemContextMenu, itemObjectId, itemObjectType, type ItemContextAction } from "@/components/common/ItemContextMenu";
+import { useAuth } from "@/features/auth/auth-context";
+import { addFavorite, listFavorites, removeFavorite } from "@/features/favorites/api";
 import { DocumentDetailsSheet } from "@/features/documents/components/DocumentDetailsSheet";
 import { FollowToggle } from "@/features/notifications/components/FollowToggle";
+import { followItem, listSubscriptions, unfollowItem } from "@/features/notifications/api";
 import {
   createLibraryView,
   listLibraryViews,
@@ -59,6 +63,8 @@ import {
 import {
   copyDocument,
   bulkUpdateMetadata,
+  checkInDocument,
+  checkOutDocument,
   createFolder,
   deleteDocument,
   deleteFolder,
@@ -67,6 +73,7 @@ import {
   listItems,
   listLibraries,
   moveDocument,
+  renameFolder,
   updateLibrary,
   uploadToFolder,
   uploadToLibrary,
@@ -99,6 +106,7 @@ export function LibraryBrowser() {
   const { siteSlug, libraryId } = useParams();
   const [searchParams] = useSearchParams();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
 
   const [folderId, setFolderId] = useState<string | null>(null);
   const [folderName, setFolderName] = useState("");
@@ -118,6 +126,8 @@ export function LibraryBrowser() {
   const [saveViewName, setSaveViewName] = useState("");
   const [saveViewShared, setSaveViewShared] = useState(false);
   const [selectedDocumentId, setSelectedDocumentId] = useState<string | null>(null);
+  const [shareOnOpen, setShareOnOpen] = useState(false);
+  const [renameItem, setRenameItem] = useState<ItemDto | null>(null);
   const defaultViewAppliedLibraryRef = useRef<string | null>(null);
   const requestedFolderId = searchParams.get("folderId");
   const requestedDocumentId = searchParams.get("documentId");
@@ -141,6 +151,17 @@ export function LibraryBrowser() {
     enabled: site !== undefined,
   });
   const library = libraries.data?.find((candidate) => candidate.id === libraryId);
+
+  const favoritesQuery = useQuery({
+    queryKey: queryKeys.me.favorites(),
+    queryFn: listFavorites,
+    retry: false,
+  });
+  const subscriptionsQuery = useQuery({
+    queryKey: queryKeys.notifications.subscriptions(),
+    queryFn: listSubscriptions,
+    retry: false,
+  });
 
   const libraryViewsQuery = useQuery({
     queryKey: queryKeys.libraryViews.list(libraryId ?? "unknown"),
@@ -265,6 +286,63 @@ export function LibraryBrowser() {
       invalidateItems();
     },
     onError: () => toast.error("Failed to delete item"),
+  });
+
+  const renameFolderMutation = useMutation({
+    mutationFn: ({ folderId: targetFolderId, name }: { folderId: string; name: string }) =>
+      renameFolder(targetFolderId, name),
+    onSuccess: () => {
+      toast.success("Folder renamed");
+      setRenameItem(null);
+      invalidateItems();
+    },
+    onError: () => toast.error("Failed to rename folder"),
+  });
+
+  const checkOutMutation = useMutation({
+    mutationFn: (documentId: string) => checkOutDocument(documentId),
+    onSuccess: () => {
+      toast.success("Checked out");
+      invalidateItems();
+    },
+    onError: () => toast.error("Failed to check out"),
+  });
+
+  const checkInMutation = useMutation({
+    mutationFn: (documentId: string) => checkInDocument(documentId),
+    onSuccess: () => {
+      toast.success("Checked in");
+      invalidateItems();
+    },
+    onError: () => toast.error("Failed to check in"),
+  });
+
+  const favoriteMutation = useMutation({
+    mutationFn: ({ item, favorite }: { item: ItemDto; favorite: boolean }) =>
+      favorite
+        ? addFavorite(itemObjectType(item), itemObjectId(item))
+        : removeFavorite(itemObjectType(item), itemObjectId(item)),
+    onSuccess: (_data, variables) => {
+      toast.success(variables.favorite ? "Added to favorites" : "Removed from favorites");
+      queryClient.invalidateQueries({ queryKey: queryKeys.me.favorites() });
+    },
+    onError: () => toast.error("Failed to update favorites"),
+  });
+
+  const followMutation = useMutation({
+    mutationFn: async ({ item, follow }: { item: ItemDto; follow: boolean }) => {
+      if (follow) {
+        await followItem(itemObjectType(item), itemObjectId(item), "Immediate");
+      } else {
+        await unfollowItem(itemObjectType(item), itemObjectId(item));
+      }
+    },
+    onSuccess: (_data, variables) => {
+      const label = itemObjectType(variables.item).toLowerCase();
+      toast.success(variables.follow ? `Following ${label}` : `Unfollowed ${label}`);
+      queryClient.invalidateQueries({ queryKey: queryKeys.notifications.subscriptions() });
+    },
+    onError: () => toast.error("Failed to update follow settings"),
   });
 
   const bulkDelete = useMutation({
@@ -399,6 +477,73 @@ export function LibraryBrowser() {
       applySavedView(view);
     }
   };
+
+  const handleContextAction = (item: ItemDto, action: ItemContextAction) => {
+    switch (action) {
+      case "open":
+        if (item.kind === "folder") {
+          setFolderId(item.folderId!);
+          setFolderName(item.name);
+          clearSelection();
+        } else {
+          setShareOnOpen(false);
+          setSelectedDocumentId(item.documentId!);
+        }
+        break;
+      case "download":
+        if (item.kind === "document") void downloadDocument(item.documentId!, item.name);
+        break;
+      case "rename":
+        if (item.kind === "folder") setRenameItem(item);
+        else {
+          setShareOnOpen(false);
+          setSelectedDocumentId(item.documentId!);
+        }
+        break;
+      case "move-copy":
+        if (item.kind === "document") {
+          setSelection(new Set([item.id]));
+          setMoveOpen(true);
+        }
+        break;
+      case "delete":
+        deleteItem.mutate(item);
+        break;
+      case "share":
+        if (item.kind === "document") {
+          setShareOnOpen(true);
+          setSelectedDocumentId(item.documentId!);
+        }
+        break;
+      case "check-out":
+        if (item.kind === "document") checkOutMutation.mutate(item.documentId!);
+        break;
+      case "check-in":
+        if (item.kind === "document") checkInMutation.mutate(item.documentId!);
+        break;
+      case "follow":
+        followMutation.mutate({ item, follow: true });
+        break;
+      case "unfollow":
+        followMutation.mutate({ item, follow: false });
+        break;
+      case "favorite":
+        favoriteMutation.mutate({ item, favorite: true });
+        break;
+      case "unfavorite":
+        favoriteMutation.mutate({ item, favorite: false });
+        break;
+    }
+  };
+
+  const isFavorite = (item: ItemDto) =>
+    favoritesQuery.data?.some(
+      (favorite) => favorite.objectType === itemObjectType(item) && favorite.objectId === itemObjectId(item),
+    ) ?? false;
+  const isFollowed = (item: ItemDto) =>
+    subscriptionsQuery.data?.some(
+      (subscription) => subscription.objectType === itemObjectType(item) && subscription.objectId === itemObjectId(item),
+    ) ?? false;
 
   const siteName = site?.name ?? siteSlug ?? "Site";
   const libraryName = library?.name ?? "Documents";
@@ -662,7 +807,16 @@ export function LibraryBrowser() {
                     </tr>
                   )}
                   {group.items.map((item) => (
-                    <tr key={item.id} className="border-b last:border-0">
+                    <ItemContextMenu
+                      key={item.id}
+                      item={item}
+                      permissionLevel={item.permissionLevel ?? "Read"}
+                      checkedOutByMe={item.checkedOutBy === user?.id}
+                      isFavorite={isFavorite(item)}
+                      isFollowed={isFollowed(item)}
+                      onAction={(action) => handleContextAction(item, action)}
+                    >
+                    <tr className="border-b last:border-0">
                   <td className="px-4 py-2">
                     <Checkbox
                       aria-label={`Select ${item.name}`}
@@ -728,6 +882,7 @@ export function LibraryBrowser() {
                     </div>
                   </td>
                     </tr>
+                    </ItemContextMenu>
                   ))}
                 </Fragment>
               ))}
@@ -746,10 +901,16 @@ export function LibraryBrowser() {
                 </div>
               )}
               {group.items.map((item) => (
-                <div
+                <ItemContextMenu
                   key={item.id}
-                  className="group relative flex flex-col gap-2 rounded-lg border bg-card p-4"
+                  item={item}
+                  permissionLevel={item.permissionLevel ?? "Read"}
+                  checkedOutByMe={item.checkedOutBy === user?.id}
+                  isFavorite={isFavorite(item)}
+                  isFollowed={isFollowed(item)}
+                  onAction={(action) => handleContextAction(item, action)}
                 >
+                <div className="group relative flex flex-col gap-2 rounded-lg border bg-card p-4">
               <div className="absolute left-3 top-3">
                 <Checkbox
                   aria-label={`Select ${item.name}`}
@@ -786,6 +947,7 @@ export function LibraryBrowser() {
                 <span>{new Date(item.modifiedAt).toLocaleDateString()}</span>
               </div>
                 </div>
+                </ItemContextMenu>
               ))}
             </Fragment>
           ))}
@@ -816,6 +978,19 @@ export function LibraryBrowser() {
         onOpenChange={setCreateFolderOpen}
         pending={createFolderMutation.isPending}
         onSubmit={(name) => createFolderMutation.mutate(name)}
+      />
+
+      <RenameFolderDialog
+        item={renameItem}
+        onOpenChange={(open) => {
+          if (!open) setRenameItem(null);
+        }}
+        pending={renameFolderMutation.isPending}
+        onSubmit={(name) => {
+          if (renameItem?.folderId) {
+            renameFolderMutation.mutate({ folderId: renameItem.folderId, name });
+          }
+        }}
       />
 
       <UploadDialog
@@ -859,8 +1034,12 @@ export function LibraryBrowser() {
         <DocumentDetailsSheet
           documentId={selectedDocumentId}
           open
+          openShare={shareOnOpen}
           onOpenChange={(open) => {
-            if (!open) setSelectedDocumentId(null);
+            if (!open) {
+              setSelectedDocumentId(null);
+              setShareOnOpen(false);
+            }
           }}
         />
       )}
@@ -1161,6 +1340,53 @@ function SaveLibraryViewDialog({
           <Button disabled={pending || name.trim().length === 0} onClick={onSubmit}>
             {pending && <LoaderCircle data-icon="inline-start" className="animate-spin" />}
             Save view
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+interface RenameFolderDialogProps {
+  item: ItemDto | null;
+  onOpenChange: (open: boolean) => void;
+  pending: boolean;
+  onSubmit: (name: string) => void;
+}
+
+function RenameFolderDialog({ item, onOpenChange, pending, onSubmit }: RenameFolderDialogProps) {
+  const [name, setName] = useState("");
+
+  useEffect(() => {
+    setName(item?.name ?? "");
+  }, [item]);
+
+  return (
+    <Dialog open={item !== null} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Rename folder</DialogTitle>
+          <DialogDescription>Choose a new name for this folder.</DialogDescription>
+        </DialogHeader>
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="rename-folder-name">Name</Label>
+          <Input
+            id="rename-folder-name"
+            value={name}
+            onChange={(event) => setName(event.target.value)}
+            autoFocus
+          />
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
+          <Button
+            disabled={pending || name.trim() === "" || item === null}
+            onClick={() => onSubmit(name.trim())}
+          >
+            {pending && <LoaderCircle className="size-4 animate-spin" />}
+            Rename
           </Button>
         </DialogFooter>
       </DialogContent>

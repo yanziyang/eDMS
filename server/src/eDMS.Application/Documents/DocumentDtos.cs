@@ -1,3 +1,5 @@
+using eDMS.Domain;
+
 namespace eDMS.Application.Documents;
 
 public sealed record LibraryDto(
@@ -43,7 +45,8 @@ public sealed record ItemDto(
     DateTimeOffset ModifiedAt,
     Guid? FolderId,
     Guid? DocumentId,
-    Guid? CheckedOutBy);
+    Guid? CheckedOutBy,
+    string PermissionLevel);
 
 public sealed record UploadResult(
     Guid DocumentId,

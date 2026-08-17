@@ -67,11 +67,20 @@ import { ShareDialog } from "./ShareDialog";
 interface DocumentDetailsSheetProps {
   documentId: string;
   open: boolean;
+  openShare?: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
-export function DocumentDetailsSheet({ documentId, open, onOpenChange }: DocumentDetailsSheetProps) {
+export function DocumentDetailsSheet({ documentId, open, openShare = false, onOpenChange }: DocumentDetailsSheetProps) {
   const [shareOpen, setShareOpen] = useState(false);
+
+  useEffect(() => {
+    if (!open) {
+      setShareOpen(false);
+    } else if (openShare) {
+      setShareOpen(true);
+    }
+  }, [open, openShare]);
 
   const detail = useQuery({
     queryKey: queryKeys.documents.detail(documentId),

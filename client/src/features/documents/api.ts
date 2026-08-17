@@ -94,6 +94,13 @@ export function deleteFolder(folderId: string): Promise<void> {
   return request<void>(`/folders/${folderId}`, { method: "DELETE" });
 }
 
+export function renameFolder(folderId: string, name: string): Promise<void> {
+  return request<void>(`/folders/${folderId}`, {
+    method: "PUT",
+    body: JSON.stringify({ name }),
+  });
+}
+
 export async function downloadDocument(documentId: string, fileName: string): Promise<void> {
   const blob = await requestBlob(`/documents/${documentId}/download`);
   const url = URL.createObjectURL(blob);
