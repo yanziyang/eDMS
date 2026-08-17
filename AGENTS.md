@@ -6,17 +6,17 @@ Instructions for AI coding agents (OpenCode, Claude Code, Cursor, or any other a
 
 **eDMS** is an internal enterprise document management system — SharePoint Online's key functions (sites, libraries, folders, documents, versioning, check-out/check-in, permissions, search, recycle bin, audit trail), for internal use only, no anonymous/external sharing. Full context: [`doc/functional-spec.md`](doc/functional-spec.md) §1–§2.
 
-**Repository state — read before doing anything else:** the production `server/` (.NET 10) and `client/` (React/Vite) now exist. **Phase 1 (M0–M11) is done** — sites, libraries, folders, documents, versioning, check-out/in, permissions (recursive-CTE resolver), search, recycle bin, audit trail, admin center (users/groups/sites/settings/audit-log/storage), document details sheet (Properties/Versions/Permissions), share dialog, and multi-provider database support are all complete and covered by the 90%+ coverage gates. The next task is the first `Not Started` item in **`doc/ImplementationPlan V1.1.md`** (Phase 2, M12+). `doc/ImplementationPlan V1.0.md` is the archived original Phase 1 plan — historical reference only, do not work from it.
+**Repository state — read before doing anything else:** the production `server/` (.NET 10) and `client/` (React/Vite) now exist. **Phase 2 (M0–M19) is done** — the Phase 1 core plus content types and required metadata, Office preview, chunked uploads, notifications/alerts, authenticated organization-wide share links, PDF/Office content indexing, dark theme, Phase 2 E2E/accessibility/responsive coverage, and deployment wiring are complete and covered by the quality gates. The next task is the first `Not Started` item in **`doc/ImplementationPlan V1.1.md`** (the Phase 3 backlog placeholder). `doc/ImplementationPlan V1.0.md` is the archived original Phase 1 plan — historical reference only, do not work from it.
 
 | Path | What it is | Status |
 |---|---|---|
 | `doc/functional-spec.md` / `.html` | Requirements, data model, API surface, roadmap | Source of truth — done |
 | `doc/technical-design-spec.md` / `.html` | Architecture, schema DDL, class-level design, deployment | Source of truth — done |
-| `doc/ImplementationPlan V1.1.md` | **Active** sequenced, dependency-ordered task list (M10/M11 Phase 1 close-out — done; M12+ Phase 2) with a live Status column | **Read this to find your next task** |
+| `doc/ImplementationPlan V1.1.md` | **Active** sequenced, dependency-ordered task list (M10/M11 Phase 1 close-out and M12–M19 Phase 2 — done) with a live Status column | **Read this to find your next task** |
 | `doc/ImplementationPlan V1.0.md` | Archived Phase 1 (M0–M9) plan, frozen at handoff | Historical reference only — superseded |
 | `prototype(html)/` | Clickable UX/IA reference (vanilla HTML/CSS/JS mimicking shadcn) | Reference only — **see §8, do not port its code** |
-| `server/` | .NET solution (Domain/Application/Infrastructure + one migrations project per database provider, Api, tests) | Done — Phase 1; Postgres in prod, SQLite dev default (ADR-8) |
-| `client/` | React/Vite app (TanStack Query throughout) | Done — Phase 1; full UI incl. details sheet, share dialog, admin center |
+| `server/` | .NET solution (Domain/Application/Infrastructure + one migrations project per database provider, Api, tests) | Done — Phase 2; Postgres in prod, SQLite dev default (ADR-8) |
+| `client/` | React/Vite app (TanStack Query throughout) | Done — Phase 2; full UI incl. Phase 2 surfaces, details sheet, share dialog, admin center |
 
 **Your very next action, every session:** open `doc/ImplementationPlan V1.1.md`, find the first task whose Status isn't `Done` and whose dependencies are, and do that.
 
@@ -148,7 +148,7 @@ These are the things most likely to be silently violated by an agent working sec
 6. **File content-type is sniffed server-side from magic bytes.** Never trust the client's `Content-Type` header (TDS §5.4, §10.2).
 7. **Every command/query has a validator.** Don't skip it because "the frontend already checks this" (TDS §5.2 pipeline behaviors).
 8. **No anonymous or external sharing, ever.** Every principal is an internal `User` or `Group` (FS §2.2). This is a scope boundary, not an oversight — don't add a public-link feature without an explicit spec change.
-9. **Don't build ahead of the roadmap.** Check FS §15 before implementing something — Phase 2/3 items (content types, SSO, org-wide links, etc.) aren't needed for a working Phase 1 system.
+9. **Don't build ahead of the roadmap.** Check FS §15 before implementing something — Phase 3 federation and other explicitly deferred items still require a plan/spec decision.
 
 ## 8. The `prototype(html)/` Folder
 

@@ -9,6 +9,11 @@ services:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d edms"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
 
   mailhog:
     image: mailhog/mailhog
@@ -17,17 +22,34 @@ services:
       - "1025:1025"
 
   office-converter:
+    image: ${OFFICE_CONVERTER_IMAGE:-edms-office-converter:local}
     build: ./server/LibreOfficeServer
     ports:
       - "8100:8100"
     environment:
       # LibreOffice needs a writable HOME for its profile
       HOME: /tmp
+    restart: unless-stopped
+    mem_limit: 1g
+    cpus: 1.0
+    healthcheck:
+      test: ["CMD-SHELL", "python3 -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8100/health', timeout=2)\""]
+      interval: 15s
+      timeout: 5s
+      retries: 10
 
   text-extractor:
     image: apache/tika:3.2.3.0-full
     ports:
       - "9998:9998"
+    restart: unless-stopped
+    mem_limit: 1g
+    cpus: 1.0
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:9998/ || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
 
   api:
     build: ./server
@@ -45,10 +67,14 @@ services:
     ports:
       - "5080:8080"
     depends_on:
-      - postgres
-      - mailhog
-      - office-converter
-      - text-extractor
+      postgres:
+        condition: service_healthy
+      mailhog:
+        condition: service_started
+      office-converter:
+        condition: service_healthy
+      text-extractor:
+        condition: service_healthy
 
   web:
     build:

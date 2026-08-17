@@ -23,6 +23,7 @@ jobs:
     outputs:
       api-image: ${{ steps.meta-api.outputs.tags }}
       web-image: ${{ steps.meta-web.outputs.tags }}
+      office-image: ${{ steps.meta-office.outputs.tags }}
     steps:
       - uses: actions/checkout@v4
       - uses: docker/setup-buildx-action@v3
@@ -45,6 +46,13 @@ jobs:
           tags: |
             type=sha,format=long
             type=raw,value=staging
+      - uses: docker/metadata-action@v5
+        id: meta-office
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAMESPACE }}-office-converter
+          tags: |
+            type=sha,format=long
+            type=raw,value=staging
       - uses: docker/build-push-action@v6
         with:
           context: ./server
@@ -59,6 +67,14 @@ jobs:
           push: true
           tags: ${{ steps.meta-web.outputs.tags }}
           labels: ${{ steps.meta-web.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - uses: docker/build-push-action@v6
+        with:
+          context: ./server/LibreOfficeServer
+          push: true
+          tags: ${{ steps.meta-office.outputs.tags }}
+          labels: ${{ steps.meta-office.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -113,7 +129,9 @@ jobs:
           script: |
             docker pull ghcr.io/yanziyang/edms-api:staging
             docker pull ghcr.io/yanziyang/edms-web:staging
-            docker compose -f /opt/edms/docker-compose.yml up -d --force-recreate api web
+            docker pull ghcr.io/yanziyang/edms-office-converter:staging
+            docker compose -f /opt/edms/docker-compose.yml pull text-extractor
+            OFFICE_CONVERTER_IMAGE=ghcr.io/yanziyang/edms-office-converter:staging docker compose -f /opt/edms/docker-compose.yml up -d --force-recreate office-converter text-extractor api web
 
   smoke:
     name: Smoke test staging

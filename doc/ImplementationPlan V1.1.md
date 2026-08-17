@@ -106,14 +106,14 @@ M12–M18 have no dependency on each other beyond M10 and may be worked in any o
 |---|---|---|---|
 | [M10](#m10--phase-1-close-out-core-gaps) | Finish everything V1.0 left open | Every document has a working details panel (Properties/Versions/Permissions tabs) and share dialog; admin has working Settings/Audit Log/Storage Report pages; recycle bin actually restores/purges from the UI — all via TanStack Query, not placeholders | Done |
 | [M11](#m11--phase-1-hardening--sign-off-close-out) | Actually satisfy FS §15's Phase 1 checklist | Validator coverage is complete, the permission CTE has a documented perf profile at 20-level nesting, an accessibility + responsive pass is done, and a staging deploy has been run at least once | Done |
-| [M12](#m12--content-types--custom-metadata-columns) | Content Types & typed columns | Admin defines a Content Type with a required column on a Library; upload/check-in in that Library blocks completion until it's filled | Not Started |
+| [M12](#m12--content-types--custom-metadata-columns) | Content Types & typed columns | Admin defines a Content Type with a required column on a Library; upload/check-in in that Library blocks completion until it's filled | Done |
 | [M13](#m13--office-preview) | In-browser Office preview | Opening a .docx/.xlsx/.pptx shows a PDF-converted preview, no download required | Done |
 | [M14](#m14--chunked-upload--minor-version-retention) | Large-file resilience + version hygiene | A >100MB upload resumes after a network interruption; a Library with a minor-version cap auto-trims old minors on check-in | Done |
 | [M15](#m15--notifications--alerts) | Notifications/alerts ("Follow") | Sharing a document emails + in-app-notifies the recipient; following a folder delivers a digest at the configured frequency | Done |
 | [M16](#m16--org-wide-share-links) | Non-anonymous org-wide links | A generated link opens for any authenticated internal user without an individual ACL entry; revoking it blocks further access | Done |
 | [M17](#m17--full-text-content-indexing) | Search inside PDF/Office content | A phrase that only appears in a PDF's body text (not name/title/description) is found by search | Done |
 | [M18](#m18--dark-theme) | Light/dark theme | Toggling dark mode re-themes the whole app and the choice persists across reloads | Done |
-| [M19](#m19--phase-2-hardening--sign-off) | Phase 2 sign-off | FS §15 Phase 2 checklist fully satisfied; same staging→production path M11 proved, re-run for Phase 2's additions | Not Started |
+| [M19](#m19--phase-2-hardening--sign-off) | Phase 2 sign-off | FS §15 Phase 2 checklist fully satisfied; same staging→production path M11 proved, re-run for Phase 2's additions | Done |
 
 ## 6. Detailed Milestones — Phase 1 Close-out
 
@@ -233,12 +233,12 @@ FS §16's roadmap scopes this as light/dark only (FR-UI-08). The original `proto
 
 | Status | ID | Track | Task | Depends on | Size | Refs |
 |---|---|---|---|---|---|---|
-| Not Started | M19.1 | Both | Extend the Playwright E2E suite to cover Phase 2 flows: content types + required-column enforcement, Office preview, chunked upload, notifications, share links, search-in-content, dark-mode toggle. | M11 (all), M12–M18 | L | TDS §12.2 |
-| Not Started | M19.2 | FE | Accessibility re-pass on all Phase 2 UI. | M12–M18 | M | FS §7 NFR |
-| Not Started | M19.3 | FE | Responsive/mobile re-verification on all Phase 2 UI. | M12–M18 | S | FS §7 NFR |
-| Not Started | M19.4 | BE | Validator-coverage re-audit including every Phase 2 command/query. | M12–M18 | S | TDS §5.2 |
-| Not Started | M19.5 | INF | Update `docker-compose.yml` and the M11.6 deploy workflows for the new containers M13/M17 added (LibreOffice, text-extraction service) — resource sizing notes, health checks. | M11.6, M13.1, M17.1 | S | TDS §11 |
-| Not Started | M19.6 | DOC | Update `AGENTS.md`/`README.md` to reflect Phase 2 completion; confirm FS §15 Phase 2 checklist is fully satisfied. | M19.1–M19.5 | S | FS §15 |
+| Done | M19.1 | Both | Extend the Playwright E2E suite to cover Phase 2 flows: content types + required-column enforcement, Office preview, chunked upload, notifications, share links, search-in-content, dark-mode toggle. | M11 (all), M12–M18 | L | TDS §12.2 |
+| Done | M19.2 | FE | Accessibility re-pass on all Phase 2 UI. | M12–M18 | M | FS §7 NFR |
+| Done | M19.3 | FE | Responsive/mobile re-verification on all Phase 2 UI. | M12–M18 | S | FS §7 NFR |
+| Done | M19.4 | BE | Validator-coverage re-audit including every Phase 2 command/query. | M12–M18 | S | TDS §5.2 |
+| Done | M19.5 | INF | Update `docker-compose.yml` and the M11.6 deploy workflows for the new containers M13/M17 added (LibreOffice, text-extraction service) — resource sizing notes, health checks. | M11.6, M13.1, M17.1 | S | TDS §11 |
+| Done | M19.6 | DOC | Update `AGENTS.md`/`README.md` to reflect Phase 2 completion; confirm FS §15 Phase 2 checklist is fully satisfied. | M19.1–M19.5 | S | FS §15 |
 
 ## 8. Sequencing Risks
 

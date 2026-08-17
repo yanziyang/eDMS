@@ -155,7 +155,7 @@ public sealed class DocumentService(
                 }
 
                 checksum = Convert.ToHexString(hasher.GetHashAndReset()).ToLowerInvariant();
-                contentType = ContentTypeSniffer.Detect(header);
+                contentType = ContentTypeSniffer.Detect(header, fileName);
             }
 
             var existing = await db.Documents.IgnoreQueryFilters()

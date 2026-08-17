@@ -71,6 +71,25 @@ public sealed class InfrastructureServicesTests
         Assert.Equal(expected, ContentTypeSniffer.Detect(header));
     }
 
+    [Theory]
+    [InlineData("report.docx", "application/vnd.openxmlformats-officedocument.wordprocessingml.document")]
+    [InlineData("budget.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")]
+    [InlineData("slides.pptx", "application/vnd.openxmlformats-officedocument.presentationml.presentation")]
+    public void ContentTypeSniffer_classifies_verified_office_packages(string fileName, string expected)
+    {
+        Assert.Equal(
+            expected,
+            ContentTypeSniffer.Detect([0x50, 0x4B, 0x03, 0x04], fileName));
+    }
+
+    [Fact]
+    public void ContentTypeSniffer_does_not_trust_office_extension_without_a_container_signature()
+    {
+        Assert.Equal(
+            "application/octet-stream",
+            ContentTypeSniffer.Detect([0x00, 0x01, 0x02, 0x03], "report.docx"));
+    }
+
     [Fact]
     public async Task EmailSender_swallows_delivery_failures()
     {
