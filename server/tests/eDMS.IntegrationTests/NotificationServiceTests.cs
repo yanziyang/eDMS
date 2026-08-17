@@ -79,7 +79,7 @@ public sealed class NotificationServiceTests : IDisposable
         var service = CreateService(_actorId);
 
         await Assert.ThrowsAsync<ConflictException>(() =>
-            service.FollowAsync(ObjectType.Site, Guid.NewGuid(), AlertFrequency.Immediate));
+            service.FollowAsync(ObjectType.User, Guid.NewGuid(), AlertFrequency.Immediate));
     }
 
     [Fact]

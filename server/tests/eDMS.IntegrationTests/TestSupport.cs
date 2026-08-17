@@ -130,6 +130,25 @@ internal static class TestSupport
         return result.DocumentId;
     }
 
+    public static async Task<Guid> UploadToFolderAsync(
+        HttpClient client,
+        Guid folderId,
+        string fileName,
+        string content)
+    {
+        using var multipart = new MultipartFormDataContent();
+        var fileContent = new ByteArrayContent(System.Text.Encoding.UTF8.GetBytes(content));
+        fileContent.Headers.ContentType = new MediaTypeHeaderValue("text/plain");
+        multipart.Add(fileContent, "file", fileName);
+
+        var response = await client.PostAsync($"/api/v1/folders/{folderId}/documents", multipart);
+        response.EnsureSuccessStatusCode();
+        var result = await response.Content
+            .ReadFromJsonAsync<eDMS.Application.Documents.UploadResult>()
+            ?? throw new InvalidOperationException("Folder upload returned no body.");
+        return result.DocumentId;
+    }
+
     public static async Task AssertProblemAsync(
         HttpResponseMessage response,
         System.Net.HttpStatusCode expectedStatus)
