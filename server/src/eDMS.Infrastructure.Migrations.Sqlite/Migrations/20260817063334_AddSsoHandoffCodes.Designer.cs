@@ -2,47 +2,44 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
-using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using eDMS.Infrastructure.Persistence;
 
 #nullable disable
 
-namespace eDMS.Infrastructure.Migrations.Postgres
+namespace eDMS.Infrastructure.Migrations.Sqlite.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260817063334_AddSsoHandoffCodes")]
+    partial class AddSsoHandoffCodes
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
-            modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.11")
-                .HasAnnotation("Relational:MaxIdentifierLength", 63);
-
-            NpgsqlModelBuilderExtensions.HasPostgresExtension(modelBuilder, "citext");
-            NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
+            modelBuilder.HasAnnotation("ProductVersion", "10.0.11");
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole<System.Guid>", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("id");
 
                     b.Property<string>("ConcurrencyStamp")
                         .IsConcurrencyToken()
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("concurrency_stamp");
 
                     b.Property<string>("Name")
                         .HasMaxLength(256)
-                        .HasColumnType("character varying(256)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("name");
 
                     b.Property<string>("NormalizedName")
                         .HasMaxLength(256)
-                        .HasColumnType("character varying(256)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("normalized_name");
 
                     b.HasKey("Id")
@@ -59,21 +56,19 @@ namespace eDMS.Infrastructure.Migrations.Postgres
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("id");
 
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
                     b.Property<string>("ClaimType")
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("claim_type");
 
                     b.Property<string>("ClaimValue")
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("claim_value");
 
                     b.Property<Guid>("RoleId")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("role_id");
 
                     b.HasKey("Id")
@@ -89,21 +84,19 @@ namespace eDMS.Infrastructure.Migrations.Postgres
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("id");
 
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
                     b.Property<string>("ClaimType")
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("claim_type");
 
                     b.Property<string>("ClaimValue")
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("claim_value");
 
                     b.Property<Guid>("UserId")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("user_id");
 
                     b.HasKey("Id")
@@ -118,19 +111,19 @@ namespace eDMS.Infrastructure.Migrations.Postgres
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserLogin<System.Guid>", b =>
                 {
                     b.Property<string>("LoginProvider")
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("login_provider");
 
                     b.Property<string>("ProviderKey")
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("provider_key");
 
                     b.Property<string>("ProviderDisplayName")
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("provider_display_name");
 
                     b.Property<Guid>("UserId")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("user_id");
 
                     b.HasKey("LoginProvider", "ProviderKey")
@@ -145,11 +138,11 @@ namespace eDMS.Infrastructure.Migrations.Postgres
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserRole<System.Guid>", b =>
                 {
                     b.Property<Guid>("UserId")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("user_id");
 
                     b.Property<Guid>("RoleId")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("role_id");
 
                     b.HasKey("UserId", "RoleId")
@@ -164,19 +157,19 @@ namespace eDMS.Infrastructure.Migrations.Postgres
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserToken<System.Guid>", b =>
                 {
                     b.Property<Guid>("UserId")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("user_id");
 
                     b.Property<string>("LoginProvider")
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("login_provider");
 
                     b.Property<string>("Name")
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("name");
 
                     b.Property<string>("Value")
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("value");
 
                     b.HasKey("UserId", "LoginProvider", "Name")
@@ -189,31 +182,31 @@ namespace eDMS.Infrastructure.Migrations.Postgres
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("id");
 
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
+                    b.Property<long>("CreatedAt")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("created_at");
 
                     b.Property<Guid>("CreatedBy")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("created_by");
 
                     b.Property<int>("Frequency")
-                        .HasColumnType("integer")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("frequency");
 
                     b.Property<Guid>("ObjectId")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("object_id");
 
                     b.Property<int>("ObjectType")
-                        .HasColumnType("integer")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("object_type");
 
                     b.Property<Guid>("UserId")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("user_id");
 
                     b.HasKey("Id")
@@ -233,13 +226,13 @@ namespace eDMS.Infrastructure.Migrations.Postgres
                 {
                     b.Property<string>("Key")
                         .HasMaxLength(128)
-                        .HasColumnType("character varying(128)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("key");
 
                     b.Property<string>("Value")
                         .IsRequired()
                         .HasMaxLength(2048)
-                        .HasColumnType("character varying(2048)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("value");
 
                     b.HasKey("Key")
@@ -252,118 +245,117 @@ namespace eDMS.Infrastructure.Migrations.Postgres
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("id");
 
                     b.Property<int>("AccessFailedCount")
-                        .HasColumnType("integer")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("access_failed_count");
 
                     b.Property<int>("AuthProvider")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
+                        .HasColumnType("INTEGER")
                         .HasDefaultValue(0)
                         .HasColumnName("auth_provider");
 
                     b.Property<string>("AvatarUrl")
                         .HasMaxLength(2048)
-                        .HasColumnType("character varying(2048)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("avatar_url");
 
                     b.Property<string>("ConcurrencyStamp")
                         .IsConcurrencyToken()
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("concurrency_stamp");
 
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at")
-                        .HasDefaultValueSql("now()");
+                    b.Property<long>("CreatedAt")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("created_at");
 
                     b.Property<string>("DisplayName")
                         .IsRequired()
                         .HasMaxLength(256)
-                        .HasColumnType("character varying(256)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("display_name");
 
                     b.Property<string>("Email")
                         .HasMaxLength(256)
-                        .HasColumnType("citext")
-                        .HasColumnName("email");
+                        .HasColumnType("TEXT")
+                        .HasColumnName("email")
+                        .UseCollation("NOCASE");
 
                     b.Property<bool>("EmailConfirmed")
-                        .HasColumnType("boolean")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("email_confirmed");
 
                     b.Property<string>("ExternalId")
                         .HasMaxLength(512)
-                        .HasColumnType("character varying(512)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("external_id");
 
                     b.Property<bool>("IsActive")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("boolean")
+                        .HasColumnType("INTEGER")
                         .HasDefaultValue(true)
                         .HasColumnName("is_active");
 
                     b.Property<bool>("IsSystemAdmin")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("boolean")
+                        .HasColumnType("INTEGER")
                         .HasDefaultValue(false)
                         .HasColumnName("is_system_admin");
 
-                    b.Property<DateTimeOffset?>("LastLoginAt")
-                        .HasColumnType("timestamp with time zone")
+                    b.Property<long?>("LastLoginAt")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("last_login_at");
 
                     b.Property<bool>("LockoutEnabled")
-                        .HasColumnType("boolean")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("lockout_enabled");
 
-                    b.Property<DateTimeOffset?>("LockoutEnd")
-                        .HasColumnType("timestamp with time zone")
+                    b.Property<long?>("LockoutEnd")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("lockout_end");
 
                     b.Property<bool>("MustChangePassword")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("boolean")
+                        .HasColumnType("INTEGER")
                         .HasDefaultValue(false)
                         .HasColumnName("must_change_password");
 
                     b.Property<string>("NormalizedEmail")
                         .HasMaxLength(256)
-                        .HasColumnType("character varying(256)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("normalized_email");
 
                     b.Property<string>("NormalizedUserName")
                         .HasMaxLength(256)
-                        .HasColumnType("character varying(256)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("normalized_user_name");
 
                     b.Property<string>("PasswordHash")
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("password_hash");
 
                     b.Property<string>("PhoneNumber")
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("phone_number");
 
                     b.Property<bool>("PhoneNumberConfirmed")
-                        .HasColumnType("boolean")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("phone_number_confirmed");
 
                     b.Property<string>("SecurityStamp")
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("security_stamp");
 
                     b.Property<bool>("TwoFactorEnabled")
-                        .HasColumnType("boolean")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("two_factor_enabled");
 
                     b.Property<string>("UserName")
                         .HasMaxLength(256)
-                        .HasColumnType("character varying(256)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("user_name");
 
                     b.HasKey("Id")
@@ -387,46 +379,44 @@ namespace eDMS.Infrastructure.Migrations.Postgres
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("id");
 
                     b.Property<int>("Action")
-                        .HasColumnType("integer")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("action");
 
                     b.Property<string>("Details")
-                        .HasColumnType("jsonb")
+                        .HasColumnType("TEXT")
                         .HasColumnName("details");
 
                     b.Property<string>("IpAddress")
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("ip_address");
 
                     b.Property<Guid>("ObjectId")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("object_id");
 
                     b.Property<string>("ObjectName")
                         .IsRequired()
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("object_name");
 
                     b.Property<int>("ObjectType")
-                        .HasColumnType("integer")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("object_type");
 
                     b.Property<Guid?>("SiteId")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("site_id");
 
-                    b.Property<DateTimeOffset>("Timestamp")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("timestamp")
-                        .HasDefaultValueSql("now()");
+                    b.Property<long>("Timestamp")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("timestamp");
 
                     b.Property<Guid>("UserId")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("user_id");
 
                     b.HasKey("Id")
@@ -449,43 +439,43 @@ namespace eDMS.Infrastructure.Migrations.Postgres
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("id");
 
                     b.Property<string>("ChoiceOptions")
                         .HasMaxLength(4096)
-                        .HasColumnType("character varying(4096)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("choice_options");
 
                     b.Property<Guid>("ContentTypeId")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("content_type_id");
 
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
+                    b.Property<long>("CreatedAt")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("created_at");
 
                     b.Property<Guid>("CreatedBy")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("created_by");
 
                     b.Property<int>("DataType")
-                        .HasColumnType("integer")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("data_type");
 
                     b.Property<string>("DefaultValue")
                         .HasMaxLength(2048)
-                        .HasColumnType("character varying(2048)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("default_value");
 
                     b.Property<bool>("IsRequired")
-                        .HasColumnType("boolean")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("is_required");
 
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(256)
-                        .HasColumnType("character varying(256)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("name");
 
                     b.HasKey("Id")
@@ -502,30 +492,30 @@ namespace eDMS.Infrastructure.Migrations.Postgres
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("id");
 
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
+                    b.Property<long>("CreatedAt")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("created_at");
 
                     b.Property<Guid>("CreatedBy")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("created_by");
 
                     b.Property<string>("Description")
                         .HasMaxLength(1024)
-                        .HasColumnType("character varying(1024)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("description");
 
                     b.Property<Guid?>("LibraryId")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("library_id");
 
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(256)
-                        .HasColumnType("character varying(256)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("name");
 
                     b.HasKey("Id")
@@ -541,88 +531,88 @@ namespace eDMS.Infrastructure.Migrations.Postgres
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("id");
 
-                    b.Property<DateTimeOffset?>("CheckedOutAt")
-                        .HasColumnType("timestamp with time zone")
+                    b.Property<long?>("CheckedOutAt")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("checked_out_at");
 
                     b.Property<Guid?>("CheckedOutBy")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("checked_out_by");
 
                     b.Property<string>("ContentType")
                         .IsRequired()
                         .HasMaxLength(128)
-                        .HasColumnType("character varying(128)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("content_type");
 
                     b.Property<Guid?>("ContentTypeId")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("content_type_id");
 
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
+                    b.Property<long>("CreatedAt")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("created_at");
 
                     b.Property<Guid>("CreatedBy")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("created_by");
 
                     b.Property<Guid?>("CurrentVersionId")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("current_version_id");
 
-                    b.Property<DateTimeOffset?>("DeletedAt")
-                        .HasColumnType("timestamp with time zone")
+                    b.Property<long?>("DeletedAt")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("deleted_at");
 
                     b.Property<Guid?>("DeletedBy")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("deleted_by");
 
                     b.Property<string>("Description")
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("description");
 
                     b.Property<string>("ExtractedText")
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("extracted_text");
 
                     b.Property<Guid?>("ExtractedTextVersionId")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("extracted_text_version_id");
 
                     b.Property<Guid?>("FolderId")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("folder_id");
 
                     b.Property<bool>("IsDeleted")
-                        .HasColumnType("boolean")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("is_deleted");
 
                     b.Property<Guid>("LibraryId")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("library_id");
 
-                    b.Property<DateTimeOffset?>("ModifiedAt")
-                        .HasColumnType("timestamp with time zone")
+                    b.Property<long?>("ModifiedAt")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("modified_at");
 
                     b.Property<Guid?>("ModifiedBy")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("modified_by");
 
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(512)
-                        .HasColumnType("character varying(512)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("name");
 
                     b.Property<string>("Title")
                         .HasMaxLength(512)
-                        .HasColumnType("character varying(512)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("title");
 
                     b.HasKey("Id")
@@ -643,17 +633,17 @@ namespace eDMS.Infrastructure.Migrations.Postgres
             modelBuilder.Entity("eDMS.Domain.DocumentColumnValue", b =>
                 {
                     b.Property<Guid>("DocumentId")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("document_id");
 
                     b.Property<Guid>("ColumnDefinitionId")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("column_definition_id");
 
                     b.Property<string>("Value")
                         .IsRequired()
                         .HasMaxLength(4096)
-                        .HasColumnType("character varying(4096)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("value");
 
                     b.HasKey("DocumentId", "ColumnDefinitionId")
@@ -668,11 +658,11 @@ namespace eDMS.Infrastructure.Migrations.Postgres
             modelBuilder.Entity("eDMS.Domain.DocumentTag", b =>
                 {
                     b.Property<Guid>("DocumentId")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("document_id");
 
                     b.Property<Guid>("TagId")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("tag_id");
 
                     b.HasKey("DocumentId", "TagId")
@@ -688,49 +678,49 @@ namespace eDMS.Infrastructure.Migrations.Postgres
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("id");
 
                     b.Property<string>("Checksum")
                         .IsRequired()
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("checksum");
 
                     b.Property<string>("Comment")
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("comment");
 
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
+                    b.Property<long>("CreatedAt")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("created_at");
 
                     b.Property<Guid>("CreatedBy")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("created_by");
 
                     b.Property<Guid>("DocumentId")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("document_id");
 
                     b.Property<bool>("IsMajor")
-                        .HasColumnType("boolean")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("is_major");
 
                     b.Property<long>("SizeBytes")
-                        .HasColumnType("bigint")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("size_bytes");
 
                     b.Property<string>("StorageKey")
                         .IsRequired()
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("storage_key");
 
                     b.Property<int>("VersionMajor")
-                        .HasColumnType("integer")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("version_major");
 
                     b.Property<int>("VersionMinor")
-                        .HasColumnType("integer")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("version_minor");
 
                     b.HasKey("Id")
@@ -747,54 +737,54 @@ namespace eDMS.Infrastructure.Migrations.Postgres
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("id");
 
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
+                    b.Property<long>("CreatedAt")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("created_at");
 
                     b.Property<Guid>("CreatedBy")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("created_by");
 
-                    b.Property<DateTimeOffset?>("DeletedAt")
-                        .HasColumnType("timestamp with time zone")
+                    b.Property<long?>("DeletedAt")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("deleted_at");
 
                     b.Property<Guid?>("DeletedBy")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("deleted_by");
 
                     b.Property<bool>("IsDeleted")
-                        .HasColumnType("boolean")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("is_deleted");
 
                     b.Property<Guid>("LibraryId")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("library_id");
 
-                    b.Property<DateTimeOffset?>("ModifiedAt")
-                        .HasColumnType("timestamp with time zone")
+                    b.Property<long?>("ModifiedAt")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("modified_at");
 
                     b.Property<Guid?>("ModifiedBy")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("modified_by");
 
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(256)
-                        .HasColumnType("character varying(256)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("name");
 
                     b.Property<Guid?>("ParentFolderId")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("parent_folder_id");
 
                     b.Property<string>("Path")
                         .IsRequired()
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("path");
 
                     b.HasKey("Id")
@@ -813,34 +803,34 @@ namespace eDMS.Infrastructure.Migrations.Postgres
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("id");
 
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
+                    b.Property<long>("CreatedAt")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("created_at");
 
                     b.Property<Guid>("CreatedBy")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("created_by");
 
                     b.Property<string>("Description")
                         .HasMaxLength(1024)
-                        .HasColumnType("character varying(1024)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("description");
 
                     b.Property<bool>("IsSystem")
-                        .HasColumnType("boolean")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("is_system");
 
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(256)
-                        .HasColumnType("character varying(256)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("name");
 
                     b.Property<Guid?>("SiteId")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("site_id");
 
                     b.HasKey("Id")
@@ -859,15 +849,15 @@ namespace eDMS.Infrastructure.Migrations.Postgres
             modelBuilder.Entity("eDMS.Domain.GroupMember", b =>
                 {
                     b.Property<Guid>("GroupId")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("group_id");
 
                     b.Property<Guid>("UserId")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("user_id");
 
-                    b.Property<DateTimeOffset>("AddedAt")
-                        .HasColumnType("timestamp with time zone")
+                    b.Property<long>("AddedAt")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("added_at");
 
                     b.HasKey("GroupId", "UserId")
@@ -883,43 +873,43 @@ namespace eDMS.Infrastructure.Migrations.Postgres
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("id");
 
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
+                    b.Property<long>("CreatedAt")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("created_at");
 
                     b.Property<Guid>("CreatedBy")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("created_by");
 
-                    b.Property<DateTimeOffset>("GrantedAt")
-                        .HasColumnType("timestamp with time zone")
+                    b.Property<long>("GrantedAt")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("granted_at");
 
                     b.Property<Guid>("GrantedBy")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("granted_by");
 
                     b.Property<int>("Level")
-                        .HasColumnType("integer")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("level");
 
                     b.Property<Guid>("ObjectId")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("object_id");
 
                     b.Property<int>("ObjectType")
-                        .HasColumnType("integer")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("object_type");
 
                     b.Property<Guid>("PrincipalId")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("principal_id");
 
                     b.Property<int>("PrincipalType")
-                        .HasColumnType("integer")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("principal_type");
 
                     b.HasKey("Id")
@@ -930,7 +920,7 @@ namespace eDMS.Infrastructure.Migrations.Postgres
 
                     b.HasIndex("ObjectType", "ObjectId", "PrincipalType", "PrincipalId")
                         .IsUnique()
-                        .HasDatabaseName("ix_item_permissions_object_type_object_id_principal_type_princ");
+                        .HasDatabaseName("ix_item_permissions_object_type_object_id_principal_type_principal_id");
 
                     b.ToTable("item_permissions", (string)null);
                 });
@@ -939,58 +929,58 @@ namespace eDMS.Infrastructure.Migrations.Postgres
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("id");
 
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
+                    b.Property<long>("CreatedAt")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("created_at");
 
                     b.Property<Guid>("CreatedBy")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("created_by");
 
-                    b.Property<DateTimeOffset?>("DeletedAt")
-                        .HasColumnType("timestamp with time zone")
+                    b.Property<long?>("DeletedAt")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("deleted_at");
 
                     b.Property<Guid?>("DeletedBy")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("deleted_by");
 
                     b.Property<string>("Description")
                         .HasMaxLength(1024)
-                        .HasColumnType("character varying(1024)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("description");
 
                     b.Property<bool>("EnableMinorVersions")
-                        .HasColumnType("boolean")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("enable_minor_versions");
 
                     b.Property<bool>("EnableVersioning")
-                        .HasColumnType("boolean")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("enable_versioning");
 
                     b.Property<bool>("IsDeleted")
-                        .HasColumnType("boolean")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("is_deleted");
 
                     b.Property<int?>("MinorVersionsRetained")
-                        .HasColumnType("integer")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("minor_versions_retained");
 
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(256)
-                        .HasColumnType("character varying(256)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("name");
 
                     b.Property<bool>("RequireCheckout")
-                        .HasColumnType("boolean")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("require_checkout");
 
                     b.Property<Guid>("SiteId")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("site_id");
 
                     b.HasKey("Id")
@@ -1006,59 +996,59 @@ namespace eDMS.Infrastructure.Migrations.Postgres
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("id");
 
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
+                    b.Property<long>("CreatedAt")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("created_at");
 
                     b.Property<Guid>("CreatedBy")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("created_by");
 
-                    b.Property<DateTimeOffset?>("EmailSentAt")
-                        .HasColumnType("timestamp with time zone")
+                    b.Property<long?>("EmailSentAt")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("email_sent_at");
 
                     b.Property<int>("Frequency")
-                        .HasColumnType("integer")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("frequency");
 
                     b.Property<bool>("IsRead")
-                        .HasColumnType("boolean")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("is_read");
 
                     b.Property<int>("Kind")
-                        .HasColumnType("integer")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("kind");
 
                     b.Property<string>("Message")
                         .IsRequired()
                         .HasMaxLength(2048)
-                        .HasColumnType("character varying(2048)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("message");
 
                     b.Property<Guid>("ObjectId")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("object_id");
 
                     b.Property<string>("ObjectName")
                         .IsRequired()
                         .HasMaxLength(512)
-                        .HasColumnType("character varying(512)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("object_name");
 
                     b.Property<int>("ObjectType")
-                        .HasColumnType("integer")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("object_type");
 
-                    b.Property<DateTimeOffset?>("ReadAt")
-                        .HasColumnType("timestamp with time zone")
+                    b.Property<long?>("ReadAt")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("read_at");
 
                     b.Property<Guid>("UserId")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("user_id");
 
                     b.HasKey("Id")
@@ -1080,45 +1070,45 @@ namespace eDMS.Infrastructure.Migrations.Postgres
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("id");
 
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
+                    b.Property<long>("CreatedAt")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("created_at");
 
                     b.Property<Guid>("CreatedBy")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("created_by");
 
-                    b.Property<DateTimeOffset?>("ExpiresAt")
-                        .HasColumnType("timestamp with time zone")
+                    b.Property<long?>("ExpiresAt")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("expires_at");
 
                     b.Property<bool>("IsRevoked")
-                        .HasColumnType("boolean")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("is_revoked");
 
                     b.Property<int>("Level")
-                        .HasColumnType("integer")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("level");
 
                     b.Property<Guid>("ObjectId")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("object_id");
 
                     b.Property<int>("ObjectType")
-                        .HasColumnType("integer")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("object_type");
 
                     b.Property<bool>("RequiresAuthentication")
-                        .HasColumnType("boolean")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("requires_authentication");
 
                     b.Property<string>("Token")
                         .IsRequired()
                         .HasMaxLength(64)
-                        .HasColumnType("character varying(64)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("token");
 
                     b.HasKey("Id")
@@ -1138,52 +1128,52 @@ namespace eDMS.Infrastructure.Migrations.Postgres
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("id");
 
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
+                    b.Property<long>("CreatedAt")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("created_at");
 
                     b.Property<Guid>("CreatedBy")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("created_by");
 
-                    b.Property<DateTimeOffset?>("DeletedAt")
-                        .HasColumnType("timestamp with time zone")
+                    b.Property<long?>("DeletedAt")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("deleted_at");
 
                     b.Property<Guid?>("DeletedBy")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("deleted_by");
 
                     b.Property<string>("Description")
                         .HasMaxLength(1024)
-                        .HasColumnType("character varying(1024)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("description");
 
                     b.Property<bool>("IsDeleted")
-                        .HasColumnType("boolean")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("is_deleted");
 
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(256)
-                        .HasColumnType("character varying(256)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("name");
 
                     b.Property<long?>("StorageQuotaBytes")
-                        .HasColumnType("bigint")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("storage_quota_bytes");
 
                     b.Property<long>("StorageUsedBytes")
-                        .HasColumnType("bigint")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("storage_used_bytes");
 
                     b.Property<string>("UrlSlug")
                         .IsRequired()
                         .HasMaxLength(128)
-                        .HasColumnType("character varying(128)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("url_slug");
 
                     b.HasKey("Id")
@@ -1200,31 +1190,31 @@ namespace eDMS.Infrastructure.Migrations.Postgres
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("id");
 
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
+                    b.Property<long>("CreatedAt")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("created_at");
 
                     b.Property<Guid>("CreatedBy")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("created_by");
 
                     b.Property<Guid>("PrincipalId")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("principal_id");
 
                     b.Property<int>("PrincipalType")
-                        .HasColumnType("integer")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("principal_type");
 
                     b.Property<int>("Role")
-                        .HasColumnType("integer")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("role");
 
                     b.Property<Guid>("SiteId")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("site_id");
 
                     b.HasKey("Id")
@@ -1241,21 +1231,21 @@ namespace eDMS.Infrastructure.Migrations.Postgres
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("id");
 
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
+                    b.Property<long>("CreatedAt")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("created_at");
 
                     b.Property<Guid>("CreatedBy")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("created_by");
 
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(128)
-                        .HasColumnType("character varying(128)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("name");
 
                     b.HasKey("Id")
@@ -1272,46 +1262,46 @@ namespace eDMS.Infrastructure.Migrations.Postgres
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("id");
 
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
+                    b.Property<long>("CreatedAt")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("created_at");
 
                     b.Property<Guid>("CreatedBy")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("created_by");
 
-                    b.Property<DateTimeOffset>("ExpiresAt")
-                        .HasColumnType("timestamp with time zone")
+                    b.Property<long>("ExpiresAt")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("expires_at");
 
                     b.Property<string>("FileName")
                         .IsRequired()
                         .HasMaxLength(512)
-                        .HasColumnType("character varying(512)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("file_name");
 
                     b.Property<Guid?>("FolderId")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("folder_id");
 
                     b.Property<Guid>("LibraryId")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("library_id");
 
                     b.Property<string>("MetadataJson")
                         .HasMaxLength(4096)
-                        .HasColumnType("character varying(4096)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("metadata_json");
 
                     b.Property<long>("TotalBytes")
-                        .HasColumnType("bigint")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("total_bytes");
 
                     b.Property<long>("UploadedBytes")
-                        .HasColumnType("bigint")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("uploaded_bytes");
 
                     b.HasKey("Id")
@@ -1327,38 +1317,38 @@ namespace eDMS.Infrastructure.Migrations.Postgres
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("id");
 
-                    b.Property<DateTimeOffset>("CreatedAt")
+                    b.Property<long>("CreatedAt")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("created_at")
                         .HasDefaultValueSql("now()");
 
                     b.Property<string>("CreatedByIp")
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("created_by_ip");
 
-                    b.Property<DateTimeOffset>("ExpiresAt")
-                        .HasColumnType("timestamp with time zone")
+                    b.Property<long>("ExpiresAt")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("expires_at");
 
                     b.Property<Guid?>("ReplacedByTokenId")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("replaced_by_token_id");
 
-                    b.Property<DateTimeOffset?>("RevokedAt")
-                        .HasColumnType("timestamp with time zone")
+                    b.Property<long?>("RevokedAt")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("revoked_at");
 
                     b.Property<string>("TokenHash")
                         .IsRequired()
-                        .HasColumnType("text")
+                        .HasColumnType("TEXT")
                         .HasColumnName("token_hash");
 
                     b.Property<Guid>("UserId")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("user_id");
 
                     b.HasKey("Id")
@@ -1381,25 +1371,25 @@ namespace eDMS.Infrastructure.Migrations.Postgres
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("id");
 
                     b.Property<string>("CodeHash")
                         .IsRequired()
                         .HasMaxLength(64)
-                        .HasColumnType("character varying(64)")
+                        .HasColumnType("TEXT")
                         .HasColumnName("code_hash");
 
-                    b.Property<DateTimeOffset?>("ConsumedAt")
-                        .HasColumnType("timestamp with time zone")
+                    b.Property<long?>("ConsumedAt")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("consumed_at");
 
-                    b.Property<DateTimeOffset>("ExpiresAt")
-                        .HasColumnType("timestamp with time zone")
+                    b.Property<long>("ExpiresAt")
+                        .HasColumnType("INTEGER")
                         .HasColumnName("expires_at");
 
                     b.Property<Guid>("UserId")
-                        .HasColumnType("uuid")
+                        .HasColumnType("TEXT")
                         .HasColumnName("user_id");
 
                     b.HasKey("Id")
@@ -1543,7 +1533,7 @@ namespace eDMS.Infrastructure.Migrations.Postgres
                         .HasForeignKey("ColumnDefinitionId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
-                        .HasConstraintName("fk_document_column_values_column_definitions_column_definition");
+                        .HasConstraintName("fk_document_column_values_column_definitions_column_definition_id");
 
                     b.HasOne("eDMS.Domain.Document", null)
                         .WithMany()

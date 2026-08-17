@@ -1379,6 +1379,47 @@ namespace eDMS.Infrastructure.Migrations.SqlServer.Migrations
                     b.ToTable("refresh_tokens", (string)null);
                 });
 
+            modelBuilder.Entity("eDMS.Infrastructure.Persistence.SsoHandoffCode", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("id");
+
+                    b.Property<string>("CodeHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)")
+                        .HasColumnName("code_hash");
+
+                    b.Property<DateTimeOffset?>("ConsumedAt")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("consumed_at");
+
+                    b.Property<DateTimeOffset>("ExpiresAt")
+                        .HasColumnType("datetimeoffset")
+                        .HasColumnName("expires_at");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_sso_handoff_codes");
+
+                    b.HasIndex("CodeHash")
+                        .IsUnique()
+                        .HasDatabaseName("ix_sso_handoff_codes_code_hash");
+
+                    b.HasIndex("ExpiresAt")
+                        .HasDatabaseName("ix_sso_handoff_codes_expires_at");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("ix_sso_handoff_codes_user_id");
+
+                    b.ToTable("sso_handoff_codes", (string)null);
+                });
+
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<System.Guid>", b =>
                 {
                     b.HasOne("Microsoft.AspNetCore.Identity.IdentityRole<System.Guid>", null)
@@ -1629,6 +1670,16 @@ namespace eDMS.Infrastructure.Migrations.SqlServer.Migrations
                         .HasConstraintName("fk_refresh_tokens_asp_net_users_user_id");
 
                     b.Navigation("ReplacedByToken");
+                });
+
+            modelBuilder.Entity("eDMS.Infrastructure.Persistence.SsoHandoffCode", b =>
+                {
+                    b.HasOne("eDMS.Domain.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_sso_handoff_codes_asp_net_users_user_id");
                 });
 #pragma warning restore 612, 618
         }

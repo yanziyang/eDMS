@@ -96,6 +96,8 @@ public static class DependencyInjection
         services.AddSingleton(TimeProvider.System);
         services.AddScoped<ITokenService, JwtTokenService>();
         services.AddScoped<IAuthService, AuthService>();
+        services.AddScoped<IJitProvisioningService, JitProvisioningService>();
+        services.AddScoped<ISsoHandoffCodeStore, SsoHandoffCodeStore>();
         services.AddScoped<IAuditLogger, AuditLogger>();
         services.AddScoped<IPermissionResolver, PermissionResolver>();
         services.AddSingleton<IPermissionCacheInvalidator, PermissionCacheInvalidator>();

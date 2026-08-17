@@ -17,6 +17,11 @@ public interface IAuthService
     /// </summary>
     Task<AuthResult?> LoginAsync(LoginRequest request, string? ipAddress, CancellationToken cancellationToken);
 
+    Task<AuthResult?> CompleteSsoExchangeAsync(
+        string code,
+        string? ipAddress,
+        CancellationToken cancellationToken);
+
     Task<RefreshAuthResult> RefreshAsync(
         string refreshToken,
         string? ipAddress,

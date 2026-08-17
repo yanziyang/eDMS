@@ -17,6 +17,7 @@ public sealed class AuthService : IAuthService
     private readonly IEmailSender _emailSender;
     private readonly JwtOptions _jwtOptions;
     private readonly ClientOptions _clientOptions;
+    private readonly ISsoHandoffCodeStore? _ssoHandoffCodeStore;
 
     public AuthService(
         UserManager<ApplicationUser> userManager,
@@ -26,7 +27,8 @@ public sealed class AuthService : IAuthService
         ICurrentUser currentUser,
         IEmailSender emailSender,
         IOptions<ClientOptions> clientOptions,
-        IOptions<JwtOptions> jwtOptions)
+        IOptions<JwtOptions> jwtOptions,
+        ISsoHandoffCodeStore? ssoHandoffCodeStore = null)
     {
         _userManager = userManager;
         _signInManager = signInManager;
@@ -36,6 +38,7 @@ public sealed class AuthService : IAuthService
         _emailSender = emailSender;
         _jwtOptions = jwtOptions.Value;
         _clientOptions = clientOptions.Value;
+        _ssoHandoffCodeStore = ssoHandoffCodeStore;
     }
 
     public async Task<AuthResult?> LoginAsync(
@@ -59,12 +62,29 @@ public sealed class AuthService : IAuthService
             return null;
         }
 
-        user.LastLoginAt = DateTimeOffset.UtcNow;
-        await _userManager.UpdateAsync(user);
+        return await CompleteAuthenticationAsync(user, ipAddress, cancellationToken);
+    }
 
-        var tokens = await _tokenService.IssueTokenPairAsync(user, ipAddress, cancellationToken);
-        await _auditLogger.LogAuthAsync(user.Id, AuditAction.Login, user.Email ?? user.UserName ?? string.Empty, cancellationToken);
-        return new AuthResult(ToCurrentUser(user), tokens, _jwtOptions.AccessTokenLifetimeMinutes * 60);
+    public async Task<AuthResult?> CompleteSsoExchangeAsync(
+        string code,
+        string? ipAddress,
+        CancellationToken cancellationToken)
+    {
+        if (_ssoHandoffCodeStore is null)
+        {
+            return null;
+        }
+
+        var userId = await _ssoHandoffCodeStore.ConsumeAsync(code, cancellationToken);
+        if (userId is null)
+        {
+            return null;
+        }
+
+        var user = await _userManager.FindByIdAsync(userId.Value.ToString());
+        return user is null || !user.IsActive
+            ? null
+            : await CompleteAuthenticationAsync(user, ipAddress, cancellationToken);
     }
 
     public async Task<RefreshAuthResult> RefreshAsync(
@@ -150,4 +170,21 @@ public sealed class AuthService : IAuthService
             user.IsSystemAdmin,
             // Site memberships are populated in M2 once the permission model exists.
             Array.Empty<SiteMembershipDto>());
+
+    private async Task<AuthResult> CompleteAuthenticationAsync(
+        ApplicationUser user,
+        string? ipAddress,
+        CancellationToken cancellationToken)
+    {
+        user.LastLoginAt = DateTimeOffset.UtcNow;
+        await _userManager.UpdateAsync(user);
+
+        var tokens = await _tokenService.IssueTokenPairAsync(user, ipAddress, cancellationToken);
+        await _auditLogger.LogAuthAsync(
+            user.Id,
+            AuditAction.Login,
+            user.Email ?? user.UserName ?? string.Empty,
+            cancellationToken);
+        return new AuthResult(ToCurrentUser(user), tokens, _jwtOptions.AccessTokenLifetimeMinutes * 60);
+    }
 }

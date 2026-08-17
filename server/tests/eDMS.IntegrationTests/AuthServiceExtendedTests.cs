@@ -18,6 +18,7 @@ public sealed class AuthServiceExtendedTests : IDisposable
     private readonly AuthService _service;
     private readonly CapturingEmailSender _emailSender = new();
     private readonly FakeCurrentUser _currentUser = new();
+    private readonly FakeSsoHandoffCodeStore _handoffCodeStore = new();
 
     public AuthServiceExtendedTests()
     {
@@ -48,7 +49,8 @@ public sealed class AuthServiceExtendedTests : IDisposable
             _currentUser,
             _emailSender,
             Options.Create(new ClientOptions { BaseUrl = "http://localhost:5173/" }),
-            Options.Create(new JwtOptions { AccessTokenLifetimeMinutes = 15 }));
+            Options.Create(new JwtOptions { AccessTokenLifetimeMinutes = 15 }),
+            _handoffCodeStore);
     }
 
     public void Dispose() => _provider.Dispose();
@@ -137,10 +139,24 @@ public sealed class AuthServiceExtendedTests : IDisposable
         Assert.NotEmpty(FakeAuditLogger.Entries);
     }
 
-    private async Task CreateUserAsync(string email, string password)
+    [Fact]
+    public async Task Complete_sso_exchange_rejects_a_deactivated_user()
+    {
+        var email = $"{Guid.NewGuid():N}@edms.test";
+        var user = await CreateUserAsync(email, "Password1!");
+        user.IsActive = false;
+        await _provider.GetRequiredService<UserManager<ApplicationUser>>().UpdateAsync(user);
+        _handoffCodeStore.UserId = user.Id;
+
+        var result = await _service.CompleteSsoExchangeAsync("one-time-code", null, default);
+
+        Assert.Null(result);
+    }
+
+    private async Task<ApplicationUser> CreateUserAsync(string email, string password)
     {
         var userManager = _provider.GetRequiredService<UserManager<ApplicationUser>>();
-        var result = await userManager.CreateAsync(new ApplicationUser
+        var user = new ApplicationUser
         {
             Id = Guid.NewGuid(),
             UserName = email,
@@ -149,8 +165,10 @@ public sealed class AuthServiceExtendedTests : IDisposable
             EmailConfirmed = true,
             IsActive = true,
             CreatedAt = DateTimeOffset.UtcNow,
-        }, password);
+        };
+        var result = await userManager.CreateAsync(user, password);
         Assert.True(result.Succeeded, string.Join("; ", result.Errors.Select(error => error.Description)));
+        return user;
     }
 
     private sealed class CapturingEmailSender : IEmailSender
@@ -187,6 +205,17 @@ public sealed class AuthServiceExtendedTests : IDisposable
 
         public Task RevokeAllForUserAsync(Guid userId, CancellationToken cancellationToken = default) =>
             Task.CompletedTask;
+    }
+
+    private sealed class FakeSsoHandoffCodeStore : ISsoHandoffCodeStore
+    {
+        public Guid? UserId { get; set; }
+
+        public Task<string> IssueAsync(Guid userId, CancellationToken cancellationToken = default) =>
+            Task.FromResult("one-time-code");
+
+        public Task<Guid?> ConsumeAsync(string code, CancellationToken cancellationToken = default) =>
+            Task.FromResult(UserId);
     }
 
     private sealed class FakeAuditLogger : IAuditLogger

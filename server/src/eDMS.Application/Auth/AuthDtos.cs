@@ -2,6 +2,8 @@ namespace eDMS.Application.Auth;
 
 public sealed record LoginRequest(string Email, string Password);
 
+public sealed record SsoExchangeRequest(string Code);
+
 public sealed record SiteMembershipDto(Guid SiteId, string SiteSlug, string Role);
 
 public sealed record CurrentUserDto(

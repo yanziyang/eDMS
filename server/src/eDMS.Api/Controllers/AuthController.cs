@@ -25,12 +25,23 @@ public sealed class AuthController(IAuthService authService) : ControllerBase
             return Unauthorized();
         }
 
-        RefreshTokenCookie.Append(
-            Response,
-            result.Tokens.RefreshToken,
-            result.Tokens.RefreshTokenExpiresAt);
+        return WriteAuthResult(result);
+    }
 
-        return Ok(new LoginResponse(result.Tokens.AccessToken, result.ExpiresInSeconds, result.User));
+    [HttpPost("sso/exchange")]
+    [AllowAnonymous]
+    [EnableRateLimiting("auth")]
+    public async Task<IActionResult> CompleteSsoExchange(
+        [FromBody] SsoExchangeRequest request,
+        CancellationToken cancellationToken)
+    {
+        var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString();
+        var result = await authService.CompleteSsoExchangeAsync(
+            request.Code,
+            ipAddress,
+            cancellationToken);
+
+        return result is null ? Unauthorized() : WriteAuthResult(result);
     }
 
     [HttpPost("refresh")]
@@ -112,6 +123,16 @@ public sealed class AuthController(IAuthService authService) : ControllerBase
             cancellationToken);
 
         return success ? Ok() : BadRequest();
+    }
+
+    private OkObjectResult WriteAuthResult(AuthResult result)
+    {
+        RefreshTokenCookie.Append(
+            Response,
+            result.Tokens.RefreshToken,
+            result.Tokens.RefreshTokenExpiresAt);
+
+        return Ok(new LoginResponse(result.Tokens.AccessToken, result.ExpiresInSeconds, result.User));
     }
 
 }
