@@ -169,6 +169,53 @@ describe("AdminUsers", () => {
     expect(await screen.findByText("Active")).toBeInTheDocument();
   });
 
+  it("updates the per-user local-login policy", async () => {
+    const users = [userDto({ isSystemAdmin: true })];
+    const requests: Request[] = [];
+    server.use(
+      http.get(`${base}/users`, () => HttpResponse.json(users)),
+      http.put(`${base}/users/u1`, async ({ request }) => {
+        requests.push(request);
+        users[0] = userDto({ isSystemAdmin: true, localLoginDisabled: true });
+        return new HttpResponse(null, { status: 204 });
+      }),
+    );
+
+    const user = userEvent.setup();
+    renderUsers();
+    await user.click(
+      await screen.findByRole("switch", { name: "Disable local login for a@b.c" }),
+    );
+
+    await waitFor(() => expect(requests).toHaveLength(1));
+    await expect(requests[0].json()).resolves.toEqual({
+      displayName: "Alice",
+      isSystemAdmin: true,
+      localLoginDisabled: true,
+      ssoExempt: false,
+    });
+    expect(mockedToast.success).toHaveBeenCalledWith("Login policy updated");
+  });
+
+  it("allows the break-glass switch only for system administrators", async () => {
+    server.use(
+      http.get(`${base}/users`, () =>
+        HttpResponse.json([
+          userDto(),
+          userDto({ id: "u2", email: "admin@edms.test", isSystemAdmin: true }),
+        ])),
+    );
+
+    renderUsers();
+
+    expect(
+      await screen.findByRole("switch", { name: "Allow local login exemption for a@b.c" }),
+    ).toBeDisabled();
+    expect(
+      screen.getByRole("switch", { name: "Allow local login exemption for admin@edms.test" }),
+    ).toBeEnabled();
+  });
+
   it("reports a failed deactivation", async () => {
     server.use(
       http.get(`${base}/users`, () => HttpResponse.json([userDto()])),

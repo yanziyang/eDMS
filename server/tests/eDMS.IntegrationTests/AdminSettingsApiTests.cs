@@ -1,7 +1,13 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Text.Json;
 using eDMS.Application.Admin;
+using eDMS.Domain;
 using eDMS.Infrastructure.Options;
+using eDMS.Infrastructure.Persistence;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace eDMS.IntegrationTests;
 
@@ -128,5 +134,62 @@ public sealed class AdminSettingsApiTests : IClassFixture<ApiFactory>
         smallMultipart.Add(small, "file", "small.txt");
         var allowed = await client.PostAsync($"/api/v1/libraries/{libraryId}/documents", smallMultipart);
         Assert.Equal(HttpStatusCode.OK, allowed.StatusCode);
+    }
+
+    [Fact]
+    public async Task Global_sso_enforcement_rejects_total_admin_lockout()
+    {
+        var email = TestSupport.UniqueEmail();
+        await TestSupport.SeedUserAsync(_factory, email, "Password1!", isAdmin: true);
+        var (token, _) = await TestSupport.LoginAsync(_factory.CreateClient(), email, "Password1!");
+        using var admin = TestSupport.AuthorizedClient(_factory, token);
+
+        var disableGlobal = await admin.PutAsJsonAsync(
+            "/api/v1/admin/settings",
+            new { ssoEnforcedGlobally = false });
+        Assert.Equal(HttpStatusCode.NoContent, disableGlobal.StatusCode);
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+            var admins = await userManager.Users
+                .Where(user => user.IsSystemAdmin)
+                .ToListAsync();
+            foreach (var systemAdmin in admins)
+            {
+                systemAdmin.SsoExempt = false;
+                await userManager.UpdateAsync(systemAdmin);
+            }
+        }
+
+        var rejected = await admin.PutAsJsonAsync(
+            "/api/v1/admin/settings",
+            new { ssoEnforcedGlobally = true });
+        Assert.Equal(HttpStatusCode.Conflict, rejected.StatusCode);
+        using (var problem = JsonDocument.Parse(await rejected.Content.ReadAsStringAsync()))
+        {
+            Assert.Equal(
+                "urn:edms:sso-safety-rail",
+                problem.RootElement.GetProperty("type").GetString());
+        }
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+            var user = await userManager.FindByEmailAsync(email);
+            Assert.NotNull(user);
+            user!.SsoExempt = true;
+            var result = await userManager.UpdateAsync(user);
+            Assert.True(result.Succeeded);
+        }
+
+        var enabled = await admin.PutAsJsonAsync(
+            "/api/v1/admin/settings",
+            new { ssoEnforcedGlobally = true });
+        Assert.Equal(HttpStatusCode.NoContent, enabled.StatusCode);
+
+        var settings = await (await admin.GetAsync("/api/v1/admin/settings"))
+            .Content.ReadFromJsonAsync<AdminSettingsDto>();
+        Assert.True(settings!.SsoEnforcedGlobally);
     }
 }

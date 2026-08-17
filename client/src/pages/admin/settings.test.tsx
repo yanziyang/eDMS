@@ -27,10 +27,10 @@ function settingsDto(overrides: Record<string, unknown> = {}) {
   };
 }
 
-function renderSettings() {
+function renderSettings(ssoProviders = { oidc: false, saml: false }) {
   server.use(
     http.get(`${base}/auth/sso/providers`, () =>
-      HttpResponse.json({ oidc: false, saml: false })),
+      HttpResponse.json(ssoProviders)),
   );
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
@@ -64,6 +64,7 @@ describe("AdminSettings", () => {
     ).toHaveValue(250);
     expect(screen.getByLabelText("Recycle Bin retention (days)")).toHaveValue(90);
     expect(screen.getByRole("switch", { name: "Restrict site creation" })).not.toBeChecked();
+    expect(screen.getByRole("switch", { name: "Require SSO for all local logins" })).not.toBeChecked();
     expect(screen.getByText("eDMS")).toBeInTheDocument();
     expect(screen.getByText("15")).toBeInTheDocument();
     expect(screen.getByText("7")).toBeInTheDocument();
@@ -103,6 +104,42 @@ describe("AdminSettings", () => {
     });
     expect(mockedToast.success).toHaveBeenCalledWith("Settings saved");
     await waitFor(() => expect(gets).toBe(2));
+  });
+
+  it("shows configured SSO providers", async () => {
+    server.use(
+      http.get(`${base}/admin/settings`, () => HttpResponse.json(settingsDto())),
+    );
+
+    renderSettings({ oidc: true, saml: false });
+
+    expect(await screen.findByText("Configured")).toBeInTheDocument();
+    expect(screen.getByText("Not configured")).toBeInTheDocument();
+  });
+
+  it("shows the safety-rail response inline when global SSO is rejected", async () => {
+    server.use(
+      http.get(`${base}/admin/settings`, () => HttpResponse.json(settingsDto())),
+      http.put(`${base}/admin/settings`, () =>
+        HttpResponse.json(
+          {
+            type: "urn:edms:sso-safety-rail",
+            detail: "Add an exempt administrator first.",
+          },
+          { status: 409 },
+        )),
+    );
+
+    const user = userEvent.setup();
+    renderSettings();
+    await screen.findByLabelText("Max file size (MB)");
+
+    await user.click(screen.getByRole("switch", { name: "Require SSO for all local logins" }));
+    await user.click(screen.getByRole("button", { name: "Save" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Add an exempt administrator first.",
+    );
   });
 
   it("disables the save button while submitting", async () => {

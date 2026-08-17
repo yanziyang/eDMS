@@ -1,6 +1,10 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Text.Json;
 using eDMS.Application.Auth;
+using eDMS.Domain;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace eDMS.IntegrationTests;
 
@@ -76,6 +80,32 @@ public sealed class AuthFlowApiTests : IClassFixture<ApiFactory>
             logout.Headers,
             header => header.Key.Equals("Set-Cookie", StringComparison.OrdinalIgnoreCase)
                 && header.Value.Any(value => value.Contains("edms_refresh=")));
+    }
+
+    [Fact]
+    public async Task Local_login_returns_distinct_sso_required_problem_when_disabled_per_user()
+    {
+        var email = TestSupport.UniqueEmail();
+        await TestSupport.SeedUserAsync(_factory, email, "Password1!");
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+            var user = await userManager.FindByEmailAsync(email);
+            Assert.NotNull(user);
+            user!.LocalLoginDisabled = true;
+            var result = await userManager.UpdateAsync(user);
+            Assert.True(result.Succeeded);
+        }
+
+        var login = await _factory.CreateClient().PostAsJsonAsync(
+            "/api/v1/auth/login",
+            new { email, password = "Password1!" });
+
+        Assert.Equal(HttpStatusCode.Unauthorized, login.StatusCode);
+        using var problem = JsonDocument.Parse(await login.Content.ReadAsStringAsync());
+        Assert.Equal(
+            "urn:edms:sso-required",
+            problem.RootElement.GetProperty("type").GetString());
     }
 
     [Fact]

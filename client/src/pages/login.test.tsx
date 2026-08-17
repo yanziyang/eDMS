@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { AuthProvider } from "@/features/auth/auth-context";
 import { getSsoProviders, login, me } from "@/features/auth/api";
+import { ApiError } from "@/lib/api-client";
 import { Login } from "./login";
 
 vi.mock("@/features/auth/api", () => ({
@@ -100,6 +101,24 @@ describe("Login", () => {
     await user.click(screen.getByRole("button", { name: "Sign in" }));
 
     expect(await screen.findByText("Invalid email or password.")).toBeInTheDocument();
+  });
+
+  it("shows the SSO-required message when local login is disabled", async () => {
+    mockedMe.mockResolvedValue(currentUser());
+    mockedLogin.mockRejectedValue(
+      new ApiError(401, { type: "urn:edms:sso-required", status: 401 }),
+    );
+
+    const user = userEvent.setup();
+    renderLogin();
+
+    await user.type(screen.getByPlaceholderText("you@company.com"), "a@b.c");
+    await user.type(screen.getByPlaceholderText("Enter your password"), "secret");
+    await user.click(screen.getByRole("button", { name: "Sign in" }));
+
+    expect(
+      await screen.findByText("This account requires SSO — use the configured SSO button above."),
+    ).toBeInTheDocument();
   });
 
   it("toggles password visibility", async () => {
