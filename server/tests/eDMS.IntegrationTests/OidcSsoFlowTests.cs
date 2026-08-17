@@ -74,10 +74,7 @@ public sealed class OidcSsoFlowTests : IAsyncLifetime
         });
 
         var challenge = await apiClient.GetAsync("/api/v1/auth/sso/oidc/challenge");
-        var challengeBody = await challenge.Content.ReadAsStringAsync();
-        Assert.True(
-            challenge.StatusCode == HttpStatusCode.Redirect,
-            $"OIDC challenge returned {(int)challenge.StatusCode} {challenge.StatusCode}: {challengeBody}");
+        Assert.Equal(HttpStatusCode.Redirect, challenge.StatusCode);
         var authorizationLocation = Assert.IsType<Uri>(challenge.Headers.Location);
         Assert.Equal(MockOidcProvider.ClientId, Query(authorizationLocation, "client_id"));
         Assert.DoesNotContain("access_token", authorizationLocation.Query, StringComparison.OrdinalIgnoreCase);
@@ -130,10 +127,8 @@ public sealed class OidcSsoFlowTests : IAsyncLifetime
         Assert.DoesNotContain("refresh_token", completeLocation.Query, StringComparison.OrdinalIgnoreCase);
 
         var code = Query(completeLocation, "code");
-        Assert.True(
-            !string.IsNullOrWhiteSpace(code),
-            $"OIDC callback did not issue a handoff code: {completeLocation}; "
-            + $"remote failure: {Header(callback, "X-EDMS-Test-Remote-Failure")}");
+        Assert.False(string.IsNullOrWhiteSpace(code),
+            $"OIDC callback did not issue a handoff code: {completeLocation}");
 
         var exchange = await apiClient.PostAsJsonAsync(
             "/api/v1/auth/sso/exchange",
@@ -168,11 +163,6 @@ public sealed class OidcSsoFlowTests : IAsyncLifetime
         var values = QueryHelpers.ParseQuery(uri.Query);
         return values.TryGetValue(key, out var value) ? value.ToString() : null;
     }
-
-    private static string Header(HttpResponseMessage response, string name) =>
-        response.Headers.TryGetValues(name, out var values)
-            ? string.Join(" | ", values)
-            : "<none>";
 
     private static LoginForm ParseLoginForm(string html, Uri fallbackAction)
     {

@@ -192,7 +192,7 @@ Phase 3 (M20→M23) and Phase 4 (M24–M30→M31) are two separate trees, both r
 
 | Milestone | Goal | Demo-able outcome | Status |
 |---|---|---|---|
-| [M20](#m20--sso-foundation--oidc-federation) | Shared federation plumbing + OIDC (FR-AUTH-10) | A user clicks "Sign in with SSO", authenticates against a real OIDC IdP, and lands in eDMS signed in — new account JIT-provisioned, zero site access until granted | Not Started |
+| [M20](#m20--sso-foundation--oidc-federation) | Shared federation plumbing + OIDC (FR-AUTH-10) | A user clicks "Sign in with SSO", authenticates against a real OIDC IdP, and lands in eDMS signed in — new account JIT-provisioned, zero site access until granted | Done |
 | [M21](#m21--saml2-federation) | SAML2 (FR-AUTH-09) | Same experience via SAML2, reusing M20's shared exchange/callback UI | Not Started |
 | [M22](#m22--sso-enforcement--admin-controls) | SSO enforcement (FR-AUTH-11) | Admin turns on "Require SSO for all logins"; non-exempt users' password logins are rejected with a clear message; a break-glass account still works | Not Started |
 | [M23](#m23--phase-3-hardening--sign-off) | Phase 3 sign-off | FS Phase 3 checklist satisfied; hardening bar M11/M19 proved, re-run for federation, plus a dedicated auth security pass | Not Started |
