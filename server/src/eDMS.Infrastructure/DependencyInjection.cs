@@ -30,6 +30,8 @@ using eDMS.Infrastructure.Favorites;
 using eDMS.Infrastructure.Recent;
 using eDMS.Application.Favorites;
 using eDMS.Application.Recent;
+using eDMS.Infrastructure.LibraryViews;
+using eDMS.Application.LibraryViews;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Configuration;
@@ -120,6 +122,7 @@ public static class DependencyInjection
         services.AddScoped<INotificationService, NotificationService>();
         services.AddScoped<IFavoritesService, FavoritesService>();
         services.AddScoped<IRecentService, RecentService>();
+        services.AddScoped<ILibraryViewService, LibraryViewService>();
         services.AddScoped<ContentTextIndexer>();
         services.AddSingleton<IFileStorageProvider, LocalDiskFileStorageProvider>();
         services.AddMemoryCache();

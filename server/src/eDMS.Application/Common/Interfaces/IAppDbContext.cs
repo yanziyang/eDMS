@@ -53,5 +53,7 @@ public interface IAppDbContext
 
     DbSet<FavoriteItem> FavoriteItems { get; }
 
+    DbSet<LibraryView> LibraryViews { get; }
+
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

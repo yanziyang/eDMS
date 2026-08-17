@@ -59,6 +59,8 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options)
 
     public DbSet<FavoriteItem> FavoriteItems => Set<FavoriteItem>();
 
+    public DbSet<LibraryView> LibraryViews => Set<LibraryView>();
+
     public DbSet<SsoHandoffCode> SsoHandoffCodes => Set<SsoHandoffCode>();
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
@@ -217,6 +219,26 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options)
                 .WithMany()
                 .HasForeignKey(favorite => favorite.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<LibraryView>(entity =>
+        {
+            entity.ToTable("library_views");
+            entity.HasKey(view => view.Id);
+            entity.Property(view => view.Name).IsRequired().HasMaxLength(256);
+            entity.Property(view => view.FilterConfig).IsRequired().HasMaxLength(16 * 1024);
+            entity.Property(view => view.SortConfig).IsRequired().HasMaxLength(16 * 1024);
+            entity.Property(view => view.GroupByColumn).HasMaxLength(128);
+            entity.HasIndex(view => new { view.LibraryId, view.OwnerId, view.Name }).IsUnique();
+            entity.HasIndex(view => new { view.LibraryId, view.IsDefault });
+            entity.HasOne<Library>()
+                .WithMany()
+                .HasForeignKey(view => view.LibraryId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne<ApplicationUser>()
+                .WithMany()
+                .HasForeignKey(view => view.OwnerId)
+                .OnDelete(DeleteBehavior.SetNull);
         });
 
         ApplyProviderSpecificColumnTypes(builder);

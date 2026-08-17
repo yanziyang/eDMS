@@ -1037,6 +1037,64 @@ namespace eDMS.Infrastructure.Migrations.Postgres
                     b.ToTable("libraries", (string)null);
                 });
 
+            modelBuilder.Entity("eDMS.Domain.LibraryView", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("FilterConfig")
+                        .IsRequired()
+                        .HasMaxLength(16384)
+                        .HasColumnType("character varying(16384)")
+                        .HasColumnName("filter_config");
+
+                    b.Property<string>("GroupByColumn")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("group_by_column");
+
+                    b.Property<bool>("IsDefault")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_default");
+
+                    b.Property<Guid>("LibraryId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("library_id");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)")
+                        .HasColumnName("name");
+
+                    b.Property<Guid?>("OwnerId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("owner_id");
+
+                    b.Property<string>("SortConfig")
+                        .IsRequired()
+                        .HasMaxLength(16384)
+                        .HasColumnType("character varying(16384)")
+                        .HasColumnName("sort_config");
+
+                    b.HasKey("Id")
+                        .HasName("pk_library_views");
+
+                    b.HasIndex("OwnerId")
+                        .HasDatabaseName("ix_library_views_owner_id");
+
+                    b.HasIndex("LibraryId", "IsDefault")
+                        .HasDatabaseName("ix_library_views_library_id_is_default");
+
+                    b.HasIndex("LibraryId", "OwnerId", "Name")
+                        .IsUnique()
+                        .HasDatabaseName("ix_library_views_library_id_owner_id_name");
+
+                    b.ToTable("library_views", (string)null);
+                });
+
             modelBuilder.Entity("eDMS.Domain.Notification", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1675,6 +1733,22 @@ namespace eDMS.Infrastructure.Migrations.Postgres
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("fk_libraries_sites_site_id");
+                });
+
+            modelBuilder.Entity("eDMS.Domain.LibraryView", b =>
+                {
+                    b.HasOne("eDMS.Domain.Library", null)
+                        .WithMany()
+                        .HasForeignKey("LibraryId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_library_views_libraries_library_id");
+
+                    b.HasOne("eDMS.Domain.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("OwnerId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_library_views_asp_net_users_owner_id");
                 });
 
             modelBuilder.Entity("eDMS.Domain.Notification", b =>
