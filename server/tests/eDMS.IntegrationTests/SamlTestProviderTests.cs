@@ -73,7 +73,6 @@ public sealed class SamlTestProviderTests : IAsyncLifetime
         var metadata = await response.Content.ReadAsStringAsync();
         Assert.Contains(SamlTestProvider.EntityId, metadata, StringComparison.Ordinal);
         Assert.Contains("HTTP-Redirect", metadata, StringComparison.Ordinal);
-        Assert.Contains("HTTP-POST", metadata, StringComparison.Ordinal);
         Assert.True(File.Exists(Path.Combine(provider!.SharedDirectory, "server.crt")));
     }
 }

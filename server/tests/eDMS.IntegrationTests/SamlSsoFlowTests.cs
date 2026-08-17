@@ -85,7 +85,10 @@ public sealed class SamlSsoFlowTests : IAsyncLifetime
         });
 
         var challenge = await apiClient.GetAsync("/api/v1/auth/sso/saml/challenge");
-        Assert.True(IsRedirect(challenge.StatusCode));
+        Assert.True(
+            IsRedirect(challenge.StatusCode),
+            $"SAML challenge returned {(int)challenge.StatusCode}: "
+            + await challenge.Content.ReadAsStringAsync());
         var challengeLocation = Assert.IsType<Uri>(challenge.Headers.Location);
         var challengeQuery = QueryHelpers.ParseQuery(challengeLocation.Query);
         Assert.False(string.IsNullOrWhiteSpace(challengeQuery["SAMLRequest"]));
@@ -110,10 +113,13 @@ public sealed class SamlSsoFlowTests : IAsyncLifetime
             providerClient,
             providerLoginResponse,
             loginForm.Action);
-        var callbackForm = ParseForm(
-            await callbackPageResponse.Content.ReadAsStringAsync(),
-            loginForm.Action);
-        Assert.True(callbackForm.Values.TryGetValue("SAMLResponse", out var samlResponse));
+        var callbackPage = await callbackPageResponse.Content.ReadAsStringAsync();
+        var callbackForm = ParseForm(callbackPage, loginForm.Action);
+        Assert.True(
+            callbackForm.Values.TryGetValue("SAMLResponse", out var samlResponse),
+            $"Expected SAML callback form; status={(int)callbackPageResponse.StatusCode}, "
+            + $"uri={callbackPageResponse.RequestMessage?.RequestUri}, "
+            + $"body={DescribeHtml(callbackPage)}");
         Assert.True(callbackForm.Values.TryGetValue("RelayState", out var relayState));
 
         var tamperedResponse = await apiClient.PostAsync(
@@ -267,6 +273,20 @@ public sealed class SamlSsoFlowTests : IAsyncLifetime
         var bytes = Convert.FromBase64String(value);
         bytes[^1] ^= 1;
         return Convert.ToBase64String(bytes);
+    }
+
+    private static string DescribeHtml(string html)
+    {
+        var text = Regex.Replace(
+            html,
+            "<script\\b[^>]*>.*?</script>|<style\\b[^>]*>.*?</style>|<[^>]+>",
+            " ",
+            RegexOptions.IgnoreCase | RegexOptions.Singleline);
+        text = Regex.Replace(
+            WebUtility.HtmlDecode(text),
+            "\\s+",
+            " ").Trim();
+        return text.Length <= 4000 ? text : "…" + text[^3999..];
     }
 
     private static string RemoveXmlSignatures(string value)

@@ -138,11 +138,22 @@ internal sealed class SamlConfigurationProvider(
         var resolvedPath = Path.IsPathRooted(path)
             ? path
             : Path.Combine(environment.ContentRootPath, path);
-        if (File.ReadAllText(resolvedPath).Contains(
-                "-----BEGIN CERTIFICATE-----",
-                StringComparison.Ordinal))
+        var pem = File.ReadAllText(resolvedPath);
+        if (pem.Contains("-----BEGIN CERTIFICATE-----", StringComparison.Ordinal))
         {
-            return X509Certificate2.CreateFromPemFile(resolvedPath);
+            var containsPrivateKey = pem.Contains(
+                    "-----BEGIN PRIVATE KEY-----",
+                    StringComparison.Ordinal)
+                || pem.Contains(
+                    "-----BEGIN RSA PRIVATE KEY-----",
+                    StringComparison.Ordinal)
+                || pem.Contains(
+                    "-----BEGIN EC PRIVATE KEY-----",
+                    StringComparison.Ordinal);
+
+            return containsPrivateKey
+                ? X509Certificate2.CreateFromPemFile(resolvedPath)
+                : X509Certificate2.CreateFromPem(pem);
         }
 #pragma warning disable SYSLIB0057
         return new X509Certificate2(
