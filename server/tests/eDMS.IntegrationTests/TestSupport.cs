@@ -150,6 +150,8 @@ internal sealed class TestAppSettings : IAppSettings
 
     public bool SiteCreationRestricted { get; set; }
 
+    public bool SsoEnforcedGlobally { get; set; }
+
     public Task<long> GetMaxUploadSizeBytesAsync(CancellationToken cancellationToken = default) =>
         Task.FromResult(MaxUploadSizeBytes);
 
@@ -158,6 +160,9 @@ internal sealed class TestAppSettings : IAppSettings
 
     public Task<bool> GetSiteCreationRestrictedAsync(CancellationToken cancellationToken = default) =>
         Task.FromResult(SiteCreationRestricted);
+
+    public Task<bool> GetSsoEnforcedGloballyAsync(CancellationToken cancellationToken = default) =>
+        Task.FromResult(SsoEnforcedGlobally);
 
     public Task UpsertAsync(IReadOnlyCollection<(string Key, string Value)> updates, CancellationToken cancellationToken = default) =>
         Task.CompletedTask;

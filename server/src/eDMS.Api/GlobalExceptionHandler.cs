@@ -19,6 +19,8 @@ public sealed class GlobalExceptionHandler(
             NotFoundException => Problem(404, "urn:edms:not-found", "Not Found", exception.Message),
             ForbiddenException => Problem(403, "urn:edms:forbidden", "Forbidden", exception.Message),
             ConflictException => Problem(409, "urn:edms:conflict", "Conflict", exception.Message),
+            SsoRequiredException => Problem(401, "urn:edms:sso-required", "SSO required", exception.Message),
+            SsoSafetyRailException => Problem(409, "urn:edms:sso-safety-rail", "SSO safety rail", exception.Message),
             _ => InternalError(exception),
         };
 

@@ -27,6 +27,8 @@ public sealed class UserManagementService(
             user.DisplayName,
             user.IsActive,
             user.IsSystemAdmin,
+            user.LocalLoginDisabled,
+            user.SsoExempt,
             user.CreatedAt,
             user.LastLoginAt)).ToList();
     }
@@ -65,6 +67,8 @@ public sealed class UserManagementService(
         Guid userId,
         string displayName,
         bool isSystemAdmin,
+        bool localLoginDisabled,
+        bool ssoExempt,
         CancellationToken cancellationToken = default)
     {
         var user = await userManager.FindByIdAsync(userId.ToString())
@@ -72,6 +76,8 @@ public sealed class UserManagementService(
 
         user.DisplayName = displayName;
         user.IsSystemAdmin = isSystemAdmin;
+        user.LocalLoginDisabled = localLoginDisabled;
+        user.SsoExempt = ssoExempt;
         await userManager.UpdateAsync(user);
     }
 

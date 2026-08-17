@@ -1,4 +1,5 @@
 using eDMS.Application.Admin;
+using eDMS.Application.Common.Exceptions;
 using eDMS.Application.Common.Interfaces;
 using eDMS.Domain;
 using eDMS.Infrastructure.Options;
@@ -67,7 +68,8 @@ public sealed class AdminService(
             await appSettings.GetSiteCreationRestrictedAsync(cancellationToken),
             jwtOptions.Value.AccessTokenLifetimeMinutes,
             jwtOptions.Value.RefreshTokenLifetimeDays,
-            "eDMS");
+            "eDMS",
+            await appSettings.GetSsoEnforcedGloballyAsync(cancellationToken));
     }
 
     public async Task UpdateSettingsAsync(
@@ -86,6 +88,24 @@ public sealed class AdminService(
         if (request.SiteCreationRestricted is { } restricted)
         {
             updates.Add((AppSettingKeys.SiteCreationRestricted, restricted ? "true" : "false"));
+        }
+        if (request.SsoEnforcedGlobally is { } enforceSso)
+        {
+            var currentlyEnforced = await appSettings.GetSsoEnforcedGloballyAsync(cancellationToken);
+            if (!currentlyEnforced && enforceSso)
+            {
+                var hasBreakGlassAdmin = await db.Users
+                    .AsNoTracking()
+                    .AnyAsync(
+                        user => user.IsActive && user.IsSystemAdmin && user.SsoExempt,
+                        cancellationToken);
+                if (!hasBreakGlassAdmin)
+                {
+                    throw new SsoSafetyRailException();
+                }
+            }
+
+            updates.Add((AppSettingKeys.SsoEnforcedGlobally, enforceSso ? "true" : "false"));
         }
 
         await appSettings.UpsertAsync(updates, cancellationToken);

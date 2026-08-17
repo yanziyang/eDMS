@@ -31,7 +31,13 @@ public sealed class AdminUsersController(IUserManagementService users) : Control
         [FromBody] UpdateUserRequest request,
         CancellationToken cancellationToken)
     {
-        await users.UpdateAsync(id, request.DisplayName, request.IsSystemAdmin, cancellationToken);
+        await users.UpdateAsync(
+            id,
+            request.DisplayName,
+            request.IsSystemAdmin,
+            request.LocalLoginDisabled,
+            request.SsoExempt,
+            cancellationToken);
         return NoContent();
     }
 
@@ -56,4 +62,8 @@ public sealed record CreateUserRequest(
     string TempPassword,
     bool IsSystemAdmin);
 
-public sealed record UpdateUserRequest(string DisplayName, bool IsSystemAdmin);
+public sealed record UpdateUserRequest(
+    string DisplayName,
+    bool IsSystemAdmin,
+    bool LocalLoginDisabled,
+    bool SsoExempt);

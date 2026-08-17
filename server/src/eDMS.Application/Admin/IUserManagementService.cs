@@ -15,6 +15,8 @@ public interface IUserManagementService
         Guid userId,
         string displayName,
         bool isSystemAdmin,
+        bool localLoginDisabled,
+        bool ssoExempt,
         CancellationToken cancellationToken = default);
 
     Task SetActiveAsync(Guid userId, bool isActive, CancellationToken cancellationToken = default);

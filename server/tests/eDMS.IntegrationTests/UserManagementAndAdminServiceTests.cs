@@ -75,7 +75,7 @@ public sealed class UserManagementAndAdminServiceTests : IDisposable
         var service = Service();
         var userId = await service.CreateAsync("user@edms.test", "Before", "Password1!", false, default);
 
-        await service.UpdateAsync(userId, "After", true, default);
+        await service.UpdateAsync(userId, "After", true, false, false, default);
 
         var users = await service.ListAsync(null, default);
         var updated = users.Single(user => user.Id == userId);
@@ -83,7 +83,7 @@ public sealed class UserManagementAndAdminServiceTests : IDisposable
         Assert.True(updated.IsSystemAdmin);
 
         await Assert.ThrowsAsync<NotFoundException>(() =>
-            service.UpdateAsync(Guid.NewGuid(), "X", false, default));
+            service.UpdateAsync(Guid.NewGuid(), "X", false, false, false, default));
     }
 
     [Fact]

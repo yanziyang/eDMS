@@ -317,6 +317,12 @@ namespace eDMS.Infrastructure.Migrations.Postgres
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("last_login_at");
 
+                    b.Property<bool>("LocalLoginDisabled")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("local_login_disabled");
+
                     b.Property<bool>("LockoutEnabled")
                         .HasColumnType("boolean")
                         .HasColumnName("lockout_enabled");
@@ -356,6 +362,12 @@ namespace eDMS.Infrastructure.Migrations.Postgres
                     b.Property<string>("SecurityStamp")
                         .HasColumnType("text")
                         .HasColumnName("security_stamp");
+
+                    b.Property<bool>("SsoExempt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("sso_exempt");
 
                     b.Property<bool>("TwoFactorEnabled")
                         .HasColumnType("boolean")

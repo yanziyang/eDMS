@@ -21,12 +21,14 @@ public sealed record AdminSettingsDto(
     bool SiteCreationRestricted,
     int AccessTokenLifetimeMinutes,
     int RefreshTokenLifetimeDays,
-    string AppName);
+    string AppName,
+    bool SsoEnforcedGlobally);
 
 public sealed record UpdateAdminSettingsRequest(
     long? MaxUploadSizeBytes,
     int? RecycleBinRetentionDays,
-    bool? SiteCreationRestricted);
+    bool? SiteCreationRestricted,
+    bool? SsoEnforcedGlobally);
 
 public interface IAdminService
 {

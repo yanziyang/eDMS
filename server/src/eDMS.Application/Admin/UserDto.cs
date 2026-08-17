@@ -6,5 +6,7 @@ public sealed record UserDto(
     string DisplayName,
     bool IsActive,
     bool IsSystemAdmin,
+    bool LocalLoginDisabled,
+    bool SsoExempt,
     DateTimeOffset CreatedAt,
     DateTimeOffset? LastLoginAt);

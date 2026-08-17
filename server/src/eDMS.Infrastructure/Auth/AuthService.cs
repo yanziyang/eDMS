@@ -1,4 +1,5 @@
 using eDMS.Application.Auth;
+using eDMS.Application.Common.Exceptions;
 using eDMS.Application.Common.Interfaces;
 using eDMS.Domain;
 using eDMS.Infrastructure.Options;
@@ -18,6 +19,7 @@ public sealed class AuthService : IAuthService
     private readonly JwtOptions _jwtOptions;
     private readonly ClientOptions _clientOptions;
     private readonly ISsoHandoffCodeStore? _ssoHandoffCodeStore;
+    private readonly IAppSettings? _appSettings;
 
     public AuthService(
         UserManager<ApplicationUser> userManager,
@@ -28,7 +30,8 @@ public sealed class AuthService : IAuthService
         IEmailSender emailSender,
         IOptions<ClientOptions> clientOptions,
         IOptions<JwtOptions> jwtOptions,
-        ISsoHandoffCodeStore? ssoHandoffCodeStore = null)
+        ISsoHandoffCodeStore? ssoHandoffCodeStore = null,
+        IAppSettings? appSettings = null)
     {
         _userManager = userManager;
         _signInManager = signInManager;
@@ -39,6 +42,7 @@ public sealed class AuthService : IAuthService
         _jwtOptions = jwtOptions.Value;
         _clientOptions = clientOptions.Value;
         _ssoHandoffCodeStore = ssoHandoffCodeStore;
+        _appSettings = appSettings;
     }
 
     public async Task<AuthResult?> LoginAsync(
@@ -60,6 +64,16 @@ public sealed class AuthService : IAuthService
         if (!result.Succeeded)
         {
             return null;
+        }
+
+        var ssoEnforcedGlobally = _appSettings is not null
+            && await _appSettings.GetSsoEnforcedGloballyAsync(cancellationToken);
+        if (!LocalLoginPolicy.CanUseLocalLogin(
+                user.LocalLoginDisabled,
+                ssoEnforcedGlobally,
+                user.SsoExempt))
+        {
+            throw new SsoRequiredException();
         }
 
         return await CompleteAuthenticationAsync(user, ipAddress, cancellationToken);

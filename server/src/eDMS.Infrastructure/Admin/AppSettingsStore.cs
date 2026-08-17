@@ -41,6 +41,13 @@ public sealed class AppSettingsStore(
             false,
             cancellationToken);
 
+    public Task<bool> GetSsoEnforcedGloballyAsync(CancellationToken cancellationToken = default) =>
+        GetAsync(
+            AppSettingKeys.SsoEnforcedGlobally,
+            static (raw, _) => string.Equals(raw, "true", StringComparison.OrdinalIgnoreCase),
+            false,
+            cancellationToken);
+
     public async Task UpsertAsync(
         IReadOnlyCollection<(string Key, string Value)> updates,
         CancellationToken cancellationToken)

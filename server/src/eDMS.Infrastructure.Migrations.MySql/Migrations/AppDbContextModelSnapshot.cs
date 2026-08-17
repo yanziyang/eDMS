@@ -309,6 +309,12 @@ namespace eDMS.Infrastructure.Migrations.MySql.Migrations
                         .HasColumnType("datetime")
                         .HasColumnName("last_login_at");
 
+                    b.Property<bool>("LocalLoginDisabled")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("tinyint(1)")
+                        .HasDefaultValue(false)
+                        .HasColumnName("local_login_disabled");
+
                     b.Property<bool>("LockoutEnabled")
                         .HasColumnType("tinyint(1)")
                         .HasColumnName("lockout_enabled");
@@ -348,6 +354,12 @@ namespace eDMS.Infrastructure.Migrations.MySql.Migrations
                     b.Property<string>("SecurityStamp")
                         .HasColumnType("longtext")
                         .HasColumnName("security_stamp");
+
+                    b.Property<bool>("SsoExempt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("tinyint(1)")
+                        .HasDefaultValue(false)
+                        .HasColumnName("sso_exempt");
 
                     b.Property<bool>("TwoFactorEnabled")
                         .HasColumnType("tinyint(1)")

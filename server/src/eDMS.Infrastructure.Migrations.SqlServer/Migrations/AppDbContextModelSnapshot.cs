@@ -317,6 +317,12 @@ namespace eDMS.Infrastructure.Migrations.SqlServer.Migrations
                         .HasColumnType("datetimeoffset")
                         .HasColumnName("last_login_at");
 
+                    b.Property<bool>("LocalLoginDisabled")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false)
+                        .HasColumnName("local_login_disabled");
+
                     b.Property<bool>("LockoutEnabled")
                         .HasColumnType("bit")
                         .HasColumnName("lockout_enabled");
@@ -356,6 +362,12 @@ namespace eDMS.Infrastructure.Migrations.SqlServer.Migrations
                     b.Property<string>("SecurityStamp")
                         .HasColumnType("nvarchar(max)")
                         .HasColumnName("security_stamp");
+
+                    b.Property<bool>("SsoExempt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false)
+                        .HasColumnName("sso_exempt");
 
                     b.Property<bool>("TwoFactorEnabled")
                         .HasColumnType("bit")

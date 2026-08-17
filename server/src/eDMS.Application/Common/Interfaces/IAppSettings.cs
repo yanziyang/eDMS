@@ -13,6 +13,8 @@ public interface IAppSettings
 
     Task<bool> GetSiteCreationRestrictedAsync(CancellationToken cancellationToken = default);
 
+    Task<bool> GetSsoEnforcedGloballyAsync(CancellationToken cancellationToken = default);
+
     Task UpsertAsync(
         IReadOnlyCollection<(string Key, string Value)> updates,
         CancellationToken cancellationToken = default);

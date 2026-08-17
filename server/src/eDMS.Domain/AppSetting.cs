@@ -19,4 +19,6 @@ public static class AppSettingKeys
     public const string RecycleBinRetentionDays = "recycle_bin_retention_days";
 
     public const string SiteCreationRestricted = "site_creation_restricted";
+
+    public const string SsoEnforcedGlobally = "sso_enforced_globally";
 }

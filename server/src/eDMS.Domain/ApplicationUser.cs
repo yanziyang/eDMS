@@ -23,6 +23,18 @@ public sealed class ApplicationUser : IdentityUser<Guid>
     public bool IsSystemAdmin { get; set; }
 
     /// <summary>
+    /// When true, this account cannot authenticate with a local password and must
+    /// use one of the configured federated providers.
+    /// </summary>
+    public bool LocalLoginDisabled { get; set; }
+
+    /// <summary>
+    /// Break-glass account flag that permits local login while global SSO enforcement
+    /// is enabled. Only trusted administrator accounts should receive this flag.
+    /// </summary>
+    public bool SsoExempt { get; set; }
+
+    /// <summary>
     /// When true, the user must change their password at the next login. Set on the
     /// first-run seed administrator so the configured temporary password is not left
     /// in place (TDS §6.5).
