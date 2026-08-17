@@ -83,6 +83,17 @@ export interface LibraryDto {
   minorVersionsRetained: number | null;
 }
 
+export interface LibraryViewDto {
+  id: string;
+  libraryId: string;
+  ownerId: string | null;
+  name: string;
+  filterConfig: string;
+  sortConfig: string;
+  groupByColumn: string | null;
+  isDefault: boolean;
+}
+
 export interface ItemDto {
   kind: "folder" | "document";
   id: string;

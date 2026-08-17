@@ -10,6 +10,10 @@ export const queryKeys = {
     all: ["libraries"] as const,
     list: (siteId: string) => [...queryKeys.libraries.all, "list", siteId] as const,
   },
+  libraryViews: {
+    all: ["library-views"] as const,
+    list: (libraryId: string) => [...queryKeys.libraryViews.all, "list", libraryId] as const,
+  },
   groups: {
     all: ["groups"] as const,
     list: (siteId?: string) =>

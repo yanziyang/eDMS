@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowDown,
@@ -37,11 +37,24 @@ import { Progress } from "@/components/ui/progress";
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
 import { DocumentDetailsSheet } from "@/features/documents/components/DocumentDetailsSheet";
+import {
+  createLibraryView,
+  listLibraryViews,
+} from "@/features/library-views/api";
+import {
+  deserializeFilterConfig,
+  deserializeSortConfig,
+  serializeFilterConfig,
+  serializeSortConfig,
+  type LibraryViewGroupBy,
+} from "@/features/library-views/config";
 import {
   copyDocument,
   createFolder,
@@ -63,7 +76,13 @@ import { abortUpload, completeUpload, startUpload } from "@/features/uploads/api
 import { LARGE_FILE_THRESHOLD, uploadChunks } from "@/features/uploads/chunkedUpload";
 import { ApiError } from "@/lib/api-client";
 import { queryKeys } from "@/lib/queryKeys";
-import type { ContentTypeColumnDto, ItemDto, LibraryDto, MetadataValueInput } from "@/types/api";
+import type {
+  ContentTypeColumnDto,
+  ItemDto,
+  LibraryDto,
+  LibraryViewDto,
+  MetadataValueInput,
+} from "@/types/api";
 
 type SortKey = "name" | "size" | "modifiedAt";
 type ViewMode = "list" | "grid";
@@ -78,12 +97,19 @@ export function LibraryBrowser() {
   const [viewMode, setViewMode] = useState<ViewMode>("list");
   const [sortKey, setSortKey] = useState<SortKey>("name");
   const [sortDesc, setSortDesc] = useState(false);
+  const [filterText, setFilterText] = useState("");
+  const [groupBy, setGroupBy] = useState<LibraryViewGroupBy>("none");
+  const [activeViewId, setActiveViewId] = useState<string | null>(null);
   const [selection, setSelection] = useState<Set<string>>(new Set());
-const [createFolderOpen, setCreateFolderOpen] = useState(false);
-const [uploadOpen, setUploadOpen] = useState(false);
-const [settingsOpen, setSettingsOpen] = useState(false);
+  const [createFolderOpen, setCreateFolderOpen] = useState(false);
+  const [uploadOpen, setUploadOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [moveOpen, setMoveOpen] = useState(false);
+  const [saveViewOpen, setSaveViewOpen] = useState(false);
+  const [saveViewName, setSaveViewName] = useState("");
+  const [saveViewShared, setSaveViewShared] = useState(false);
   const [selectedDocumentId, setSelectedDocumentId] = useState<string | null>(null);
+  const defaultViewAppliedLibraryRef = useRef<string | null>(null);
   const requestedFolderId = searchParams.get("folderId");
   const requestedDocumentId = searchParams.get("documentId");
 
@@ -107,6 +133,44 @@ const [settingsOpen, setSettingsOpen] = useState(false);
   });
   const library = libraries.data?.find((candidate) => candidate.id === libraryId);
 
+  const libraryViewsQuery = useQuery({
+    queryKey: queryKeys.libraryViews.list(libraryId ?? "unknown"),
+    queryFn: () => listLibraryViews(libraryId!),
+    enabled: libraryId !== undefined,
+    retry: false,
+  });
+
+  const applySavedView = useCallback((view: LibraryViewDto) => {
+    const filter = deserializeFilterConfig(view.filterConfig);
+    const sort = deserializeSortConfig(view.sortConfig);
+    setFilterText(filter.text);
+    setSortKey(sort.key);
+    setSortDesc(sort.descending);
+    setGroupBy(view.groupByColumn === "kind" ? "kind" : "none");
+    setActiveViewId(view.id);
+    setSelection(new Set());
+  }, []);
+
+  useEffect(() => {
+    if (!libraryId) {
+      defaultViewAppliedLibraryRef.current = null;
+      return;
+    }
+
+    if (
+      !libraryViewsQuery.data
+      || defaultViewAppliedLibraryRef.current === libraryId
+    ) {
+      return;
+    }
+
+    defaultViewAppliedLibraryRef.current = libraryId;
+    const defaultView = libraryViewsQuery.data.find((view) => view.isDefault);
+    if (defaultView) {
+      applySavedView(defaultView);
+    }
+  }, [applySavedView, libraryId, libraryViewsQuery.data]);
+
   const itemsQuery = useQuery({
     queryKey: folderId
       ? queryKeys.folders.items(folderId)
@@ -129,7 +193,10 @@ const [settingsOpen, setSettingsOpen] = useState(false);
   const invalidateItems = () => queryClient.invalidateQueries({ queryKey: itemsKey });
 
   const items = useMemo(() => {
-    const source = [...(itemsQuery.data ?? [])];
+    const normalizedFilter = filterText.trim().toLocaleLowerCase();
+    const source = (itemsQuery.data ?? []).filter(
+      (item) => normalizedFilter.length === 0 || item.name.toLocaleLowerCase().includes(normalizedFilter),
+    );
     source.sort((a, b) => {
       const direction = sortDesc ? -1 : 1;
       if (sortKey === "name") {
@@ -141,7 +208,18 @@ const [settingsOpen, setSettingsOpen] = useState(false);
       return direction * (new Date(a.modifiedAt).getTime() - new Date(b.modifiedAt).getTime());
     });
     return source;
-  }, [itemsQuery.data, sortKey, sortDesc]);
+  }, [filterText, itemsQuery.data, sortKey, sortDesc]);
+
+  const groupedItems = useMemo(() => {
+    if (groupBy === "none") {
+      return [{ label: null, items }];
+    }
+
+    return [
+      { label: "Folders", items: items.filter((item) => item.kind === "folder") },
+      { label: "Documents", items: items.filter((item) => item.kind === "document") },
+    ].filter((group) => group.items.length > 0);
+  }, [groupBy, items]);
 
   const selectedItems = items.filter((item) => selection.has(item.id));
   const singleSelectedDocument =
@@ -249,6 +327,45 @@ const [settingsOpen, setSettingsOpen] = useState(false);
       toast.error(variables.mode === "move" ? "Failed to move document" : "Failed to copy document"),
   });
 
+  const saveViewMutation = useMutation({
+    mutationFn: (name: string) => {
+      if (!libraryId) {
+        throw new Error("A library is required to save a view.");
+      }
+
+      return createLibraryView(libraryId, {
+        name,
+        filterConfig: serializeFilterConfig({ text: filterText }),
+        sortConfig: serializeSortConfig({ key: sortKey, descending: sortDesc }),
+        groupByColumn: groupBy === "none" ? null : groupBy,
+        isShared: saveViewShared,
+      });
+    },
+    onSuccess: (view) => {
+      toast.success("View saved");
+      setSaveViewOpen(false);
+      setSaveViewName("");
+      setSaveViewShared(false);
+      setActiveViewId(view.id);
+      queryClient.invalidateQueries({ queryKey: queryKeys.libraryViews.list(libraryId ?? "unknown") });
+    },
+    onError: () => toast.error("Failed to save view"),
+  });
+
+  const handleSavedViewChange = (value: string) => {
+    if (value === "save-current") {
+      setSaveViewName("");
+      setSaveViewShared(false);
+      setSaveViewOpen(true);
+      return;
+    }
+
+    const view = libraryViewsQuery.data?.find((candidate) => candidate.id === value);
+    if (view) {
+      applySavedView(view);
+    }
+  };
+
   const siteName = site?.name ?? siteSlug ?? "Site";
   const libraryName = library?.name ?? "Documents";
 
@@ -307,11 +424,68 @@ const [settingsOpen, setSettingsOpen] = useState(false);
       </div>
 
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Select
-            value={`${sortKey}-${sortDesc}`}
+            value={activeViewId ?? "custom"}
+            onValueChange={handleSavedViewChange}
+          >
+            <SelectTrigger aria-label="Saved view" className="w-48">
+              <SelectValue placeholder="Current view" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="custom" disabled>Current view</SelectItem>
+              <SelectGroup>
+                <SelectLabel>Shared views</SelectLabel>
+                {(libraryViewsQuery.data ?? [])
+                  .filter((view) => view.ownerId === null)
+                  .map((view) => (
+                    <SelectItem key={view.id} value={view.id}>
+                      {view.name}{view.isDefault ? " (default)" : ""}
+                    </SelectItem>
+                  ))}
+              </SelectGroup>
+              <SelectGroup>
+                <SelectLabel>My views</SelectLabel>
+                {(libraryViewsQuery.data ?? [])
+                  .filter((view) => view.ownerId !== null)
+                  .map((view) => (
+                    <SelectItem key={view.id} value={view.id}>{view.name}</SelectItem>
+                  ))}
+              </SelectGroup>
+              <SelectItem value="save-current">Save current as…</SelectItem>
+            </SelectContent>
+          </Select>
+          <Input
+            aria-label="Filter items"
+            className="w-48"
+            placeholder="Filter by name…"
+            value={filterText}
+            onChange={(event) => {
+              setActiveViewId(null);
+              setFilterText(event.target.value);
+              clearSelection();
+            }}
+          />
+          <Select
+            value={groupBy}
+            onValueChange={(value) => {
+              setActiveViewId(null);
+              setGroupBy(value as LibraryViewGroupBy);
+            }}
+          >
+            <SelectTrigger aria-label="Group items" className="w-40">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">No grouping</SelectItem>
+              <SelectItem value="kind">By type</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select
+            value={`${sortKey}-${sortDesc ? "desc" : "asc"}`}
             onValueChange={(value) => {
               const [key, desc] = value.split("-");
+              setActiveViewId(null);
               setSortKey(key as SortKey);
               setSortDesc(desc === "desc");
             }}
@@ -376,9 +550,13 @@ const [settingsOpen, setSettingsOpen] = useState(false);
       {itemsQuery.data && items.length === 0 && (
         <div className="rounded-lg border border-dashed p-10 text-center">
           <Folder className="mx-auto size-10 text-muted-foreground" />
-          <h2 className="mt-3 font-medium">This folder is empty</h2>
+          <h2 className="mt-3 font-medium">
+            {filterText.trim() ? "No matching items" : "This folder is empty"}
+          </h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            Upload files or create a subfolder to get started.
+            {filterText.trim()
+              ? "Try a different name filter."
+              : "Upload files or create a subfolder to get started."}
           </p>
         </div>
       )}
@@ -400,7 +578,10 @@ const [settingsOpen, setSettingsOpen] = useState(false);
                     label="Name"
                     active={sortKey === "name"}
                     desc={sortDesc}
-                    onClick={() => toggleSort("name", sortKey, sortDesc, setSortKey, setSortDesc)}
+                    onClick={() => {
+                      setActiveViewId(null);
+                      toggleSort("name", sortKey, sortDesc, setSortKey, setSortDesc);
+                    }}
                   />
                 </th>
                 <th className="px-4 py-2 font-medium">
@@ -408,7 +589,10 @@ const [settingsOpen, setSettingsOpen] = useState(false);
                     label="Size"
                     active={sortKey === "size"}
                     desc={sortDesc}
-                    onClick={() => toggleSort("size", sortKey, sortDesc, setSortKey, setSortDesc)}
+                    onClick={() => {
+                      setActiveViewId(null);
+                      toggleSort("size", sortKey, sortDesc, setSortKey, setSortDesc);
+                    }}
                   />
                 </th>
                 <th className="px-4 py-2 font-medium">
@@ -416,17 +600,27 @@ const [settingsOpen, setSettingsOpen] = useState(false);
                     label="Modified"
                     active={sortKey === "modifiedAt"}
                     desc={sortDesc}
-                    onClick={() =>
-                      toggleSort("modifiedAt", sortKey, sortDesc, setSortKey, setSortDesc)
-                    }
+                    onClick={() => {
+                      setActiveViewId(null);
+                      toggleSort("modifiedAt", sortKey, sortDesc, setSortKey, setSortDesc);
+                    }}
                   />
                 </th>
                 <th className="px-4 py-2 font-medium">Actions</th>
               </tr>
             </thead>
             <tbody>
-              {items.map((item) => (
-                <tr key={item.id} className="border-b last:border-0">
+              {groupedItems.map((group) => (
+                <Fragment key={group.label ?? "all-items"}>
+                  {group.label && (
+                    <tr className="border-b bg-muted/20">
+                      <td colSpan={5} className="px-4 py-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                        {group.label}
+                      </td>
+                    </tr>
+                  )}
+                  {group.items.map((item) => (
+                    <tr key={item.id} className="border-b last:border-0">
                   <td className="px-4 py-2">
                     <Checkbox
                       aria-label={`Select ${item.name}`}
@@ -491,7 +685,9 @@ const [settingsOpen, setSettingsOpen] = useState(false);
                       </Button>
                     </div>
                   </td>
-                </tr>
+                    </tr>
+                  ))}
+                </Fragment>
               ))}
             </tbody>
           </table>
@@ -500,11 +696,18 @@ const [settingsOpen, setSettingsOpen] = useState(false);
 
       {viewMode === "grid" && items.length > 0 && (
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-          {items.map((item) => (
-            <div
-              key={item.id}
-              className="group relative flex flex-col gap-2 rounded-lg border bg-card p-4"
-            >
+          {groupedItems.map((group) => (
+            <Fragment key={group.label ?? "all-items"}>
+              {group.label && (
+                <div className="col-span-full text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  {group.label}
+                </div>
+              )}
+              {group.items.map((item) => (
+                <div
+                  key={item.id}
+                  className="group relative flex flex-col gap-2 rounded-lg border bg-card p-4"
+                >
               <div className="absolute left-3 top-3">
                 <Checkbox
                   aria-label={`Select ${item.name}`}
@@ -540,10 +743,23 @@ const [settingsOpen, setSettingsOpen] = useState(false);
                 <span>{item.kind === "document" ? formatBytes(item.sizeBytes) : "—"}</span>
                 <span>{new Date(item.modifiedAt).toLocaleDateString()}</span>
               </div>
-            </div>
+                </div>
+              ))}
+            </Fragment>
           ))}
         </div>
       )}
+
+      <SaveLibraryViewDialog
+        open={saveViewOpen}
+        onOpenChange={setSaveViewOpen}
+        name={saveViewName}
+        onNameChange={setSaveViewName}
+        shared={saveViewShared}
+        onSharedChange={setSaveViewShared}
+        pending={saveViewMutation.isPending}
+        onSubmit={() => saveViewMutation.mutate(saveViewName.trim())}
+      />
 
       <CreateFolderDialog
         open={createFolderOpen}
@@ -637,6 +853,72 @@ function SortHeader({
       {label}
       {active && (desc ? <ArrowDown className="size-3" /> : <ArrowUp className="size-3" />)}
     </button>
+  );
+}
+
+interface SaveLibraryViewDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  name: string;
+  onNameChange: (name: string) => void;
+  shared: boolean;
+  onSharedChange: (shared: boolean) => void;
+  pending: boolean;
+  onSubmit: () => void;
+}
+
+function SaveLibraryViewDialog({
+  open,
+  onOpenChange,
+  name,
+  onNameChange,
+  shared,
+  onSharedChange,
+  pending,
+  onSubmit,
+}: SaveLibraryViewDialogProps) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Save library view</DialogTitle>
+          <DialogDescription>
+            Save the current filter, sort, and grouping settings for quick access later.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="saved-view-name">View name</Label>
+            <Input
+              id="saved-view-name"
+              aria-label="View name"
+              placeholder="e.g. Active policies"
+              value={name}
+              onChange={(event) => onNameChange(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" && name.trim().length > 0 && !pending) {
+                  onSubmit();
+                }
+              }}
+            />
+          </div>
+          <label className="flex items-center gap-2 text-sm">
+            <Checkbox
+              checked={shared}
+              onCheckedChange={(checked) => onSharedChange(checked === true)}
+            />
+            <span>Share with everyone who can access this library</span>
+          </label>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+          <Button disabled={pending || name.trim().length === 0} onClick={onSubmit}>
+            {pending && <LoaderCircle data-icon="inline-start" className="animate-spin" />}
+            Save view
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
