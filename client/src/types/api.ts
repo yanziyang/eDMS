@@ -127,6 +127,26 @@ export interface FavoriteItemDto {
   folderId: string | null;
 }
 
+export type AuditAction =
+  | "Upload"
+  | "View"
+  | "EditMetadata"
+  | "CheckIn";
+
+export interface RecentDocumentDto {
+  documentId: string;
+  name: string;
+  siteId: string;
+  siteName: string;
+  siteSlug: string;
+  libraryId: string;
+  libraryName: string;
+  folderId: string | null;
+  folderPath: string | null;
+  lastTouchedAt: string;
+  lastAction: AuditAction;
+}
+
 export type ShareLinkLevel = "Read" | "Contribute";
 
 export interface ShareLinkDto {

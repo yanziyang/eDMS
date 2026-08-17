@@ -64,6 +64,7 @@ export const queryKeys = {
     all: ["me"] as const,
     current: () => [...queryKeys.me.all, "current"] as const,
     favorites: () => [...queryKeys.me.all, "favorites"] as const,
+    recent: () => [...queryKeys.me.all, "recent"] as const,
   },
   notifications: {
     all: ["notifications"] as const,

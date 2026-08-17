@@ -1,9 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
-import { Folder, HardDrive } from "lucide-react";
+import { FileText, Folder, HardDrive } from "lucide-react";
 import { Link } from "react-router-dom";
+import { listRecent } from "@/features/recent/api";
 import { listSites } from "@/features/sites/api";
 import { queryKeys } from "@/lib/queryKeys";
-import type { SiteDto } from "@/types/api";
+import type { RecentDocumentDto, SiteDto } from "@/types/api";
 
 export function Home() {
   const {
@@ -12,6 +13,11 @@ export function Home() {
   } = useQuery({
     queryKey: queryKeys.sites.list(),
     queryFn: listSites,
+  });
+
+  const recent = useQuery({
+    queryKey: queryKeys.me.recent(),
+    queryFn: listRecent,
   });
 
   if (isLoading) {
@@ -56,8 +62,76 @@ export function Home() {
           ))}
         </div>
       )}
+
+      <RecentSection recent={recent.data ?? []} isLoading={recent.isLoading} isError={recent.isError} />
     </div>
   );
+}
+
+function RecentSection({
+  recent,
+  isLoading,
+  isError,
+}: {
+  recent: RecentDocumentDto[];
+  isLoading: boolean;
+  isError: boolean;
+}) {
+  return (
+    <section className="mt-8" aria-labelledby="recent-heading">
+      <div className="mb-3">
+        <h2 id="recent-heading" className="text-lg font-semibold">Recent</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Documents you recently viewed, uploaded, or modified.
+        </p>
+      </div>
+      {isLoading && <div className="text-sm text-muted-foreground">Loading recent documents…</div>}
+      {isError && <div className="text-sm text-destructive">Failed to load recent documents.</div>}
+      {!isLoading && !isError && recent.length === 0 && (
+        <div className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
+          No recent documents yet.
+        </div>
+      )}
+      {!isLoading && !isError && recent.length > 0 && (
+        <div className="flex flex-col gap-2">
+          {recent.map((document) => (
+            <RecentRow key={document.documentId} document={document} />
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function RecentRow({ document }: { document: RecentDocumentDto }) {
+  const location = document.folderPath && document.folderPath !== "/"
+    ? `${document.siteName} / ${document.libraryName} / ${document.folderPath.trim().replace(/^\/+|\/+$/g, "")}`
+    : `${document.siteName} / ${document.libraryName}`;
+
+  return (
+    <Link
+      to={`/sites/${document.siteSlug}/libraries/${document.libraryId}?documentId=${encodeURIComponent(document.documentId)}`}
+      className="flex items-center gap-3 rounded-lg border bg-card px-4 py-3 hover:bg-muted/50"
+    >
+      <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+        <FileText className="size-4" />
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="truncate font-medium">{document.name}</div>
+        <div className="truncate text-xs text-muted-foreground">{location}</div>
+      </div>
+      <time
+        dateTime={document.lastTouchedAt}
+        className="shrink-0 text-xs text-muted-foreground max-sm:hidden"
+      >
+        {formatRecentTime(document.lastTouchedAt)}
+      </time>
+    </Link>
+  );
+}
+
+function formatRecentTime(value: string): string {
+  return new Date(value).toLocaleString();
 }
 
 function formatBytes(bytes: number): string {
