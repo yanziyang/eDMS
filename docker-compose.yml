@@ -51,6 +51,47 @@ services:
       timeout: 5s
       retries: 10
 
+  mock-oauth2-server:
+    # Test/demo only. Never use this provider in a production deployment.
+    image: ghcr.io/navikt/mock-oauth2-server:3.1.4
+    hostname: host.docker.internal
+    ports:
+      - "4011:8080"
+    environment:
+      # The provider accepts the client/redirect requested by the test app;
+      # these values mirror the Oidc:* settings below and .env.example.
+      JSON_CONFIG: >-
+        {
+          "interactiveLogin": true,
+          "tokenCallbacks": [
+            {
+              "issuerId": "default",
+              "requestMappings": [
+                {
+                  "requestParam": "subject",
+                  "match": "demo-user",
+                  "claims": {
+                    "sub": "oidc-demo-user",
+                    "aud": ["edms-demo-client"],
+                    "email": "demo-user@edms.local",
+                    "email_verified": true,
+                    "name": "OIDC Demo User",
+                    "preferred_username": "demo-user"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:8080/isalive"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+    mem_limit: 512m
+    cpus: 0.5
+
   api:
     build: ./server
     environment:
@@ -58,6 +99,11 @@ services:
       ConnectionStrings__Default: "Host=postgres;Port=5432;Database=edms;Username=postgres;Password=devonly"
       OfficeConversion__BaseUrl: "http://office-converter:8100"
       TextExtraction__BaseUrl: "http://text-extractor:9998"
+      Oidc__Authority: "http://host.docker.internal:4011/default"
+      Oidc__ClientId: "edms-demo-client"
+      Oidc__ClientSecret: "edms-demo-secret"
+      Oidc__CallbackPath: "/api/v1/auth/sso/oidc/callback"
+      Client__BaseUrl: "http://localhost:5173"
       Jwt__PrivateKey: ""
       Jwt__PublicKey: ""
       Seed__AdminEmail: "admin@edms.local"
@@ -66,6 +112,8 @@ services:
       Smtp__Port: "1025"
     ports:
       - "5080:8080"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       postgres:
         condition: service_healthy
@@ -74,6 +122,8 @@ services:
       office-converter:
         condition: service_healthy
       text-extractor:
+        condition: service_healthy
+      mock-oauth2-server:
         condition: service_healthy
 
   web:
