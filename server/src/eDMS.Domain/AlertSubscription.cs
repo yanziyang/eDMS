@@ -3,7 +3,7 @@ using eDMS.Domain.Common;
 namespace eDMS.Domain;
 
 /// <summary>
-/// A user's alert subscription for a document or folder (FR-NOTIF-02).
+/// A user's alert subscription for a site, library, folder, or document (FR-NOTIF-02).
 /// ObjectId is intentionally polymorphic because the permission model uses the
 /// same ObjectType/ObjectId pair and the target may be soft-deleted later.
 /// </summary>

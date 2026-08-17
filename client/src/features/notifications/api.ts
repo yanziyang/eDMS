@@ -1,5 +1,12 @@
 import { request } from "@/lib/api-client";
-import type { AlertFrequency, AlertSubscriptionDto, NotificationDto } from "@/types/api";
+import type {
+  AlertFrequency,
+  AlertSubscriptionDto,
+  FollowableObjectType,
+  NotificationDto,
+} from "@/types/api";
+
+export type { FollowableObjectType } from "@/types/api";
 
 export function listNotifications(unreadOnly = false): Promise<NotificationDto[]> {
   return request<NotificationDto[]>(`/me/notifications?unreadOnly=${unreadOnly}`);
@@ -18,7 +25,7 @@ export function listSubscriptions(): Promise<AlertSubscriptionDto[]> {
 }
 
 export function followItem(
-  objectType: "Document" | "Folder",
+  objectType: FollowableObjectType,
   objectId: string,
   frequency: AlertFrequency,
 ): Promise<AlertSubscriptionDto> {
@@ -28,6 +35,6 @@ export function followItem(
   });
 }
 
-export function unfollowItem(objectType: "Document" | "Folder", objectId: string): Promise<void> {
+export function unfollowItem(objectType: FollowableObjectType, objectId: string): Promise<void> {
   return request<void>(`/${objectType}/objects/${objectId}/follow`, { method: "DELETE" });
 }

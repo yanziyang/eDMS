@@ -44,6 +44,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { DocumentDetailsSheet } from "@/features/documents/components/DocumentDetailsSheet";
+import { FollowToggle } from "@/features/notifications/components/FollowToggle";
 import {
   createLibraryView,
   listLibraryViews,
@@ -409,6 +410,9 @@ export function LibraryBrowser() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          {libraryId && (
+            <FollowToggle objectType="Library" objectId={libraryId} itemName={libraryName} />
+          )}
           <Button variant="outline" size="sm" onClick={() => setCreateFolderOpen(true)}>
             <FolderPlus className="size-4" />
             New folder

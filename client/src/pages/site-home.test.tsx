@@ -110,6 +110,7 @@ function mockSiteRequests(
     http.get(`${base}/sites/s1/libraries`, () =>
       HttpResponse.json(overrides.libraries ?? [libraryDto()]),
     ),
+    http.get(`${base}/me/notifications/subscriptions`, () => HttpResponse.json([])),
   );
 }
 
@@ -134,6 +135,33 @@ describe("SiteHome", () => {
     expect(await screen.findByText("Managers")).toBeInTheDocument();
     expect(screen.getByText("3 members")).toBeInTheDocument();
     expect(screen.getByText("0 members")).toBeInTheDocument();
+  });
+
+  it("follows the current site from Site Home", async () => {
+    mockSiteRequests();
+    let requestBody: unknown;
+    server.use(
+      http.post(`${base}/Site/objects/s1/follow`, async ({ request }) => {
+        requestBody = await request.json();
+        return HttpResponse.json({
+          id: "sub-site",
+          objectType: "Site",
+          objectId: "s1",
+          objectName: "Site One",
+          frequency: "Immediate",
+          createdAt: "2026-08-17T00:00:00Z",
+        });
+      }),
+    );
+
+    const user = userEvent.setup();
+    renderSiteHome();
+    await screen.findByRole("heading", { name: "Site One" });
+
+    await user.click(await screen.findByRole("button", { name: "Follow" }));
+
+    await waitFor(() => expect(requestBody).toEqual({ frequency: "Immediate" }));
+    expect(mockedToast.success).toHaveBeenCalledWith("Following site");
   });
 
   it("falls back to a generic description", async () => {

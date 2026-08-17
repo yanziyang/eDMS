@@ -168,13 +168,53 @@ public sealed class NotificationService(
             return;
         }
 
+        var hierarchy = await ResolveFollowHierarchyAsync(objectType, objectId, cancellationToken);
+        if (hierarchy.Count == 0)
+        {
+            return;
+        }
+
+        var hierarchyRanks = hierarchy
+            .Select((target, index) => (target, index))
+            .ToDictionary(item => (item.target.ObjectType, item.target.ObjectId), item => item.index);
+        var documentIds = hierarchy
+            .Where(target => target.ObjectType == ObjectType.Document)
+            .Select(target => target.ObjectId)
+            .ToArray();
+        var folderIds = hierarchy
+            .Where(target => target.ObjectType == ObjectType.Folder)
+            .Select(target => target.ObjectId)
+            .ToArray();
+        var libraryIds = hierarchy
+            .Where(target => target.ObjectType == ObjectType.Library)
+            .Select(target => target.ObjectId)
+            .ToArray();
+        var siteIds = hierarchy
+            .Where(target => target.ObjectType == ObjectType.Site)
+            .Select(target => target.ObjectId)
+            .ToArray();
+
         var subscriptions = await db.AlertSubscriptions
-            .Where(item => item.ObjectType == objectType && item.ObjectId == objectId)
+            .Where(item =>
+                (item.ObjectType == ObjectType.Document && documentIds.Contains(item.ObjectId))
+                || (item.ObjectType == ObjectType.Folder && folderIds.Contains(item.ObjectId))
+                || (item.ObjectType == ObjectType.Library && libraryIds.Contains(item.ObjectId))
+                || (item.ObjectType == ObjectType.Site && siteIds.Contains(item.ObjectId)))
             .ToListAsync(cancellationToken);
         if (subscriptions.Count == 0)
         {
             return;
         }
+
+        // The closest subscription wins (Document before Folder before Library before
+        // Site), while the user receives only one row for a single persisted change.
+        subscriptions = subscriptions
+            .GroupBy(subscription => subscription.UserId)
+            .Select(group => group
+                .OrderBy(subscription => hierarchyRanks[(subscription.ObjectType, subscription.ObjectId)])
+                .ThenBy(subscription => subscription.CreatedAt)
+                .First())
+            .ToList();
 
         var objectName = await ResolveObjectNameAsync(objectType, objectId, cancellationToken)
             ?? "Deleted item";
@@ -340,6 +380,14 @@ public sealed class NotificationService(
         Guid objectId,
         CancellationToken cancellationToken) => objectType switch
         {
+            ObjectType.Site => await db.Sites.IgnoreQueryFilters()
+                .Where(site => site.Id == objectId)
+                .Select(site => site.Name)
+                .SingleOrDefaultAsync(cancellationToken),
+            ObjectType.Library => await db.Libraries.IgnoreQueryFilters()
+                .Where(library => library.Id == objectId)
+                .Select(library => library.Name)
+                .SingleOrDefaultAsync(cancellationToken),
             ObjectType.Document => await db.Documents.IgnoreQueryFilters()
                 .Where(document => document.Id == objectId)
                 .Select(document => document.Name)
@@ -350,6 +398,125 @@ public sealed class NotificationService(
                 .SingleOrDefaultAsync(cancellationToken),
             _ => null,
         };
+
+    private async Task<IReadOnlyList<FollowTarget>> ResolveFollowHierarchyAsync(
+        ObjectType objectType,
+        Guid objectId,
+        CancellationToken cancellationToken)
+    {
+        var targets = new List<FollowTarget>();
+
+        switch (objectType)
+        {
+            case ObjectType.Site:
+                if (await db.Sites.IgnoreQueryFilters()
+                    .AnyAsync(site => site.Id == objectId, cancellationToken))
+                {
+                    targets.Add(new FollowTarget(ObjectType.Site, objectId));
+                }
+
+                break;
+
+            case ObjectType.Library:
+            {
+                var library = await db.Libraries.IgnoreQueryFilters()
+                    .Where(item => item.Id == objectId)
+                    .Select(item => new { item.Id, item.SiteId })
+                    .SingleOrDefaultAsync(cancellationToken);
+                if (library is null)
+                {
+                    break;
+                }
+
+                targets.Add(new FollowTarget(ObjectType.Library, library.Id));
+                AddSiteTarget(targets, library.SiteId);
+                break;
+            }
+
+            case ObjectType.Folder:
+            {
+                var folder = await db.Folders.IgnoreQueryFilters()
+                    .Where(item => item.Id == objectId)
+                    .Select(item => new { item.Id, item.ParentFolderId, item.LibraryId })
+                    .SingleOrDefaultAsync(cancellationToken);
+                if (folder is null)
+                {
+                    break;
+                }
+
+                await AddFolderHierarchyByIdAsync(targets, folder.Id, cancellationToken);
+                await AddLibraryAndSiteTargetsAsync(targets, folder.LibraryId, cancellationToken);
+                break;
+            }
+
+            case ObjectType.Document:
+            {
+                var document = await db.Documents.IgnoreQueryFilters()
+                    .Where(item => item.Id == objectId)
+                    .Select(item => new { item.Id, item.FolderId, item.LibraryId })
+                    .SingleOrDefaultAsync(cancellationToken);
+                if (document is null)
+                {
+                    break;
+                }
+
+                targets.Add(new FollowTarget(ObjectType.Document, document.Id));
+                if (document.FolderId is Guid folderId)
+                {
+                    await AddFolderHierarchyByIdAsync(targets, folderId, cancellationToken);
+                }
+
+                await AddLibraryAndSiteTargetsAsync(targets, document.LibraryId, cancellationToken);
+                break;
+            }
+        }
+
+        return targets;
+    }
+
+    private async Task AddFolderHierarchyByIdAsync(
+        ICollection<FollowTarget> targets,
+        Guid folderId,
+        CancellationToken cancellationToken)
+    {
+        var visited = new HashSet<Guid>();
+        Guid? currentId = folderId;
+        while (currentId is Guid id && visited.Add(id))
+        {
+            var folder = await db.Folders.IgnoreQueryFilters()
+                .Where(item => item.Id == id)
+                .Select(item => new { item.Id, item.ParentFolderId, item.LibraryId })
+                .SingleOrDefaultAsync(cancellationToken);
+            if (folder is null)
+            {
+                break;
+            }
+
+            targets.Add(new FollowTarget(ObjectType.Folder, folder.Id));
+            currentId = folder.ParentFolderId;
+        }
+    }
+
+    private async Task AddLibraryAndSiteTargetsAsync(
+        ICollection<FollowTarget> targets,
+        Guid libraryId,
+        CancellationToken cancellationToken)
+    {
+        var library = await db.Libraries.IgnoreQueryFilters()
+            .Where(item => item.Id == libraryId)
+            .Select(item => new { item.Id, item.SiteId })
+            .SingleOrDefaultAsync(cancellationToken);
+        if (library is null)
+        {
+            return;
+        }
+
+        targets.Add(new FollowTarget(ObjectType.Library, library.Id));
+        AddSiteTarget(targets, library.SiteId);
+    }
+
+    private static void AddSiteTarget(ICollection<FollowTarget> targets, Guid siteId) =>
+        targets.Add(new FollowTarget(ObjectType.Site, siteId));
 
     private static AlertSubscriptionDto ToSubscriptionDto(
         AlertSubscription subscription,
@@ -376,12 +543,14 @@ public sealed class NotificationService(
     {
         if (!IsFollowable(objectType))
         {
-            throw new ConflictException("Only documents and folders can be followed.");
+            throw new ConflictException("Only sites, libraries, folders, and documents can be followed.");
         }
     }
 
     private static bool IsFollowable(ObjectType objectType) =>
-        objectType is ObjectType.Document or ObjectType.Folder;
+        objectType is ObjectType.Site or ObjectType.Library or ObjectType.Folder or ObjectType.Document;
+
+    private sealed record FollowTarget(ObjectType ObjectType, Guid ObjectId);
 
     private static void ValidateFrequency(AlertFrequency frequency)
     {

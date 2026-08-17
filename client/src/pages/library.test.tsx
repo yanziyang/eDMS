@@ -78,6 +78,7 @@ function mockNav(overrides: { sites?: unknown; libraries?: unknown; views?: unkn
     ),
     http.get(`${base}/libraries/l1/views`, () => HttpResponse.json(overrides.views ?? [])),
     http.get(`${base}/admin/content-types`, () => HttpResponse.json([])),
+    http.get(`${base}/me/notifications/subscriptions`, () => HttpResponse.json([])),
   );
 }
 
@@ -323,6 +324,34 @@ describe("LibraryBrowser", () => {
       "/sites/site-one",
     );
     expect(await screen.findByRole("heading", { name: "Policies" })).toBeInTheDocument();
+  });
+
+  it("follows the current library from the library toolbar", async () => {
+    mockNav();
+    let requestBody: unknown;
+    server.use(
+      http.get(`${base}/libraries/l1/items`, () => HttpResponse.json([])),
+      http.post(`${base}/Library/objects/l1/follow`, async ({ request }) => {
+        requestBody = await request.json();
+        return HttpResponse.json({
+          id: "sub-library",
+          objectType: "Library",
+          objectId: "l1",
+          objectName: "Policies",
+          frequency: "Immediate",
+          createdAt: "2026-08-17T00:00:00Z",
+        });
+      }),
+    );
+
+    const user = userEvent.setup();
+    renderLibrary();
+    await screen.findByRole("heading", { name: "Policies" });
+
+    await user.click(await screen.findByRole("button", { name: "Follow" }));
+
+    await waitFor(() => expect(requestBody).toEqual({ frequency: "Immediate" }));
+    expect(mockedToast.success).toHaveBeenCalledWith("Following library");
   });
 
   it("shows the empty state", async () => {

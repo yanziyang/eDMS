@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Download,
-  Bell,
   FileText,
   FileWarning,
   LoaderCircle,
@@ -26,9 +25,7 @@ import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
-  SelectGroup,
   SelectItem,
-  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
@@ -56,10 +53,9 @@ import {
 } from "@/features/content-types/components/MetadataFields";
 import { FavoriteToggle } from "@/features/favorites/components/FavoriteToggle";
 import { grantPermission, getPermissions, resetPermissions, revokePermission } from "@/features/permissions/api";
-import { followItem, listSubscriptions, unfollowItem } from "@/features/notifications/api";
+import { FollowToggle } from "@/features/notifications/components/FollowToggle";
 import { queryKeys } from "@/lib/queryKeys";
 import type {
-  AlertFrequency,
   DocumentDto,
   DocumentMetadataColumnDto,
   PermissionLevel,
@@ -110,7 +106,7 @@ export function DocumentDetailsSheet({ documentId, open, onOpenChange }: Documen
                   <Share2 className="size-4" />
                   Share
                 </Button>
-                <FollowControl documentId={documentId} />
+                <FollowToggle objectType="Document" objectId={documentId} itemName={detail.data.name} />
               </div>
             </SheetHeader>
 
@@ -153,80 +149,6 @@ export function DocumentDetailsSheet({ documentId, open, onOpenChange }: Documen
         )}
       </SheetContent>
     </Sheet>
-  );
-}
-
-function FollowControl({ documentId }: { documentId: string }) {
-  const queryClient = useQueryClient();
-  const subscriptions = useQuery({
-    queryKey: queryKeys.notifications.subscriptions(),
-    queryFn: listSubscriptions,
-  });
-  const subscription = subscriptions.data?.find(
-    (item) => item.objectType === "Document" && item.objectId === documentId,
-  );
-  const follow = useMutation({
-    mutationFn: (frequency: AlertFrequency) => followItem("Document", documentId, frequency),
-    onSuccess: () => {
-      toast.success("Following document");
-      queryClient.invalidateQueries({ queryKey: queryKeys.notifications.subscriptions() });
-    },
-    onError: () => toast.error("Failed to follow document"),
-  });
-  const unfollow = useMutation({
-    mutationFn: () => unfollowItem("Document", documentId),
-    onSuccess: () => {
-      toast.success("Unfollowed document");
-      queryClient.invalidateQueries({ queryKey: queryKeys.notifications.subscriptions() });
-    },
-    onError: () => toast.error("Failed to unfollow document"),
-  });
-
-  if (subscriptions.isLoading) {
-    return null;
-  }
-
-  if (!subscription) {
-    return (
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={() => follow.mutate("Immediate")}
-        disabled={follow.isPending}
-      >
-        <Bell data-icon="inline-start" />
-        Follow
-      </Button>
-    );
-  }
-
-  return (
-    <div className="flex items-center gap-1">
-      <Select
-        value={subscription.frequency}
-        onValueChange={(value) => follow.mutate(value as AlertFrequency)}
-      >
-        <SelectTrigger className="w-28" aria-label="Alert frequency">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectGroup>
-            <SelectLabel>Alerts</SelectLabel>
-            <SelectItem value="Immediate">Immediate</SelectItem>
-            <SelectItem value="Daily">Daily</SelectItem>
-            <SelectItem value="Weekly">Weekly</SelectItem>
-          </SelectGroup>
-        </SelectContent>
-      </Select>
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={() => unfollow.mutate()}
-        disabled={unfollow.isPending}
-      >
-        Unfollow
-      </Button>
-    </div>
   );
 }
 

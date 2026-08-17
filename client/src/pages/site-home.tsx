@@ -24,6 +24,7 @@ import {
 import { listUsers } from "@/features/admin/api";
 import { listLibraries } from "@/features/documents/api";
 import { FavoriteToggle } from "@/features/favorites/components/FavoriteToggle";
+import { FollowToggle } from "@/features/notifications/components/FollowToggle";
 import { listGroups } from "@/features/groups/api";
 import {
   getPermissions,
@@ -85,6 +86,7 @@ export function SiteHome() {
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <FavoriteToggle objectType="Site" objectId={displaySite.id} itemName={displaySite.name} />
+          <FollowToggle objectType="Site" objectId={displaySite.id} itemName={displaySite.name} />
           <Button variant="outline" size="sm" onClick={() => setAccessOpen(true)}>
             <ShieldCheck className="size-4" />
             Manage access

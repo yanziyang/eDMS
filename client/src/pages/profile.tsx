@@ -4,7 +4,12 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { me } from "@/features/auth/api";
-import { followItem, listSubscriptions, unfollowItem } from "@/features/notifications/api";
+import {
+  followItem,
+  listSubscriptions,
+  unfollowItem,
+  type FollowableObjectType,
+} from "@/features/notifications/api";
 import { queryKeys } from "@/lib/queryKeys";
 import { toast } from "sonner";
 import type { AlertFrequency } from "@/types/api";
@@ -25,7 +30,7 @@ export function Profile() {
       objectId,
       frequency,
     }: {
-      objectType: "Document" | "Folder";
+      objectType: FollowableObjectType;
       objectId: string;
       frequency: AlertFrequency;
     }) => followItem(objectType, objectId, frequency),
@@ -36,7 +41,7 @@ export function Profile() {
     onError: () => toast.error("Failed to update alert frequency"),
   });
   const removeSubscription = useMutation({
-    mutationFn: ({ objectType, objectId }: { objectType: "Document" | "Folder"; objectId: string }) =>
+    mutationFn: ({ objectType, objectId }: { objectType: FollowableObjectType; objectId: string }) =>
       unfollowItem(objectType, objectId),
     onSuccess: () => {
       toast.success("Unfollowed");
@@ -66,7 +71,9 @@ export function Profile() {
       <Card className="mt-6">
         <CardHeader>
           <CardTitle>Alert preferences</CardTitle>
-          <CardDescription>Choose how often followed documents and folders notify you.</CardDescription>
+          <CardDescription>
+            Choose how often followed sites, libraries, folders, and documents notify you.
+          </CardDescription>
         </CardHeader>
         <CardContent>
           {subscriptions.isLoading && (

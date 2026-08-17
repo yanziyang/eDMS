@@ -282,10 +282,11 @@ export interface DocumentMetadataColumnDto {
 }
 
 export type AlertFrequency = "Immediate" | "Daily" | "Weekly";
+export type FollowableObjectType = "Site" | "Library" | "Folder" | "Document";
 
 export interface AlertSubscriptionDto {
   id: string;
-  objectType: "Document" | "Folder";
+  objectType: FollowableObjectType;
   objectId: string;
   objectName: string;
   frequency: AlertFrequency;
@@ -295,7 +296,7 @@ export interface AlertSubscriptionDto {
 export interface NotificationDto {
   id: string;
   kind: "SharedWithMe" | "FollowedItemChanged";
-  objectType: "Document" | "Folder";
+  objectType: FollowableObjectType;
   objectId: string;
   objectName: string;
   message: string;
