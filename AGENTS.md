@@ -6,13 +6,13 @@ Instructions for AI coding agents (OpenCode, Claude Code, Cursor, or any other a
 
 **eDMS** is an internal enterprise document management system — SharePoint Online's key functions (sites, libraries, folders, documents, versioning, check-out/check-in, permissions, search, recycle bin, audit trail), for internal use only, no anonymous/external sharing. Full context: [`doc/functional-spec.md`](doc/functional-spec.md) §1–§2.
 
-**Repository state — read before doing anything else:** the production `server/` (.NET 10) and `client/` (React/Vite) now exist. **Phase 2 (M0–M19) is done** — the Phase 1 core plus content types and required metadata, Office preview, chunked uploads, notifications/alerts, authenticated organization-wide share links, PDF/Office content indexing, dark theme, Phase 2 E2E/accessibility/responsive coverage, and deployment wiring are complete and covered by the quality gates. **Phase 3 (SAML2/OIDC federation, FR-AUTH-09/10/11) is now planned** in **`doc/ImplementationPlan V1.2.md`** — this is the functional spec's currently-final phase (FS §15). The next task is the first `Not Started` item there. `doc/ImplementationPlan V1.1.md` (Phase 1 close-out + Phase 2, all `Done`) and `doc/ImplementationPlan V1.0.md` (original Phase 1 plan) are both superseded — historical reference only, do not work from either.
+**Repository state — read before doing anything else:** the production `server/` (.NET 10) and `client/` (React/Vite) now exist. **Phase 2 (M0–M19) is done** — the Phase 1 core plus content types and required metadata, Office preview, chunked uploads, notifications/alerts, authenticated organization-wide share links, PDF/Office content indexing, dark theme, Phase 2 E2E/accessibility/responsive coverage, and deployment wiring are complete and covered by the quality gates. **Phase 3 (SAML2/OIDC federation, FR-AUTH-09/10/11) is complete** — M20–M23 delivered the two federated login paths, JIT provisioning, one-time handoff exchange, SSO enforcement, and their hardening/sign-off coverage. The next task is the first `Not Started` item in **`doc/ImplementationPlan V1.2.md`**. `doc/ImplementationPlan V1.1.md` (Phase 1 close-out + Phase 2, all `Done`) and `doc/ImplementationPlan V1.0.md` (original Phase 1 plan) are both superseded — historical reference only, do not work from either.
 
 | Path | What it is | Status |
 |---|---|---|
 | `doc/functional-spec.md` / `.html` | Requirements, data model, API surface, roadmap | Source of truth — done |
 | `doc/technical-design-spec.md` / `.html` | Architecture, schema DDL, class-level design, deployment | Source of truth — done |
-| `doc/ImplementationPlan V1.2.md` | **Active** sequenced, dependency-ordered task list — Phase 3 federation (M20–M23) with a live Status column | **Read this to find your next task** |
+| `doc/ImplementationPlan V1.2.md` | **Active** sequenced, dependency-ordered task list — Phase 3 federation (M20–M23) and Phase 4 (M24–M31), with a live Status column | **Read this to find your next task** |
 | `doc/ImplementationPlan V1.1.md` | Superseded Phase 1 close-out + Phase 2 (M10–M19) plan, all milestones `Done` at handoff | Historical reference only — superseded |
 | `doc/ImplementationPlan V1.0.md` | Archived Phase 1 (M0–M9) plan, frozen at handoff | Historical reference only — superseded |
 | `prototype(html)/` | Clickable UX/IA reference (vanilla HTML/CSS/JS mimicking shadcn) | Reference only — **see §8, do not port its code** |
@@ -51,7 +51,7 @@ Don't load the full specs into context speculatively. Look up the row that match
 | Styling | Tailwind CSS 4 |
 | Backend | .NET 10, ASP.NET Core Web API (controllers, not Minimal APIs — ADR-3), Entity Framework Core |
 | Database | EF Core provider-switchable via `Database:Provider` (ADR-8): **PostgreSQL** (production), **SQL Server**, **MySQL**, **SQLite** (default for local Development) |
-| Auth | Database (local) auth now; SAML2/OIDC federation in progress (FR-AUTH-09/10, `doc/ImplementationPlan V1.2.md`) |
+| Auth | Database (local) auth plus completed SAML2/OIDC federation (FR-AUTH-09/10/11, `doc/ImplementationPlan V1.2.md`) |
 
 Supporting libraries and the rationale for each are in FS §3 and TDS §2.4 (ADR table) — don't swap MediatR, Mapster, TanStack Query, Zustand, etc. for alternatives without a good reason recorded as a new ADR in TDS §2.4.
 
@@ -149,7 +149,7 @@ These are the things most likely to be silently violated by an agent working sec
 6. **File content-type is sniffed server-side from magic bytes.** Never trust the client's `Content-Type` header (TDS §5.4, §10.2).
 7. **Every command/query has a validator.** Don't skip it because "the frontend already checks this" (TDS §5.2 pipeline behaviors).
 8. **No anonymous or external sharing, ever.** Every principal is an internal `User` or `Group` (FS §2.2). This is a scope boundary, not an oversight — don't add a public-link feature without an explicit spec change.
-9. **Don't build ahead of the roadmap.** Check FS §15 before implementing something. Phase 3 federation now has a plan (`doc/ImplementationPlan V1.2.md`) — build against it, not ahead of it; anything beyond FS's three currently-defined phases (retention, legal hold, workflow/approval, etc.) still requires a new spec decision first (see V1.2 §8).
+9. **Don't build ahead of the roadmap.** Check FS §15 before implementing something. Phase 3 federation is complete; continue with the next `Not Started` milestone in `doc/ImplementationPlan V1.2.md` and do not build beyond the sequenced scope. Anything beyond FS's currently-defined phases (retention, legal hold, workflow/approval, etc.) still requires a new spec decision first (see V1.2 §8).
 
 ## 8. The `prototype(html)/` Folder
 
