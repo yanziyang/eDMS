@@ -54,6 +54,7 @@ import {
   missingRequiredColumns,
   type MetadataFieldColumn,
 } from "@/features/content-types/components/MetadataFields";
+import { FavoriteToggle } from "@/features/favorites/components/FavoriteToggle";
 import { grantPermission, getPermissions, resetPermissions, revokePermission } from "@/features/permissions/api";
 import { followItem, listSubscriptions, unfollowItem } from "@/features/notifications/api";
 import { queryKeys } from "@/lib/queryKeys";
@@ -403,11 +404,12 @@ function PropertiesTab({ document }: { document: DocumentDto }) {
             onChange={(event) => setDescription(event.target.value)}
           />
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button onClick={() => save.mutate()} disabled={save.isPending}>
             {save.isPending && <LoaderCircle className="size-4 animate-spin" />}
             Save
           </Button>
+          <FavoriteToggle objectType="Document" objectId={document.id} itemName={document.name} />
           {document.checkedOutBy ? (
             <Badge variant="outline" className="gap-1">
               <Lock className="size-3" />

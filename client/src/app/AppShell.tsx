@@ -1,4 +1,4 @@
-import { LogOut, Menu, Moon, Recycle, Search, Settings, Sun } from "lucide-react";
+import { LogOut, Menu, Moon, Recycle, Search, Settings, Star, Sun } from "lucide-react";
 import { Bell } from "lucide-react";
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -56,6 +56,10 @@ export function AppShell() {
       <NavLink to="/search" className={navClass}>
         <Search className="size-4" />
         Search
+      </NavLink>
+      <NavLink to="/favorites" className={navClass}>
+        <Star className="size-4" />
+        Favorites
       </NavLink>
       <NavLink to="/recycle-bin" className={navClass}>
         <Recycle className="size-4" />

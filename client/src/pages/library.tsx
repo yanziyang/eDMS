@@ -19,7 +19,7 @@ import {
   X,
 } from "lucide-react";
 import { toast } from "sonner";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -70,6 +70,7 @@ type ViewMode = "list" | "grid";
 
 export function LibraryBrowser() {
   const { siteSlug, libraryId } = useParams();
+  const [searchParams] = useSearchParams();
   const queryClient = useQueryClient();
 
   const [folderId, setFolderId] = useState<string | null>(null);
@@ -81,14 +82,17 @@ export function LibraryBrowser() {
 const [createFolderOpen, setCreateFolderOpen] = useState(false);
 const [uploadOpen, setUploadOpen] = useState(false);
 const [settingsOpen, setSettingsOpen] = useState(false);
-const [moveOpen, setMoveOpen] = useState(false);
+  const [moveOpen, setMoveOpen] = useState(false);
   const [selectedDocumentId, setSelectedDocumentId] = useState<string | null>(null);
+  const requestedFolderId = searchParams.get("folderId");
+  const requestedDocumentId = searchParams.get("documentId");
 
   useEffect(() => {
-    setFolderId(null);
-    setFolderName("");
+    setFolderId(requestedFolderId);
+    setFolderName(requestedFolderId ? "Folder" : "");
+    setSelectedDocumentId(requestedDocumentId);
     setSelection(new Set());
-  }, [libraryId]);
+  }, [libraryId, requestedDocumentId, requestedFolderId]);
 
   const sites = useQuery({
     queryKey: queryKeys.sites.list(),

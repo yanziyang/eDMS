@@ -115,6 +115,18 @@ export interface UploadSessionDto {
 
 export type PermissionLevel = "FullControl" | "Contribute" | "Read" | "NoAccess";
 
+export type FavoriteObjectType = "Site" | "Library" | "Folder" | "Document";
+
+export interface FavoriteItemDto {
+  objectId: string;
+  objectType: FavoriteObjectType;
+  name: string;
+  location: string;
+  siteSlug: string;
+  libraryId: string | null;
+  folderId: string | null;
+}
+
 export type ShareLinkLevel = "Read" | "Contribute";
 
 export interface ShareLinkDto {

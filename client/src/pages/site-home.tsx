@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/select";
 import { listUsers } from "@/features/admin/api";
 import { listLibraries } from "@/features/documents/api";
+import { FavoriteToggle } from "@/features/favorites/components/FavoriteToggle";
 import { listGroups } from "@/features/groups/api";
 import {
   getPermissions,
@@ -82,10 +83,13 @@ export function SiteHome() {
             {displaySite.description || "No description"}
           </p>
         </div>
-        <Button variant="outline" size="sm" onClick={() => setAccessOpen(true)}>
-          <ShieldCheck className="size-4" />
-          Manage access
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <FavoriteToggle objectType="Site" objectId={displaySite.id} itemName={displaySite.name} />
+          <Button variant="outline" size="sm" onClick={() => setAccessOpen(true)}>
+            <ShieldCheck className="size-4" />
+            Manage access
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">

@@ -1,6 +1,7 @@
 import { Navigate, createBrowserRouter } from "react-router-dom";
 import { AppShell } from "@/app/AppShell";
 import { ForgotPassword } from "@/pages/forgot-password";
+import { Favorites } from "@/pages/favorites";
 import { Home } from "@/pages/home";
 import { Admin } from "@/pages/admin";
 import { Login } from "@/pages/login";
@@ -30,6 +31,7 @@ export const router = createBrowserRouter([
     element: <AppShell />,
     children: [
       { path: "/", element: <Home /> },
+      { path: "/favorites", element: <Favorites /> },
       { path: "/sites/:siteSlug", element: <SiteHome /> },
       { path: "/sites/:siteSlug/libraries/:libraryId", element: <LibraryBrowser /> },
       { path: "/search", element: <Search /> },
