@@ -2,6 +2,7 @@ using eDMS.Application;
 using eDMS.Application.Auth;
 using eDMS.Application.Common.Interfaces;
 using eDMS.Api.Auth;
+using eDMS.Api.Controllers;
 using eDMS.Domain;
 using eDMS.Infrastructure;
 using eDMS.Infrastructure.Options;
@@ -9,11 +10,13 @@ using eDMS.Infrastructure.Persistence;
 using eDMS.Infrastructure.Persistence.Seeding;
 using eDMS.Infrastructure.Security;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.RateLimiting;
 using System.Threading.RateLimiting;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.IdentityModel.Protocols.OpenIdConnect;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json.Serialization;
 using Serilog;
@@ -69,6 +72,8 @@ public class Program
 
         var jwtOptions = builder.Configuration.GetSection(JwtOptions.SectionName).Get<JwtOptions>()
             ?? new JwtOptions();
+        var oidcOptions = builder.Configuration.GetSection(OidcOptions.SectionName).Get<OidcOptions>()
+            ?? new OidcOptions();
         var keyMaterial = new TokenKeyMaterial(jwtOptions);
         builder.Services.AddSingleton(keyMaterial);
 
@@ -84,7 +89,7 @@ public class Program
             .AddDefaultTokenProviders()
             .AddEntityFrameworkStores<AppDbContext>();
 
-        builder.Services
+        var authentication = builder.Services
             .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             .AddJwtBearer(options =>
             {
@@ -100,6 +105,51 @@ public class Program
                     ClockSkew = TimeSpan.FromSeconds(30),
                 };
             });
+
+        if (!string.IsNullOrWhiteSpace(oidcOptions.Authority))
+        {
+            authentication
+                .AddCookie(SsoAuthenticationSchemes.CorrelationCookie, options =>
+                {
+                    options.Cookie.Name = SsoAuthenticationSchemes.CorrelationCookie;
+                    options.Cookie.HttpOnly = true;
+                    options.Cookie.SameSite = SameSiteMode.Lax;
+                    options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+                    options.ExpireTimeSpan = TimeSpan.FromMinutes(5);
+                    options.SlidingExpiration = false;
+                })
+                .AddOpenIdConnect(SsoAuthenticationSchemes.Oidc, options =>
+                {
+                    options.SignInScheme = SsoAuthenticationSchemes.CorrelationCookie;
+                    options.Authority = oidcOptions.Authority;
+                    options.ClientId = oidcOptions.ClientId;
+                    options.ClientSecret = oidcOptions.ClientSecret;
+                    options.CallbackPath = oidcOptions.CallbackPath;
+                    options.ResponseType = OpenIdConnectResponseType.Code;
+                    options.UsePkce = true;
+                    options.SaveTokens = false;
+                    options.GetClaimsFromUserInfoEndpoint = false;
+                    options.Scope.Clear();
+                    options.Scope.Add("openid");
+                    options.Scope.Add("profile");
+                    options.Scope.Add("email");
+                    options.Events = new OpenIdConnectEvents
+                    {
+                        OnTokenValidated = context => SsoController.HandleOidcTokenValidatedAsync(
+                            context,
+                            builder.Configuration.GetSection(ClientOptions.SectionName).Get<ClientOptions>()
+                                ?? new ClientOptions()),
+                        OnRemoteFailure = context =>
+                        {
+                            SsoController.HandleOidcRemoteFailure(
+                                context,
+                                builder.Configuration.GetSection(ClientOptions.SectionName).Get<ClientOptions>()
+                                    ?? new ClientOptions());
+                            return Task.CompletedTask;
+                        },
+                    };
+                });
+        }
 
         builder.Services.AddAuthorization(options =>
             options.AddPolicy("SystemAdmin", policy => policy.RequireClaim("is_admin", "true")));

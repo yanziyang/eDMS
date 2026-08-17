@@ -4,6 +4,8 @@ public sealed record LoginRequest(string Email, string Password);
 
 public sealed record SsoExchangeRequest(string Code);
 
+public sealed record SsoProvidersResponse(bool Oidc, bool Saml);
+
 public sealed record SiteMembershipDto(Guid SiteId, string SiteSlug, string Role);
 
 public sealed record CurrentUserDto(
