@@ -9,8 +9,10 @@ namespace eDMS.Application.UnitTests;
 
 /// <summary>
 /// Every MediatR command/query must have a registered FluentValidation validator
-/// (M11.1, AGENTS.md §7 rule 7). The check is DI-based so a validator that exists
-/// but was never registered also fails the audit.
+/// (M11.1, M19.4, M23.2, AGENTS.md §7 rule 7). The check is DI-based so a
+/// validator that exists but was never registered also fails the audit. The
+/// assembly-wide discovery means any new Phase 3 command/query is included
+/// automatically rather than relying on a hand-maintained allow-list.
 /// </summary>
 public sealed class ValidatorCoverageTests
 {
