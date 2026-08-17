@@ -3,6 +3,7 @@ import { AppLayout } from "@/components/app/app-layout";
 import { ForgotPassword } from "@/pages/forgot-password";
 import { Login } from "@/pages/login";
 import { Home } from "@/pages/home";
+import { Favorites } from "@/pages/favorites";
 import { SiteHome } from "@/pages/site-home";
 import { Library } from "@/pages/library";
 import { Search } from "@/pages/search";
@@ -23,6 +24,7 @@ export default function App() {
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route element={<AppLayout />}>
         <Route path="/home" element={<Home />} />
+        <Route path="/favorites" element={<Favorites />} />
         <Route path="/sites/:slug" element={<SiteHome />} />
         <Route path="/sites/:slug/:lib" element={<Library />} />
         <Route path="/sites/:slug/:lib/:folder" element={<Library />} />

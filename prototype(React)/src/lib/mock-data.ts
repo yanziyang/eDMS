@@ -5,6 +5,9 @@ import type {
   Notification,
   QuickAccessDoc,
   RecycleItem,
+  FavoriteEntry,
+  RecentDocument,
+  SavedView,
   Site,
   User,
 } from "@/types";
@@ -243,6 +246,33 @@ export const QUICK_ACCESS: QuickAccessDoc[] = [
   { site: "hr", lib: "documents", folder: "root", name: "Employee Handbook 2026.docx", ext: "docx" },
   { site: "marketing", lib: "documents", folder: "root", name: "Brand Guidelines 2026.pdf", ext: "pdf" },
 ];
+
+export const RECENT_DOCUMENTS: RecentDocument[] = [
+  { site: "phoenix", lib: "documents", folder: "root", name: "Requirements Spec v2.docx", ext: "docx", modified: "2026-08-14", modifiedBy: "Liam O'Brien", action: "Viewed" },
+  { site: "finance", lib: "documents", folder: "root", name: "Q3 Financial Report.xlsx", ext: "xlsx", modified: "2026-08-14", modifiedBy: "Sarah Chen", action: "Modified" },
+  { site: "marketing", lib: "documents", folder: "root", name: "Q3 Campaign Plan.pptx", ext: "pptx", modified: "2026-08-14", modifiedBy: "Victor Alves", action: "Uploaded" },
+  { site: "hr", lib: "documents", folder: "root", name: "Employee Handbook 2026.docx", ext: "docx", modified: "2026-08-08", modifiedBy: "Rachel Adams", action: "Viewed" },
+  { site: "it", lib: "documents", folder: "root", name: "Server Runbook.docx", ext: "docx", modified: "2026-08-11", modifiedBy: "Omar Farouk", action: "Viewed" },
+];
+
+export const FAVORITE_ENTRIES: FavoriteEntry[] = [
+  { key: "site:finance", type: "site", name: "Finance", href: "/sites/finance", detail: "Site · 18 members" },
+  { key: "library:finance/documents", type: "library", name: "Finance Documents", href: "/sites/finance/documents/root", detail: "Library · Finance" },
+  { key: "folder:finance/documents/invoices", type: "folder", name: "Invoices", href: "/sites/finance/documents/invoices", detail: "Folder · Finance / Documents" },
+  { key: "document:phoenix/documents/root/requirements", type: "document", name: "Requirements Spec v2.docx", href: "/sites/phoenix/documents/root", detail: "Document · Project Phoenix / Documents", ext: "docx" },
+];
+
+export const SAVED_VIEWS: Record<string, SavedView[]> = {
+  "finance/documents/root": [
+    { id: "all", name: "All items", filter: "", sortKey: "name", sortDir: "asc", groupBy: "none", isDefault: true },
+    { id: "recent-files", name: "Recently modified files", filter: "", sortKey: "modified", sortDir: "desc", groupBy: "type" },
+    { id: "finance-tags", name: "Finance tagged", filter: "finance", sortKey: "name", sortDir: "asc", groupBy: "none" },
+  ],
+  "phoenix/documents/root": [
+    { id: "all", name: "All items", filter: "", sortKey: "name", sortDir: "asc", groupBy: "none", isDefault: true },
+    { id: "roadmap", name: "Roadmap and specs", filter: "roadmap", sortKey: "modified", sortDir: "desc", groupBy: "none" },
+  ],
+};
 
 /* Storage usage report data */
 export const STORAGE_TREND = [68, 74, 81, 90, 101, 108, 118]; /* GB, last 7 months incl. current */

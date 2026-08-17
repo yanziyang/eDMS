@@ -4,6 +4,7 @@ import {
   Clock,
   Folder,
   Home,
+  Star,
   Settings,
   Trash2,
   UserPlus,
@@ -110,6 +111,12 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
           active={path === "/recycle-bin"}
           icon={<Trash2 className={iconCls} />}
           label="Recycle Bin"
+        />
+        <SidebarLink
+          to="/favorites"
+          active={path === "/favorites"}
+          icon={<Star className={iconCls} />}
+          label="Favorites"
         />
         <div className="px-2.5 pb-1.5 pt-3.5 text-[11px] font-semibold uppercase tracking-[0.06em] text-sidebar-foreground/50">
           Admin Center

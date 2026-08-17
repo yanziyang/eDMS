@@ -145,7 +145,7 @@ export function Search() {
                 key={`${d.site}/${d.lib}/${d.folder}/${d.name}`}
                 type="button"
                 className="mb-2.5 flex w-full items-center gap-3.5 rounded-[var(--radius)] border bg-card px-4 py-3.5 text-left hover:bg-muted/40"
-                onClick={() => openDocSheet({ ...d }, "properties")}
+                onClick={() => openDocSheet({ ...d }, "properties", { site: d.site, lib: d.lib, folder: d.folder })}
               >
                 <FileIcon item={d} />
                 <div className="min-w-0 flex-1">

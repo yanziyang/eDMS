@@ -1,4 +1,4 @@
-import { Building2, Bell, ChevronRight, Database, FileText, TrendingUp, UploadCloud } from "lucide-react";
+import { Building2, Bell, ChevronRight, Clock3, Database, FileText, TrendingUp, UploadCloud } from "lucide-react";
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -11,11 +11,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { SiteIcon } from "@/components/app/icon-map";
-import { actionVerb, initialsOf } from "@/lib/helpers";
+import { actionVerb, fmtDate, initialsOf } from "@/lib/helpers";
 import { AUDIT_LOG, CURRENT_USER, NOTIFICATIONS, QUICK_ACCESS, SEARCH_INDEX, findSite } from "@/lib/mock-data";
-import { db } from "@/lib/store";
+import { db, useDb } from "@/lib/store";
 
 export function Home() {
+  useDb();
   const navigate = useNavigate();
   const [openCreateSite, setOpenCreateSite] = useState(false);
 
@@ -112,6 +113,34 @@ export function Home() {
           </Link>
         ))}
       </div>
+
+      <Card className="mb-8">
+        <CardHeader>
+          <div>
+            <CardTitle>Recent documents</CardTitle>
+            <CardDescription>Documents you viewed, uploaded, or modified across your sites</CardDescription>
+          </div>
+          <Clock3 className="size-4 text-muted-foreground" />
+        </CardHeader>
+        <CardContent className="grid grid-cols-1 gap-1 sm:grid-cols-2 lg:grid-cols-3">
+          {db.recent.map((doc) => (
+            <Link
+              key={`${doc.site}/${doc.lib}/${doc.name}`}
+              to={`/sites/${doc.site}/${doc.lib}/${doc.folder}`}
+              className="flex min-w-0 items-center gap-3 rounded-[calc(var(--radius)-4px)] px-2.5 py-2.5 hover:bg-muted/50"
+            >
+              <FileIcon item={{ type: "file", ext: doc.ext }} />
+              <div className="min-w-0 flex-1">
+                <div className="truncate text-sm font-medium">{doc.name}</div>
+                <div className="mt-0.5 truncate text-xs text-muted-foreground">
+                  {findSite(doc.site).name} · {doc.action.toLowerCase()} {fmtDate(doc.modified)}
+                </div>
+              </div>
+              <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
+            </Link>
+          ))}
+        </CardContent>
+      </Card>
 
       <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-[1.4fr_1fr]">
         <Card>

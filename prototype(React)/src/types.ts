@@ -20,6 +20,8 @@ export interface LibraryItem {
   type: "folder" | "file";
   id?: string;
   name: string;
+  title?: string;
+  description?: string;
   ext?: string;
   size?: string;
   modified: string;
@@ -93,6 +95,40 @@ export interface QuickAccessDoc {
   folder: string;
   name: string;
   ext: string;
+}
+
+export type FavoriteType = "site" | "library" | "folder" | "document";
+
+export interface FavoriteEntry {
+  key: string;
+  type: FavoriteType;
+  name: string;
+  href: string;
+  detail: string;
+  ext?: string;
+}
+
+export type FollowType = "site" | "library";
+
+export interface SavedView {
+  id: string;
+  name: string;
+  filter: string;
+  sortKey: "name" | "modifiedBy" | "modified" | "size";
+  sortDir: "asc" | "desc";
+  groupBy: "none" | "type" | "modifiedBy";
+  isDefault?: boolean;
+}
+
+export interface RecentDocument {
+  site: string;
+  lib: string;
+  folder: string;
+  name: string;
+  ext: string;
+  modified: string;
+  modifiedBy: string;
+  action: "Viewed" | "Uploaded" | "Modified";
 }
 
 export interface DocVersion {

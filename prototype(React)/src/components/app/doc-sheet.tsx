@@ -9,6 +9,7 @@ import {
   Pencil,
   Share2,
   ShieldCheck,
+  Star,
   TriangleAlert,
   UploadCloud,
   UserPlus,
@@ -40,7 +41,16 @@ import { AlertBanner, TagBadges } from "@/components/app/bits";
 import { FileIcon } from "@/components/app/file-icon";
 import { bumpVersion, fmtDate, generateActivity, generateVersions, todayStr } from "@/lib/helpers";
 import { CURRENT_USER } from "@/lib/mock-data";
-import { closeDocSheet, db, emit, setDocSheetTab, useDb } from "@/lib/store";
+import {
+  closeDocSheet,
+  db,
+  emit,
+  isFavorite,
+  itemFavoriteEntry,
+  setDocSheetTab,
+  toggleFavorite,
+  useDb,
+} from "@/lib/store";
 import { cn } from "@/lib/utils";
 
 export function DocSheet() {
@@ -82,6 +92,8 @@ export function DocSheet() {
   const versions = generateVersions(item);
   const activity = generateActivity(item);
   const mine = item.checkedOutBy === CURRENT_USER.name;
+  const favoriteEntry = itemFavoriteEntry(item, state?.context ?? { site: "unknown", lib: "documents", folder: "root" });
+  const favorite = isFavorite(favoriteEntry.key);
 
   const checkout = () => {
     item.checkedOutBy = CURRENT_USER.name;
@@ -115,6 +127,15 @@ export function DocSheet() {
                 {item.size || ""} · v{item.version || "1.0"} · modified {fmtDate(item.modified)}
               </div>
             </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              className={favorite ? "text-amber-500 hover:text-amber-600" : undefined}
+              aria-label={favorite ? "Remove document from favorites" : "Add document to favorites"}
+              onClick={() => toggleFavorite(favoriteEntry)}
+            >
+              <Star className={favorite ? "fill-current" : undefined} />
+            </Button>
             <Button variant="ghost" size="icon" onClick={() => closeDocSheet()} aria-label="Close">
               <X />
             </Button>

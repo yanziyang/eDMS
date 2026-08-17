@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import {
+  Bell,
   Check,
   Copy,
   Download,
   Eye,
+  Filter,
   FileSearch,
   FolderPlus,
   Grid2x2,
@@ -13,8 +15,11 @@ import {
   MoreHorizontal,
   Move,
   Pencil,
+  Save,
   Share2,
   ShieldCheck,
+  Star,
+  Tags,
   Trash2,
   UploadCloud,
   UserPlus,
@@ -24,6 +29,7 @@ import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom"
 import { toast } from "sonner";
 import { CheckoutBadge, EmptyState, PageHeader, TagBadges } from "@/components/app/bits";
 import { FileIcon } from "@/components/app/file-icon";
+import { ItemContextMenu } from "@/components/app/item-context-menu";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -49,8 +55,21 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { bumpVersion, fmtDate, fmtSize, parseSizeVal, todayStr } from "@/lib/helpers";
 import { CURRENT_USER, findSite, getLibraryContents } from "@/lib/mock-data";
-import { db, emit, openDocSheet, useDb } from "@/lib/store";
-import type { LibraryItem } from "@/types";
+import {
+  db,
+  emit,
+  getLibraryViews,
+  isFavorite,
+  isFollowing,
+  itemFavoriteEntry,
+  libraryFavoriteEntry,
+  openDocSheet,
+  saveLibraryView,
+  toggleFavorite,
+  toggleFollow,
+  useDb,
+} from "@/lib/store";
+import type { LibraryItem, SavedView, Site } from "@/types";
 import { cn } from "@/lib/utils";
 
 type SortKey = "name" | "modifiedBy" | "modified" | "size";
@@ -69,6 +88,11 @@ export function Library() {
   const [view, setView] = useState<"list" | "grid">("list");
   const [sort, setSort] = useState<{ key: SortKey; dir: "asc" | "desc" }>({ key: "name", dir: "asc" });
   const [selection, setSelection] = useState<Set<number>>(new Set());
+  const [filter, setFilter] = useState("");
+  const [groupBy, setGroupBy] = useState<SavedView["groupBy"]>("none");
+  const [viewId, setViewId] = useState("all");
+  const [saveViewOpen, setSaveViewOpen] = useState(false);
+  const [bulkEditOpen, setBulkEditOpen] = useState(false);
 
   const [uploadOpen, setUploadOpen] = useState(false);
   const [quickInput, setQuickInput] = useState<{
@@ -83,12 +107,20 @@ export function Library() {
   const [previewItem, setPreviewItem] = useState<LibraryItem | null>(null);
 
   const action = searchParams.get("action");
+  const libraryKey = `${site.slug}/${lib.id}/${folder}`;
+  const views = getLibraryViews(libraryKey);
+  const libraryEntry = libraryFavoriteEntry(site, lib);
+  const following = isFollowing("library", `${site.slug}/${lib.id}`);
 
   useEffect(() => {
     setView("list");
-    setSort({ key: "name", dir: "asc" });
+    const defaultView = getLibraryViews(libraryKey).find((candidate) => candidate.isDefault) ?? getLibraryViews(libraryKey)[0];
+    setViewId(defaultView?.id ?? "all");
+    setFilter(defaultView?.filter ?? "");
+    setSort({ key: defaultView?.sortKey ?? "name", dir: defaultView?.sortDir ?? "asc" });
+    setGroupBy(defaultView?.groupBy ?? "none");
     setSelection(new Set());
-  }, [slug, libId, folder]);
+  }, [slug, libId, folder, libraryKey]);
 
   useEffect(() => {
     if (action === "upload") setUploadOpen(true);
@@ -115,7 +147,13 @@ export function Library() {
   }, [slug, libId, folder, action]);
 
   const sortedItems = (() => {
-    const items = entry.items.slice();
+    const query = filter.trim().toLowerCase();
+    const items = entry.items.filter((item) => {
+      if (!query) return true;
+      return [item.name, item.modifiedBy, item.ext || "", ...(item.tags || [])].some((value) =>
+        value.toLowerCase().includes(query)
+      );
+    });
     items.sort((a, b) => {
       if (a.type !== b.type) return a.type === "folder" ? -1 : 1;
       if (sort.key === "size") {
@@ -130,6 +168,29 @@ export function Library() {
     });
     return items;
   })();
+
+  const groupedItems = (() => {
+    if (groupBy === "none") return [{ label: "", items: sortedItems.map((item, index) => ({ item, index })) }];
+    const groups = new Map<string, Array<{ item: LibraryItem; index: number }>>();
+    sortedItems.forEach((item, index) => {
+      const label = groupBy === "type" ? (item.type === "folder" ? "Folders" : "Files") : item.modifiedBy;
+      const group = groups.get(label) ?? [];
+      group.push({ item, index });
+      groups.set(label, group);
+    });
+    return Array.from(groups, ([label, items]) => ({ label, items }));
+  })();
+
+  const itemEntry = (item: LibraryItem) => itemFavoriteEntry(item, { site: site.slug, lib: lib.id, folder });
+
+  const applyView = (id: string) => {
+    const selected = views.find((candidate) => candidate.id === id);
+    if (!selected) return;
+    setViewId(id);
+    setFilter(selected.filter);
+    setSort({ key: selected.sortKey, dir: selected.sortDir });
+    setGroupBy(selected.groupBy);
+  };
 
   const toggleSelect = (i: number, checked: boolean) => {
     setSelection((prev) => {
@@ -182,6 +243,32 @@ export function Library() {
   const title = folder === "root" ? lib.name : entry.name;
   const isRoot = folder === "root";
 
+  const getItemActions = (item: LibraryItem, index: number) => ({
+    favorite: isFavorite(itemEntry(item).key),
+    onFavorite: () => toggleFavorite(itemEntry(item)),
+    onOpen: () => openItem(item, navigate, slug, lib.id, folder),
+    onPreview: () => setPreviewItem(item),
+    onRename: () =>
+      setQuickInput({
+        title: "Rename",
+        label: "Name",
+        value: item.name,
+        confirmLabel: "Rename",
+        onConfirm: (value) => {
+          item.name = value;
+          emit();
+          toast.success("Renamed successfully");
+        },
+      }),
+    onMove: () => setMoveCopy({ index, mode: "move" }),
+    onCopy: () => setMoveCopy({ index, mode: "copy" }),
+    onVersions: () => openDocSheet(item, "versions", { site: slug, lib: lib.id, folder }),
+    onCheckout: () => toggleCheckout(index),
+    onPermissions: () => openDocSheet(item, "permissions", { site: slug, lib: lib.id, folder }),
+    onShare: () => setShareItem(item),
+    onDelete: () => deleteItem(index),
+  });
+
   return (
     <div>
       <CrumbBar>
@@ -203,6 +290,22 @@ export function Library() {
         subtitle="Upload, organize, and manage documents with version history and permissions."
         actions={
           <>
+            <Button
+              variant={following ? "secondary" : "outline"}
+              onClick={() => toggleFollow("library", `${site.slug}/${lib.id}`)}
+            >
+              <Bell data-icon="inline-start" />
+              {following ? "Following" : "Follow"}
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              className={isFavorite(libraryEntry.key) ? "text-amber-500 hover:text-amber-600" : undefined}
+              aria-label={isFavorite(libraryEntry.key) ? "Remove library from favorites" : "Add library to favorites"}
+              onClick={() => toggleFavorite(libraryEntry)}
+            >
+              <Star className={isFavorite(libraryEntry.key) ? "fill-current" : undefined} />
+            </Button>
             <Button
               variant="outline"
               onClick={() =>
@@ -251,6 +354,10 @@ export function Library() {
             <Download data-icon="inline-start" />
             Download
           </Button>
+          <Button variant="ghost" size="sm" onClick={() => setBulkEditOpen(true)}>
+            <Pencil data-icon="inline-start" />
+            Edit properties
+          </Button>
           <Button
             variant="ghost"
             size="sm"
@@ -273,12 +380,56 @@ export function Library() {
       )}
 
       <div className="mb-3.5 flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <span className="hidden text-xs text-muted-foreground md:inline">
+        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+          <div className="relative min-w-[190px] max-w-[270px] flex-1">
+            <Filter className="pointer-events-none absolute left-2.5 top-2 size-3.5 text-muted-foreground" />
+            <Input
+              className="h-8 pl-8 text-[12.5px]"
+              placeholder="Filter this library…"
+              value={filter}
+              onChange={(e) => {
+                setFilter(e.target.value);
+                setViewId("custom");
+              }}
+              aria-label="Filter this library"
+            />
+          </div>
+          <Select value={viewId} onValueChange={applyView}>
+            <SelectTrigger className="h-8 w-[170px] text-[12.5px]" aria-label="Saved library view">
+              <SelectValue placeholder="Saved view" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                {viewId === "custom" && <SelectItem value="custom">Custom view</SelectItem>}
+                {views.map((savedView) => (
+                  <SelectItem key={savedView.id} value={savedView.id}>
+                    {savedView.name}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+          <Select value={groupBy} onValueChange={(value) => { setGroupBy(value as SavedView["groupBy"]); setViewId("custom"); }}>
+            <SelectTrigger className="h-8 w-[135px] text-[12.5px]" aria-label="Group library items">
+              <SelectValue placeholder="Group by" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                <SelectItem value="none">No grouping</SelectItem>
+                <SelectItem value="type">Type</SelectItem>
+                <SelectItem value="modifiedBy">Modified by</SelectItem>
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+          <Button variant="outline" size="sm" onClick={() => setSaveViewOpen(true)}>
+            <Save data-icon="inline-start" />
+            Save view
+          </Button>
+          <span className="hidden text-xs text-muted-foreground xl:inline">
             Drag and drop files anywhere on this page to upload
           </span>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 items-center gap-2">
           <div className="inline-flex overflow-hidden rounded-[calc(var(--radius)-2px)] border">
             <Button
               variant="ghost"
@@ -370,11 +521,12 @@ export function Library() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {sortedItems.map((item, i) => (
-                      <TableRow
-                        key={item.name + i}
-                        className={cn(selection.has(i) && "bg-accent")}
-                      >
+                    {groupedItems.flatMap((group) => group.items).map(({ item, index: i }) => (
+                      <ItemContextMenu item={item} {...getItemActions(item, i)}>
+                        <TableRow
+                          key={item.name + i}
+                          className={cn(selection.has(i) && "bg-accent")}
+                        >
                         <TableCell className="w-9">
                           <Checkbox
                             checked={selection.has(i)}
@@ -386,7 +538,7 @@ export function Library() {
                         <TableCell className="max-w-[340px]">
                           <RowName
                             item={item}
-                            onOpen={() => openItem(item, navigate, slug, lib.id)}
+                            onOpen={() => openItem(item, navigate, slug, lib.id, folder)}
                           />
                           {item.tags?.length ? (
                             <div className="mt-1 flex gap-1 pl-[2.75rem]">
@@ -403,31 +555,11 @@ export function Library() {
                           <RowMenu
                             item={item}
                             index={i}
-                            onOpen={() => openItem(item, navigate, slug, lib.id)}
-                            onPreview={() => setPreviewItem(item)}
-                            onRename={() =>
-                              setQuickInput({
-                                title: "Rename",
-                                label: "Name",
-                                value: item.name,
-                                confirmLabel: "Rename",
-                                onConfirm: (v) => {
-                                  item.name = v;
-                                  emit();
-                                  toast.success("Renamed successfully");
-                                },
-                              })
-                            }
-                            onMove={() => setMoveCopy({ index: i, mode: "move" })}
-                            onCopy={() => setMoveCopy({ index: i, mode: "copy" })}
-                            onVersions={() => openDocSheet(item, "versions")}
-                            onCheckout={() => toggleCheckout(i)}
-                            onPermissions={() => openDocSheet(item, "permissions")}
-                            onShare={() => setShareItem(item)}
-                            onDelete={() => deleteItem(i)}
+                            {...getItemActions(item, i)}
                           />
                         </TableCell>
-                      </TableRow>
+                        </TableRow>
+                      </ItemContextMenu>
                     ))}
                   </TableBody>
                 </Table>
@@ -435,11 +567,12 @@ export function Library() {
 
               {/* Mobile card list */}
               <div className="overflow-hidden rounded-[var(--radius)] border bg-card md:hidden">
-                {sortedItems.map((item, i) => (
-                  <div
-                    key={item.name + i}
-                    className={cn("flex items-center gap-3 border-b px-3.5 py-3.5 last:border-b-0", selection.has(i) && "bg-accent")}
-                  >
+                {groupedItems.flatMap((group) => group.items).map(({ item, index: i }) => (
+                  <ItemContextMenu item={item} {...getItemActions(item, i)}>
+                    <div
+                      key={item.name + i}
+                      className={cn("flex items-center gap-3 border-b px-3.5 py-3.5 last:border-b-0", selection.has(i) && "bg-accent")}
+                    >
                     <Checkbox
                       checked={selection.has(i)}
                       onCheckedChange={(c) => toggleSelect(i, !!c)}
@@ -448,7 +581,7 @@ export function Library() {
                     <button
                       type="button"
                       className="flex min-w-0 flex-1 items-center gap-3 text-left"
-                      onClick={() => openItem(item, navigate, slug, lib.id)}
+                      onClick={() => openItem(item, navigate, slug, lib.id, folder)}
                     >
                       <FileIcon item={item} />
                       <div className="min-w-0 flex-1">
@@ -463,33 +596,13 @@ export function Library() {
                         </div>
                       </div>
                     </button>
-                    <RowMenu
-                      item={item}
-                      index={i}
-                      onOpen={() => openItem(item, navigate, slug, lib.id)}
-                      onPreview={() => setPreviewItem(item)}
-                      onRename={() =>
-                        setQuickInput({
-                          title: "Rename",
-                          label: "Name",
-                          value: item.name,
-                          confirmLabel: "Rename",
-                          onConfirm: (v) => {
-                            item.name = v;
-                            emit();
-                            toast.success("Renamed successfully");
-                          },
-                        })
-                      }
-                      onMove={() => setMoveCopy({ index: i, mode: "move" })}
-                      onCopy={() => setMoveCopy({ index: i, mode: "copy" })}
-                      onVersions={() => openDocSheet(item, "versions")}
-                      onCheckout={() => toggleCheckout(i)}
-                      onPermissions={() => openDocSheet(item, "permissions")}
-                      onShare={() => setShareItem(item)}
-                      onDelete={() => deleteItem(i)}
-                    />
-                  </div>
+                          <RowMenu
+                            item={item}
+                            index={i}
+                            {...getItemActions(item, i)}
+                          />
+                    </div>
+                  </ItemContextMenu>
                 ))}
               </div>
             </>
@@ -497,14 +610,15 @@ export function Library() {
 
           {view === "grid" && (
             <div className="grid grid-cols-[repeat(auto-fill,minmax(148px,1fr))] gap-3.5">
-              {sortedItems.map((item, i) => (
-                <div
-                  key={item.name + i}
-                  className={cn(
-                    "relative rounded-[var(--radius)] border bg-card p-4 text-center hover:border-primary/40 hover:bg-muted/40",
-                    selection.has(i) && "bg-accent"
-                  )}
-                >
+              {groupedItems.flatMap((group) => group.items).map(({ item, index: i }) => (
+                <ItemContextMenu item={item} {...getItemActions(item, i)}>
+                  <div
+                    key={item.name + i}
+                    className={cn(
+                      "relative rounded-[var(--radius)] border bg-card p-4 text-center hover:border-primary/40 hover:bg-muted/40",
+                      selection.has(i) && "bg-accent"
+                    )}
+                  >
                   <span className="absolute left-2 top-2">
                     <Checkbox
                       checked={selection.has(i)}
@@ -516,34 +630,13 @@ export function Library() {
                     <RowMenu
                       item={item}
                       index={i}
-                      onOpen={() => openItem(item, navigate, slug, lib.id)}
-                      onPreview={() => setPreviewItem(item)}
-                      onRename={() =>
-                        setQuickInput({
-                          title: "Rename",
-                          label: "Name",
-                          value: item.name,
-                          confirmLabel: "Rename",
-                          onConfirm: (v) => {
-                            item.name = v;
-                            emit();
-                            toast.success("Renamed successfully");
-                          },
-                        })
-                      }
-                      onMove={() => setMoveCopy({ index: i, mode: "move" })}
-                      onCopy={() => setMoveCopy({ index: i, mode: "copy" })}
-                      onVersions={() => openDocSheet(item, "versions")}
-                      onCheckout={() => toggleCheckout(i)}
-                      onPermissions={() => openDocSheet(item, "permissions")}
-                      onShare={() => setShareItem(item)}
-                      onDelete={() => deleteItem(i)}
+                      {...getItemActions(item, i)}
                     />
                   </span>
                   <button
                     type="button"
                     className="w-full"
-                    onClick={() => openItem(item, navigate, slug, lib.id)}
+                    onClick={() => openItem(item, navigate, slug, lib.id, folder)}
                   >
                     <FileIcon item={item} size={44} className="mx-auto mb-2.5 mt-1 size-11" iconClassName="size-5" />
                     <div className="tile-name text-[12.3px] font-medium leading-[1.3]">{item.name}</div>
@@ -551,7 +644,8 @@ export function Library() {
                       {item.type === "folder" ? fmtDate(item.modified) : item.size}
                     </div>
                   </button>
-                </div>
+                  </div>
+                </ItemContextMenu>
               ))}
             </div>
           )}
@@ -561,6 +655,7 @@ export function Library() {
       <UploadDialog
         open={uploadOpen}
         onOpenChange={setUploadOpen}
+        site={site}
         onUploaded={(item) => {
           entry.items.unshift(item);
           emit();
@@ -618,6 +713,34 @@ export function Library() {
       )}
 
       {previewItem && <PreviewDialog item={previewItem} onClose={() => setPreviewItem(null)} />}
+
+      {saveViewOpen && (
+        <SaveViewDialog
+          open={saveViewOpen}
+          onOpenChange={setSaveViewOpen}
+          current={{ filter, sortKey: sort.key, sortDir: sort.dir, groupBy }}
+          canSetDefault={CURRENT_USER.role === "System Administrator"}
+          onSave={(view) => {
+            saveLibraryView(libraryKey, view);
+            setViewId(view.id);
+            setSaveViewOpen(false);
+            toast.success(`Saved view "${view.name}"`);
+          }}
+        />
+      )}
+
+      {bulkEditOpen && (
+        <BulkMetadataDialog
+          open={bulkEditOpen}
+          onOpenChange={setBulkEditOpen}
+          items={sortedItems.filter((_, index) => selection.has(index))}
+          onSaved={() => {
+            setBulkEditOpen(false);
+            setSelection(new Set());
+            emit();
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -671,11 +794,11 @@ function sortBy(key: SortKey, sort: { key: SortKey; dir: "asc" | "desc" }, setSo
   else setSort({ key, dir: "asc" });
 }
 
-function openItem(item: LibraryItem, navigate: (to: string) => void, slug: string, libId: string) {
+function openItem(item: LibraryItem, navigate: (to: string) => void, slug: string, libId: string, folder = "root") {
   if (item.type === "folder") {
     navigate(`/sites/${slug}/${libId}/${item.id}`);
   } else {
-    openDocSheet(item, "properties");
+    openDocSheet(item, "properties", { site: slug, lib: libId, folder });
   }
 }
 
@@ -702,6 +825,8 @@ function RowName({
 function RowMenu({
   item,
   index,
+  favorite,
+  onFavorite,
   onOpen,
   onPreview,
   onRename,
@@ -715,6 +840,8 @@ function RowMenu({
 }: {
   item: LibraryItem;
   index: number;
+  favorite: boolean;
+  onFavorite: () => void;
   onOpen: () => void;
   onPreview: () => void;
   onRename: () => void;
@@ -754,6 +881,10 @@ function RowMenu({
             Download
           </DropdownMenuItem>
         )}
+        <DropdownMenuItem onSelect={onFavorite}>
+          <Star data-icon="inline-start" className={favorite ? "fill-current text-amber-500" : undefined} />
+          {favorite ? "Remove from favorites" : "Add to favorites"}
+        </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem onSelect={onRename}>
           <Pencil data-icon="inline-start" />
@@ -810,15 +941,18 @@ interface UploadRow {
   pct: number;
   done: boolean;
   sizeBytes: number;
+  error?: string;
 }
 
 function UploadDialog({
   open,
   onOpenChange,
+  site,
   onUploaded,
 }: {
   open: boolean;
   onOpenChange: (o: boolean) => void;
+  site: Site;
   onUploaded: (item: LibraryItem) => void;
 }) {
   const [rows, setRows] = useState<UploadRow[]>([]);
@@ -826,7 +960,7 @@ function UploadDialog({
   const inputRef = useRef<HTMLInputElement>(null);
   const timersRef = useRef<ReturnType<typeof setInterval>[]>([]);
 
-  const allDone = rows.length > 0 && rows.every((r) => r.done);
+  const allDone = rows.length > 0 && rows.every((r) => r.done || !!r.error);
 
   const addFiles = (files: FileList | null) => {
     if (!files?.length) return;
@@ -834,6 +968,14 @@ function UploadDialog({
     list.forEach((f) => {
       const ext = (f.name.split(".").pop() || "").toLowerCase();
       const sizeBytes = f.size || 245000;
+      const exceedsQuota = site.storageUsedGB + sizeBytes / (1024 ** 3) > site.storageQuotaGB;
+      if (exceedsQuota) {
+        setRows((prev) => [...prev, { name: f.name, ext, pct: 0, done: false, sizeBytes, error: "Storage quota exceeded" }]);
+        toast.error(`Upload blocked for ${f.name}`, {
+          description: `${site.name} has reached its ${site.storageQuotaGB} GB storage quota.`,
+        });
+        return;
+      }
       setRows((prev) => [...prev, { name: f.name, ext, pct: 0, done: false, sizeBytes }]);
       const timer = setInterval(() => {
         setRows((prev) =>
@@ -911,6 +1053,17 @@ function UploadDialog({
               onChange={(e) => addFiles(e.target.files)}
             />
           </label>
+          <div className="mt-3 rounded-[var(--radius)] border bg-muted/35 px-3 py-2 text-xs text-muted-foreground">
+            <div className="flex items-center justify-between gap-3">
+              <span>Storage quota</span>
+              <span className="font-medium text-foreground">
+                {site.storageUsedGB.toFixed(1)} GB of {site.storageQuotaGB} GB used
+              </span>
+            </div>
+            <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-muted">
+              <div className="h-full rounded-full bg-primary" style={{ width: `${Math.min(100, (site.storageUsedGB / site.storageQuotaGB) * 100)}%` }} />
+            </div>
+          </div>
           {rows.length > 0 && (
             <div className="mt-4 flex flex-col gap-3">
               {rows.map((r) => (
@@ -919,11 +1072,13 @@ function UploadDialog({
                   <div className="min-w-0 flex-1">
                     <div className="flex justify-between gap-2 text-[13px]">
                       <span className="truncate">{r.name}</span>
-                      <span className="shrink-0 text-muted-foreground">{r.done ? "Done" : Math.round(r.pct) + "%"}</span>
+                      <span className={cn("shrink-0", r.error ? "text-destructive" : "text-muted-foreground")}>
+                        {r.error || (r.done ? "Done" : Math.round(r.pct) + "%")}
+                      </span>
                     </div>
                     <div className="mt-1 h-[7px] overflow-hidden rounded-full bg-muted">
                       <div
-                        className={cn("h-full rounded-full", r.done ? "bg-success" : "bg-primary")}
+                        className={cn("h-full rounded-full", r.error ? "bg-destructive" : r.done ? "bg-success" : "bg-primary")}
                         style={{ width: r.pct + "%" }}
                       />
                     </div>
@@ -992,6 +1147,151 @@ function QuickInputDialog({
             Cancel
           </Button>
           <Button onClick={() => onConfirm(val.trim())}>{confirmLabel}</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function SaveViewDialog({
+  open,
+  onOpenChange,
+  current,
+  canSetDefault,
+  onSave,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  current: Pick<SavedView, "filter" | "sortKey" | "sortDir" | "groupBy">;
+  canSetDefault: boolean;
+  onSave: (view: SavedView) => void;
+}) {
+  const [name, setName] = useState("");
+  const [isDefault, setIsDefault] = useState(false);
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-[440px]">
+        <DialogHeader>
+          <DialogTitle>Save current view</DialogTitle>
+          <DialogDescription>
+            Save the current filter, sort, and grouping so the library can be opened the same way next time.
+          </DialogDescription>
+        </DialogHeader>
+        <form
+          onSubmit={(event) => {
+            event.preventDefault();
+            const trimmed = name.trim();
+            if (!trimmed) return;
+            onSave({
+              id: `${trimmed.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${Date.now()}`,
+              name: trimmed,
+              ...current,
+              isDefault: canSetDefault && isDefault,
+            });
+            setName("");
+            setIsDefault(false);
+          }}
+        >
+          <Label htmlFor="save-view-name" className="text-[13px]">View name</Label>
+          <Input
+            id="save-view-name"
+            className="mt-1.5"
+            placeholder="e.g. Recently modified files"
+            value={name}
+            onChange={(event) => setName(event.target.value)}
+            autoFocus
+            required
+          />
+          <div className="mt-4 rounded-[var(--radius)] border bg-muted/30 px-3 py-2.5 text-xs text-muted-foreground">
+            <div className="font-medium text-foreground">Current settings</div>
+            <div className="mt-1">Filter: {current.filter || "None"}</div>
+            <div>Sort: {current.sortKey} ({current.sortDir}) · Group: {current.groupBy}</div>
+          </div>
+          {canSetDefault && (
+            <label className="mt-4 flex cursor-pointer items-center gap-2 text-[13px]">
+              <Checkbox checked={isDefault} onCheckedChange={(checked) => setIsDefault(!!checked)} />
+              Make this the default view for this library
+            </label>
+          )}
+          <DialogFooter className="mt-5">
+            <Button type="button" variant="secondary" onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
+            <Button type="submit">Save view</Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function BulkMetadataDialog({
+  open,
+  onOpenChange,
+  items,
+  onSaved,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  items: LibraryItem[];
+  onSaved: () => void;
+}) {
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [tags, setTags] = useState("");
+
+  const save = () => {
+    const nextTags = tags.split(",").map((tag) => tag.trim()).filter(Boolean);
+    const failures: string[] = [];
+    let updated = 0;
+    items.forEach((item) => {
+      if (item.checkedOutBy && item.checkedOutBy !== CURRENT_USER.name) {
+        failures.push(`${item.name} (checked out by ${item.checkedOutBy})`);
+        return;
+      }
+      if (title.trim()) item.title = title.trim();
+      if (description.trim()) item.description = description.trim();
+      if (nextTags.length) item.tags = nextTags;
+      item.modified = todayStr();
+      item.modifiedBy = CURRENT_USER.name;
+      updated += 1;
+    });
+    if (updated) toast.success(`Updated metadata on ${updated} item${updated === 1 ? "" : "s"}`);
+    if (failures.length) {
+      toast.error(`${failures.length} item${failures.length === 1 ? "" : "s"} could not be updated`, {
+        description: failures.join(", "),
+      });
+    }
+    onSaved();
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-[480px]">
+        <DialogHeader>
+          <DialogTitle>Edit properties</DialogTitle>
+          <DialogDescription>
+            Apply metadata to {items.length} selected item{items.length === 1 ? "" : "s"}. Blank fields are left unchanged.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="flex flex-col gap-4">
+          <div>
+            <Label htmlFor="bulk-title" className="text-[13px]">Title</Label>
+            <Input id="bulk-title" className="mt-1.5" value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Set a common title" />
+          </div>
+          <div>
+            <Label htmlFor="bulk-description" className="text-[13px]">Description</Label>
+            <Textarea id="bulk-description" className="mt-1.5" rows={3} value={description} onChange={(event) => setDescription(event.target.value)} placeholder="Set a common description" />
+          </div>
+          <div>
+            <Label htmlFor="bulk-tags" className="flex items-center gap-1.5 text-[13px]"><Tags className="size-3.5" />Tags</Label>
+            <Input id="bulk-tags" className="mt-1.5" value={tags} onChange={(event) => setTags(event.target.value)} placeholder="Comma-separated tags" />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="secondary" onClick={() => onOpenChange(false)}>Cancel</Button>
+          <Button onClick={save} disabled={!title.trim() && !description.trim() && !tags.trim()}>Apply changes</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

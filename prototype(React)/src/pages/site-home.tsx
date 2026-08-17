@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ChevronRight, Folder, Settings, ShieldCheck, UserPlus, Users } from "lucide-react";
+import { Bell, ChevronRight, Folder, Settings, ShieldCheck, Star, UserPlus, Users } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
@@ -12,9 +12,19 @@ import { Textarea } from "@/components/ui/textarea";
 import { SiteIcon } from "@/components/app/icon-map";
 import { actionVerb, initialsOf } from "@/lib/helpers";
 import { AUDIT_LOG, findSite, getLibraryContents } from "@/lib/mock-data";
-import { db } from "@/lib/store";
+import {
+  db,
+  isFavorite,
+  isFollowing,
+  libraryFavoriteEntry,
+  siteFavoriteEntry,
+  toggleFavorite,
+  toggleFollow,
+  useDb,
+} from "@/lib/store";
 
 export function SiteHome() {
+  useDb();
   const { slug = "finance" } = useParams();
   const site = findSite(slug);
   const [permsOpen, setPermsOpen] = useState(false);
@@ -23,6 +33,8 @@ export function SiteHome() {
   const siteActivity = AUDIT_LOG.filter((a) => a.site === site.name).slice(0, 8);
   const activity = siteActivity.length ? siteActivity : AUDIT_LOG.slice(0, 5);
   const storagePct = Math.min(100, (site.storageUsedGB / site.storageQuotaGB) * 100);
+  const siteEntry = siteFavoriteEntry(site);
+  const following = isFollowing("site", site.slug);
 
   return (
     <div>
@@ -65,7 +77,24 @@ export function SiteHome() {
               <div className="h-full rounded-full bg-primary" style={{ width: storagePct + "%" }} />
             </div>
           </div>
-          <div className="flex shrink-0 gap-2">
+          <div className="flex shrink-0 flex-wrap gap-2">
+            <Button
+              variant={following ? "secondary" : "outline"}
+              size="sm"
+              onClick={() => toggleFollow("site", site.slug)}
+            >
+              <Bell data-icon="inline-start" />
+              {following ? "Following" : "Follow"}
+            </Button>
+            <Button
+              variant="outline"
+              size="icon-sm"
+              className={isFavorite(siteEntry.key) ? "text-amber-500 hover:text-amber-600" : undefined}
+              aria-label={isFavorite(siteEntry.key) ? "Remove site from favorites" : "Add site to favorites"}
+              onClick={() => toggleFavorite(siteEntry)}
+            >
+              <Star className={isFavorite(siteEntry.key) ? "fill-current" : undefined} />
+            </Button>
             <Button variant="outline" size="sm" onClick={() => setPermsOpen(true)}>
               <ShieldCheck data-icon="inline-start" />
               Manage access
@@ -85,20 +114,30 @@ export function SiteHome() {
         {site.libraries.map((l) => {
           const data = getLibraryContents(site.slug, l.id, "root");
           return (
-            <Link
+            <div
               key={l.id}
-              to={`/sites/${site.slug}/${l.id}/root`}
               className="flex items-center gap-3.5 rounded-[var(--radius)] border bg-card p-[1.1rem] hover:bg-muted/40"
             >
-              <div className="file-ico folder size-11">
-                <Folder className="size-5" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="text-sm font-medium">{l.name}</div>
-                <div className="mt-1 text-xs text-muted-foreground">{data.items.length} items</div>
-              </div>
-              <ChevronRight className="size-4 text-muted-foreground" />
-            </Link>
+              <Link to={`/sites/${site.slug}/${l.id}/root`} className="flex min-w-0 flex-1 items-center gap-3.5">
+                <div className="file-ico folder size-11">
+                  <Folder className="size-5" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="text-sm font-medium">{l.name}</div>
+                  <div className="mt-1 text-xs text-muted-foreground">{data.items.length} items</div>
+                </div>
+                <ChevronRight className="size-4 text-muted-foreground" />
+              </Link>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                className={isFavorite(libraryFavoriteEntry(site, l).key) ? "text-amber-500 hover:text-amber-600" : undefined}
+                aria-label={isFavorite(libraryFavoriteEntry(site, l).key) ? `Remove ${l.name} from favorites` : `Add ${l.name} to favorites`}
+                onClick={() => toggleFavorite(libraryFavoriteEntry(site, l))}
+              >
+                <Star className={isFavorite(libraryFavoriteEntry(site, l).key) ? "fill-current" : undefined} />
+              </Button>
+            </div>
           );
         })}
       </div>

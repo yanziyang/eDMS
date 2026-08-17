@@ -64,6 +64,10 @@ await ok("sign in navigates to home", async () => {
 });
 await ok("home greeting", () => waitVisible(page.locator("text=Welcome back, Jordan")));
 await ok("site cards", () => waitVisible(page.locator('a[href="#/sites/finance"]')));
+await ok("home recent documents", async () => {
+  await waitVisible(page.getByText("Recent documents"));
+  await waitVisible(page.getByText("Requirements Spec v2.docx"));
+});
 
 await ok("site home", async () => {
   await page.click('a[href="#/sites/phoenix"]');
@@ -80,11 +84,74 @@ await ok("site permissions dialog", async () => {
   await page.waitForTimeout(500);
 });
 
+await ok("site favorite and follow controls", async () => {
+  await page.getByRole("button", { name: "Follow", exact: true }).click();
+  await waitVisible(page.getByRole("button", { name: "Following", exact: true }));
+  await page.getByRole("button", { name: "Add site to favorites" }).click();
+  await waitVisible(page.getByRole("button", { name: "Remove site from favorites" }));
+});
+
 await ok("library page", async () => {
   await page.click('a[href="#/sites/phoenix/documents/root"]');
   await page.waitForURL(/#\/sites\/phoenix\/documents\/root/, { timeout: 8000 });
   await waitVisible(page.locator("text=Upload, organize, and manage documents"));
   await waitVisible(page.locator("tbody tr").first());
+});
+
+await ok("library follow", async () => {
+  await page.getByRole("button", { name: "Follow", exact: true }).click();
+  await waitVisible(page.getByRole("button", { name: "Following", exact: true }));
+});
+
+await ok("library filter", async () => {
+  await page.getByRole("textbox", { name: "Filter this library" }).fill("requirements");
+  await waitVisible(page.getByText("Requirements Spec v2.docx"));
+});
+
+await ok("saved library view", async () => {
+  await page.getByRole("textbox", { name: "Filter this library" }).fill("");
+  await page.getByRole("combobox", { name: "Saved library view" }).click();
+  await page.getByRole("option", { name: "Roadmap and specs" }).click();
+  await waitVisible(page.getByText("Project Phoenix Roadmap.pptx"));
+});
+
+await ok("context menu favorite action", async () => {
+  const row = page.locator("tbody tr", { hasText: "Project Phoenix Roadmap.pptx" });
+  await row.click({ button: "right" });
+  const favoriteAction = page.getByRole("menuitem", { name: /favorites/ }).first();
+  await waitVisible(favoriteAction);
+  await favoriteAction.click();
+});
+
+await ok("bulk metadata edit", async () => {
+  await reloadAt("/sites/phoenix/documents/root");
+  await waitVisible(page.locator("tbody tr").first());
+  await page.locator("tbody tr", { hasText: "Requirements Spec v2.docx" }).getByRole("checkbox").click();
+  await page.locator("tbody tr", { hasText: "Meeting Notes - Aug 2026.docx" }).getByRole("checkbox").click();
+  await waitVisible(page.getByRole("button", { name: "Edit properties", exact: true }));
+  const selectedCount = await page.locator('tbody [role="checkbox"][aria-checked="true"]').count();
+  if (selectedCount !== 2) throw new Error(`expected 2 selected rows, got ${selectedCount}`);
+  await page.getByRole("button", { name: "Edit properties", exact: true }).click();
+  const dialog = page.getByRole("dialog");
+  await dialog.getByLabel("Tags").fill("Smoke, Phase 4");
+  await dialog.getByRole("button", { name: "Apply changes" }).click();
+  await waitVisible(page.getByText("Updated metadata on 2 items"));
+});
+
+await ok("save library view", async () => {
+  await page.getByRole("button", { name: "Save view", exact: true }).click();
+  const dialog = page.getByRole("dialog");
+  await dialog.getByLabel("View name").fill("Smoke view");
+  await dialog.getByRole("button", { name: "Save view", exact: true }).click();
+  await waitVisible(page.getByText('Saved view "Smoke view"'));
+});
+
+await ok("favorites page", async () => {
+  await page.getByRole("link", { name: "Favorites" }).first().click();
+  await page.waitForURL(/#\/favorites/, { timeout: 8000 });
+  await waitVisible(page.getByText("Favorites", { exact: true }));
+  await waitVisible(page.getByText("Finance", { exact: true }));
+  await reloadAt("/sites/phoenix/documents/root");
 });
 
 await ok("sorting works", async () => {
