@@ -36,6 +36,18 @@ internal sealed class SamlTestProvider : IDisposable
             .WithExposedPort(443)
             .WithPortBinding(443, true)
             .WithBindMount(resourceDirectory, "/opt/edms-saml")
+            .WithBindMount(
+                Path.Combine(resourceDirectory, "config-override.php"),
+                "/var/simplesamlphp/config/config-override.php")
+            .WithBindMount(
+                Path.Combine(resourceDirectory, "authsources.php"),
+                "/var/simplesamlphp/config/authsources.php")
+            .WithBindMount(
+                Path.Combine(resourceDirectory, "saml20-idp-hosted.php"),
+                "/var/simplesamlphp/metadata/saml20-idp-hosted.php")
+            .WithBindMount(
+                Path.Combine(resourceDirectory, "saml20-sp-remote.php"),
+                "/var/simplesamlphp/metadata/saml20-sp-remote.php")
             .WithBindMount(SharedDirectory, "/shared")
             .WithEntrypoint("bash", "/opt/edms-saml/entrypoint.sh")
             .WithEnvironment("SSP_ADMIN_PASSWORD", "secret1")
@@ -44,11 +56,19 @@ internal sealed class SamlTestProvider : IDisposable
             .WithEnvironment("APACHE_CERT_NAME", "local-stack-dev")
             .WithWaitStrategy(
                 Wait.ForUnixContainer()
-                    .UntilHttpRequestIsSucceeded(request => request
-                        .ForPort(443)
-                        .ForPath("/simplesaml/saml2/idp/metadata.php")
-                        .UsingTls()
-                        .ForStatusCode(System.Net.HttpStatusCode.OK)));
+                    .UntilHttpRequestIsSucceeded(
+                        request => request
+                            .ForPort(443)
+                            .ForPath("/simplesaml/saml2/idp/metadata.php")
+                            .UsingTls()
+                            .UsingHttpMessageHandler(new HttpClientHandler
+                            {
+                                ServerCertificateCustomValidationCallback =
+                                    HttpClientHandler
+                                        .DangerousAcceptAnyServerCertificateValidator,
+                            })
+                            .ForStatusCode(System.Net.HttpStatusCode.OK),
+                        wait => wait.WithTimeout(TimeSpan.FromMinutes(2))));
 
     public void Dispose()
     {

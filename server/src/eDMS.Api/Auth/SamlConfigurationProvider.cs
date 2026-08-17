@@ -138,6 +138,12 @@ internal sealed class SamlConfigurationProvider(
         var resolvedPath = Path.IsPathRooted(path)
             ? path
             : Path.Combine(environment.ContentRootPath, path);
+        if (File.ReadAllText(resolvedPath).Contains(
+                "-----BEGIN CERTIFICATE-----",
+                StringComparison.Ordinal))
+        {
+            return X509Certificate2.CreateFromPemFile(resolvedPath);
+        }
 #pragma warning disable SYSLIB0057
         return new X509Certificate2(
             resolvedPath,

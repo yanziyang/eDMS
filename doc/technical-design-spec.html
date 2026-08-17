@@ -331,8 +331,27 @@
           <tr><td><span class="badge badge-adr">ADR-5</span></td><td class="req">Postgres full-text search, not Elasticsearch</td><td>Meets FR-SRCH-01…06 with no extra service to operate</td><td>Elasticsearch/OpenSearch — deferred until justified by scale</td></tr>
           <tr><td><span class="badge badge-adr">ADR-6</span></td><td class="req">Local disk behind <code>IFileStorageProvider</code></td><td>Matches FS §13's no-mandatory-cloud-dependency goal; the interface is the real deliverable</td><td>Direct S3 SDK calls — leaks a vendor dependency into Application</td></tr>
           <tr><td><span class="badge badge-adr">ADR-7</span></td><td class="req">Mapster over AutoMapper</td><td>Comparable capability, faster, less reflection magic to debug</td><td>AutoMapper — acceptable if the team prefers it</td></tr>
+          <tr><td><span class="badge badge-adr">ADR-8</span></td><td class="req">EF Core supports four database providers behind the <code>Database:Provider</code> config key — PostgreSQL (production default), SQL Server, MySQL, SQLite (<strong>default for local Development</strong>)</td><td>PostgreSQL stays production, but local development needs no Docker/Postgres install; enterprise deployments may use SQL Server/MySQL</td><td>Provider-locked PostgreSQL — rejected; Pomelo for MySQL deferred because it lags EF Core 10</td></tr>
+          <tr><td><span class="badge badge-adr">ADR-9</span></td><td class="req">Content-type column values live in a portable <code>document_column_values</code> table, not a <code>jsonb</code> bag on <code>Document</code></td><td>A values table works identically on all four providers, keeps validation simple, and stores choice options as JSON text in <code>column_definitions.choice_options</code>; required columns are enforced at upload and check-in</td><td><code>jsonb</code> bag — Postgres-only; typed EAV columns — unnecessary complexity for MVP</td></tr>
+          <tr><td><span class="badge badge-adr">ADR-10</span></td><td class="req">Resumable uploads use a custom session-based protocol, not tus</td><td>A small append-only protocol keeps the API surface consistent, needs no extra client library, and resumes from an exact offset; chunks are 8 MiB and sessions expire after 24h</td><td>tus — heavyweight for an internal tool; S3 multipart — not native to local-disk storage</td></tr>
+          <tr><td><span class="badge badge-adr">ADR-11</span></td><td class="req">Office preview converts through a dedicated LibreOffice-headless HTTP container behind <code>IOfficeConversionService</code></td><td>Keeps the native dependency out of the API process and falls back to original bytes if conversion is unavailable</td><td>Local binary in the API — fragile deployment coupling; in-process converters — licensing and binary-size cost</td></tr>
+          <tr><td><span class="badge badge-adr">ADR-12</span></td><td class="req">Notifications use on-write fan-out into durable inbox rows, with frequency snapshotted per followed-item event</td><td>The bell reads durable state, shares are immediately visible, and digest delivery is restart-safe with <code>email_sent_at</code> as the watermark</td><td>On-read fan-out — expensive pagination/read state; message broker — deferred for the modular monolith</td></tr>
+          <tr><td><span class="badge badge-adr">ADR-13</span></td><td class="req">PDF/Office text extraction runs asynchronously through an Apache Tika HTTP container</td><td>Persisted extracted text plus source version makes indexing restart-safe; Postgres' generated <code>search_vector</code> includes it while application queries remain portable</td><td>Inline extraction — blocks writes; shelling out — fragile lifecycle; separate search engine — deferred</td></tr>
+          <tr><td><span class="badge badge-adr">ADR-14</span></td><td class="req">SSO handoff codes are persisted as SHA-256 hashes, not kept in <code>IMemoryCache</code></td><td>Database persistence supports load-balanced exchange and atomic one-time consumption, preventing concurrent replay from issuing two token pairs</td><td><code>IMemoryCache</code> — instance-local and lost on restart; read-then-write — replay race</td></tr>
+          <tr><td><span class="badge badge-adr">ADR-15</span></td><td class="req">OIDC uses the first-party <code>Microsoft.AspNetCore.Authentication.OpenIdConnect</code> 10.0.11 package as an optional named scheme with a dedicated cookie correlation scheme</td><td>Preserves Bearer as the API default, uses supported cookie-backed nonce/state validation, requires HTTPS metadata by default, and keeps provider tokens out of the SPA</td><td>OIDC as default — interferes with Bearer; manual correlation — unsupported; globally allowing HTTP metadata — weakens discovery</td></tr>
+          <tr><td><span class="badge badge-adr">ADR-16</span></td><td class="req">OIDC and SAML integration tests use pinned, containerized protocol providers rather than hand-mocked tokens/assertions</td><td>Real discovery, redirects, signatures, nonce, certificate, and clock-skew handling are exercised; OIDC uses <code>ghcr.io/navikt/mock-oauth2-server:4.0.0</code>, with the same Testcontainers pattern reused for SAML</td><td>Hand-mocked IdP — misses protocol defects; unpinned <code>latest</code> — non-reproducible tests</td></tr>
+          <tr><td><span class="badge badge-adr">ADR-17</span></td><td class="req">SAML2 uses <code>ITfoxtec.Identity.Saml2.MvcCore</code> 4.20.1 rather than <code>Sustainsys.Saml2.AspNetCore2</code></td><td>ITfoxtec explicitly targets <code>net10.0</code> and provides maintained MVC binding/metadata helpers; the service provider validates signed assertions, maps NameID to <code>ExternalId</code>, uses configurable email attributes, and binds protected RelayState to the AuthnRequest ID</td><td>Hand-rolled XML/signature validation — security-sensitive; Sustainsys 2.11.0 — no explicit .NET 10 target; hard-coded email claims — IdP-specific</td></tr>
         </tbody>
       </table></div>
+      <p class="lede"><strong>ADR-8 implementation rules (normative):</strong></p>
+      <ol>
+        <li>Use one migrations assembly per provider (<code>eDMS.Infrastructure.Migrations.Postgres|SqlServer|MySql|Sqlite</code>); select it at runtime with <code>MigrationsAssembly(...)</code> and in tooling with <code>-p &lt;project&gt;</code> plus <code>Database__Provider=&lt;provider&gt;</code>.</li>
+        <li>Quarantine provider-specific schema in <code>AppDbContext.ApplyProviderSpecificColumnTypes</code>: Postgres keeps <code>citext</code>, <code>jsonb</code>, and <code>now()</code>; SQLite uses <code>NOCASE</code> and application-set timestamps; SQL Server/MySQL use native case-insensitive collations and UTC defaults.</li>
+        <li>SQLite has no native <code>DateTimeOffset</code>; apply <code>DateTimeOffsetToBinaryConverter</code> for SQLite only.</li>
+        <li>Do not use provider-specific LINQ. Replace Npgsql-only <code>EF.Functions.ILike</code> with portable <code>ToLower().Contains()</code>.</li>
+        <li>SQLite is a development convenience, not a production target; its gitignored <code>edms-dev.db</code> uses portable search behavior while Postgres keeps the <code>tsvector</code> migration.</li>
+        <li>The host applies the development default (<code>Development</code> with no provider config ⇒ <code>Sqlite</code>, otherwise <code>Postgres</code>); infrastructure remains environment-agnostic.</li>
+      </ol>
     </section>
 
     <!-- 3. SOLUTION STRUCTURE -->
@@ -353,7 +372,11 @@
   src/
     eDMS.Domain/               # entities, enums, invariants — no package refs beyond BCL
     eDMS.Application/          # commands, queries, handlers, validators, DTOs, interfaces
-    eDMS.Infrastructure/       # EF Core DbContext + migrations, concrete implementations, background services
+    eDMS.Infrastructure/       # EF Core DbContext + entity configs, concrete implementations, background services
+    eDMS.Infrastructure.Migrations.Postgres/    # PostgreSQL migration set (ADR-8)
+    eDMS.Infrastructure.Migrations.SqlServer/   # SQL Server migration set (ADR-8)
+    eDMS.Infrastructure.Migrations.MySql/       # MySQL migration set (ADR-8)
+    eDMS.Infrastructure.Migrations.Sqlite/      # SQLite migration set — local dev default (ADR-8)
     eDMS.Api/                  # controllers, Program.cs, middleware, DI composition
   tests/
     eDMS.Domain.UnitTests/
@@ -387,7 +410,7 @@
         <thead><tr><th>Concern</th><th>Convention</th></tr></thead>
         <tbody>
           <tr><td class="req">IDs</td><td><code>Guid</code> everywhere, generated app-side via <code>Guid.CreateVersion7()</code> — time-ordered, keeps PK indexes append-friendly</td></tr>
-          <tr><td class="req">Timestamps</td><td>UTC only, <code>timestamptz</code> in Postgres, ISO-8601 over the wire; never store local time</td></tr>
+          <tr><td class="req">Timestamps</td><td>UTC only, <code>timestamptz</code> in Postgres, ISO-8601 over the wire; never store local time. Other providers map this through their migration sets; SQLite stores UTC binary ticks (ADR-8).</td></tr>
           <tr><td class="req">Soft delete</td><td><code>IsDeleted</code>/<code>DeletedAt</code>/<code>DeletedBy</code> on Recycle-Bin-eligible entities, enforced via an EF Core global query filter — never a manual <code>WHERE</code></td></tr>
           <tr><td class="req">Audit fields</td><td><code>CreatedBy</code>/<code>CreatedAt</code> everywhere; <code>ModifiedBy</code>/<code>ModifiedAt</code> per FS §8.2</td></tr>
           <tr><td class="req">Nullability</td><td>C# nullable reference types enabled solution-wide; TypeScript <code>strict: true</code></td></tr>
@@ -516,6 +539,7 @@ public sealed class CheckOutDocumentHandler(
         <tbody>
           <tr><td class="req">RecycleBinPurgeService</td><td>Daily, 02:00</td><td>Hard-deletes soft-deleted items past retention (default 90d, FR-BIN-04) + their blobs</td></tr>
           <tr><td class="req">OrphanedUploadSweepService</td><td>Hourly</td><td>Removes temp upload files older than 24h from failed transactions</td></tr>
+          <tr><td class="req">ContentTextIndexingService</td><td>Every minute, bounded batch</td><td>Sends current PDF/Office versions through Apache Tika and persists extracted text; a version mismatch remains pending for retry (FR-SRCH-07, ADR-13)</td></tr>
           <tr><td class="req">PermissionCacheWarmupService <em>(P2)</em></td><td>On startup</td><td>Pre-populates the permission cache after a deploy to avoid a cold-cache spike</td></tr>
         </tbody>
       </table></div>
@@ -573,10 +597,13 @@ CREATE TABLE documents (
     is_deleted          boolean NOT NULL DEFAULT false,
     created_by          uuid NOT NULL REFERENCES "AspNetUsers"(id),
     created_at          timestamptz NOT NULL DEFAULT now(),
+    extracted_text      text,
+    extracted_text_version_id uuid,
     search_vector       tsvector GENERATED ALWAYS AS (
         setweight(to_tsvector('english', coalesce(name, '')), 'A') ||
         setweight(to_tsvector('english', coalesce(title, '')), 'A') ||
-        setweight(to_tsvector('english', coalesce(description, '')), 'B')
+        setweight(to_tsvector('english', coalesce(description, '')), 'B') ||
+        setweight(to_tsvector('english', coalesce(extracted_text, '')), 'C')
     ) STORED
 );
 CREATE INDEX ix_documents_folder ON documents(library_id, folder_id) WHERE NOT is_deleted;
@@ -642,7 +669,13 @@ SELECT object_type, object_id, depth FROM chain ORDER BY depth;</code></pre>
       <p>The resolver walks the result in order, stopping at the first level with an <code>item_permissions</code> row for the caller (direct or via group membership); falls through to <code>site_permissions</code> at the end.</p>
 
       <h3>6.4 Migrations</h3>
-      <p><code>dotnet ef migrations add &lt;Name&gt; -p src/eDMS.Infrastructure -s src/eDMS.Api</code>. Auto-apply on startup <strong>only</strong> in Development/Testing; every other environment runs migrations as an explicit CI/CD step before the new API version deploys (§11.3) — never auto-migrate production from application startup.</p>
+      <p>EF Core Code-First uses <strong>one migration set per database provider</strong> (ADR-8), each in its own project so a database never sees another provider's migrations. Select the set with <code>Database__Provider</code> and the matching <code>-p</code> project:</p>
+      <pre><code># bash — PostgreSQL (production):
+Database__Provider=Postgres dotnet ef migrations add &lt;Name&gt; -p server/src/eDMS.Infrastructure.Migrations.Postgres -s server/src/eDMS.Api
+# PowerShell:
+#   $env:Database__Provider='Postgres'; dotnet ef migrations add &lt;Name&gt; -p server/src/eDMS.Infrastructure.Migrations.Postgres -s server/src/eDMS.Api
+# SqlServer / MySql / Sqlite: swap the value and project accordingly.</code></pre>
+      <p>Every model change requires a migration <strong>in all four sets</strong>; verify none is missed with <code>dotnet ef migrations has-pending-model-changes -p &lt;project&gt; -s server/src/eDMS.Api</code> per provider. Auto-apply on startup remains limited to Development/Testing; every other environment runs migrations as an explicit CI/CD step before the new API version deploys (§11.3) — never auto-migrate production from application startup.</p>
 
       <h3>6.5 Seed data</h3>
       <p>First run against an empty database creates exactly one System Administrator from configuration (<code>Seed:AdminEmail</code>/<code>Seed:AdminTempPassword</code>, required env vars, no baked-in default), forced password reset on first login. No sample content is seeded outside local dev — <code>docker-compose.yml</code> (§11.2) seeds demonstration data matching <code>prototype(html)/assets/data.js</code>.</p>
@@ -940,7 +973,7 @@ services:
   ci.yml              # PR: restore, build, unit + integration tests, lint, format-check
   deploy-staging.yml  # push to main: build images, run migrations, deploy, smoke test
   deploy-prod.yml     # manual approval after staging: same steps against production</code></pre>
-      <p>Migrations run as their own job <em>before</em> the new API image rolls out — never auto-migrate on boot outside local dev (§6.4).</p>
+      <p>Migrations run as their own job <em>before</em> the new API image rolls out, with <code>Database__Provider</code> and <code>-p</code> matching the deployment database (§6.4) — never auto-migrate on boot outside local dev.</p>
       <h3>11.4 Configuration &amp; secrets</h3>
       <p><code>appsettings.json</code> holds only non-secret defaults; every environment above local dev supplies connection strings, JWT keys, and SMTP credentials via the hosting platform's secret manager. This document stays deployment-target-agnostic (FS §16 assumption 1) — the contract is "secrets arrive as environment variables," which any mainstream host satisfies.</p>
     </section>
@@ -952,17 +985,18 @@ services:
       <div class="table-wrap"><table>
         <thead><tr><th>Layer</th><th>Tool</th><th>Covers</th></tr></thead>
         <tbody>
-          <tr><td class="req">Domain.UnitTests</td><td>xUnit + FluentAssertions</td><td>Entity invariants — no mocks, pure domain logic</td></tr>
-          <tr><td class="req">Application.UnitTests</td><td>xUnit + FluentAssertions + NSubstitute</td><td>Handlers with dependencies mocked, one test class per use case</td></tr>
-          <tr><td class="req">IntegrationTests</td><td>WebApplicationFactory + Testcontainers.PostgreSql</td><td>Full HTTP round-trip against a real ephemeral Postgres — permission CTE, migrations, auth/refresh end-to-end</td></tr>
+          <tr><td class="req">Domain.UnitTests</td><td>xUnit</td><td>Entity invariants (e.g. soft-delete idempotency, <code>SiteRoleExtensions</code> fallback) — no mocks, pure domain logic</td></tr>
+          <tr><td class="req">Application.UnitTests</td><td>xUnit</td><td>Pipeline behaviors (authorization, audit logging, validation) with fakes</td></tr>
+          <tr><td class="req">IntegrationTests</td><td>xUnit + <code>WebApplicationFactory&lt;Program&gt;</code></td><td>Full HTTP round-trip per controller group, direct service tests (document/permission/recycle-bin/search/admin), auth/refresh flows, permission-hierarchy resolution, SQLite boot test, provider-specific model config</td></tr>
         </tbody>
       </table></div>
+      <p>CI gate: unit and integration suites must be green, plus a <strong>90% minimum line-coverage threshold across the real-code assemblies</strong> (<code>eDMS.Domain</code>, <code>eDMS.Application</code>, <code>eDMS.Infrastructure</code>, <code>eDMS.Api</code>) enforced by <code>coverlet.collector</code> via <code>server/coverlet.runsettings</code> with <code>--collect:"XPlat Code Coverage" --settings server/coverlet.runsettings</code>. The four generated EF migrations assemblies and <code>*.generated.cs</code> are excluded.</p>
       <h3>12.2 Frontend</h3>
       <div class="table-wrap"><table>
         <thead><tr><th>Layer</th><th>Tool</th><th>Covers</th></tr></thead>
         <tbody>
-          <tr><td class="req">Unit/component</td><td>Vitest + React Testing Library</td><td>Components, hooks, <code>api-client.ts</code> refresh/retry logic with <code>msw</code></td></tr>
-          <tr><td class="req">E2E</td><td>Playwright</td><td>Login → browse → upload → check-out/in → share → search, against the full docker-compose stack — the automated equivalent of the manual walkthrough <code>prototype(html)</code> enables today</td></tr>
+          <tr><td class="req">Unit/component</td><td>Vitest + React Testing Library + MSW</td><td>Pages, feature API clients, auth context, and <code>api-client.ts</code> refresh/retry logic in jsdom with mocked HTTP. 90% line/statement/function/branch thresholds apply to <code>src</code>, excluding generated UI, wiring, and types.</td></tr>
+          <tr><td class="req">E2E</td><td>Playwright</td><td>Login → browse → upload → check-out/in → share → search against the full docker-compose stack. <code>E2E_DATABASE_PROVIDER</code> selects Postgres (default) or SQLite, and the harness resets the E2E database before each run.</td></tr>
         </tbody>
       </table></div>
       <h3>12.3 Non-negotiable test cases</h3>
@@ -1007,7 +1041,7 @@ services:
         <tbody>
           <tr><td class="req">Permission cache 30s staleness could let a just-revoked user complete one more request</td><td>Low — bounded window, still audit-logged</td><td>Acceptable for MVP; revisit if compliance demands immediate revocation</td></tr>
           <tr><td class="req">Local-disk storage has no built-in redundancy</td><td>Data loss on disk failure without a separate backup job</td><td>Out of scope here (infra/ops) — flag explicitly to whoever owns production infrastructure before go-live</td></tr>
-          <tr><td class="req">Recursive CTE performance at deep nesting + large group memberships is untested</td><td>Possible latency regression at scale</td><td>Add to integration suite once realistic fixtures exist; not blocking given FR-FLD-06's 20-level cap</td></tr>
+          <tr><td class="req">Recursive CTE performance at deep nesting + large group memberships is untested</td><td>Possible latency regression at scale</td><td><strong>Measured (M11.2, 2026-08-16):</strong> 1.70 ms average per resolution uncached and 0.001 ms cached at the FR-FLD-06 20-level cap with 10k group memberships and 50 groups. <code>PermissionCtePerformanceTests</code> asserts &lt;500 ms uncached / &lt;5 ms cached; the recursion cap was raised 20 → 25 after the initial run exposed truncation before Library/Site.</td></tr>
         </tbody>
       </table></div>
       <h3>14.2 Glossary</h3>

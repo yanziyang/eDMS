@@ -13,6 +13,9 @@ if [[ ! -s /shared/server.crt || ! -s /shared/server.pem ]]; then
     -out /shared/server.crt
   chmod 600 /shared/server.pem
 fi
+
+# The image's bundled local-stack-dev certificate serves the HTTPS endpoint.
+# The generated pair below is only for SAML assertion signing.
 cp /shared/server.crt /var/simplesamlphp/cert/server.crt
 cp /shared/server.pem /var/simplesamlphp/cert/server.pem
 

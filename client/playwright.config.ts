@@ -13,6 +13,11 @@ const connectionString =
     : "Host=localhost;Port=5432;Database=edms_e2e;Username=postgres;Password=Password1";
 const oidcEnabled = process.env.E2E_OIDC_ENABLED === "1";
 const oidcAuthority = process.env.E2E_OIDC_AUTHORITY ?? "http://localhost:4011/default";
+const samlEnabled = process.env.E2E_SAML_ENABLED === "1";
+const samlIdpEntityId = process.env.E2E_SAML_IDP_ENTITY_ID ?? "urn:edms:test-saml-idp";
+const samlIdpSso = process.env.E2E_SAML_IDP_SSO
+  ?? "https://localhost:4443/simplesaml/saml2/idp/SSOService.php";
+const samlIdpCertificate = process.env.E2E_SAML_IDP_CERT ?? "";
 
 export default defineConfig({
   testDir: "./e2e",
@@ -26,6 +31,7 @@ export default defineConfig({
     baseURL: `http://localhost:${WEB_PORT}`,
     channel: "msedge",
     headless: true,
+    ignoreHTTPSErrors: samlEnabled,
     trace: "on-first-retry",
     screenshot: "only-on-failure",
     viewport: { width: 1440, height: 900 },
@@ -60,6 +66,12 @@ export default defineConfig({
           Oidc__ClientSecret: "edms-demo-secret",
           Oidc__CallbackPath: "/api/v1/auth/sso/oidc/callback",
           Oidc__RequireHttpsMetadata: oidcEnabled ? "false" : "true",
+          Saml__IdpEntityId: samlEnabled ? samlIdpEntityId : "",
+          Saml__IdpSingleSignOnUrl: samlEnabled ? samlIdpSso : "",
+          Saml__IdpSigningCertificate: samlEnabled ? samlIdpCertificate : "",
+          Saml__EntityId: "urn:edms:saml",
+          Saml__CallbackPath: "/api/v1/auth/sso/saml/acs",
+          Saml__EmailAttributeName: "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress",
         },
       }]),
     {

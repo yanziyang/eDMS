@@ -122,29 +122,23 @@ public sealed class SsoController(
                 return Unauthorized();
             }
 
-            var externalId = samlResponse.NameId?.Value;
-            var email = FindClaim(
+            var identity = SamlClaimsMapper.Map(
+                samlResponse.NameId?.Value,
                 samlResponse.ClaimsIdentity,
                 samlOptions.Value.EmailAttributeName);
-            if (string.IsNullOrWhiteSpace(externalId) || string.IsNullOrWhiteSpace(email))
+            if (identity is null)
             {
                 return Unauthorized();
             }
 
-            var displayName = FindClaim(
-                    samlResponse.ClaimsIdentity,
-                    ClaimTypes.Name,
-                    "name",
-                    "displayName")
-                ?? email;
             var services = HttpContext.RequestServices;
             var user = await services
                 .GetRequiredService<IJitProvisioningService>()
                 .ProvisionOrLinkAsync(
                     eDMS.Domain.AuthProvider.Saml,
-                    externalId,
-                    email,
-                    displayName,
+                    identity.ExternalId,
+                    identity.Email,
+                    identity.DisplayName,
                     cancellationToken);
             if (user is null)
             {

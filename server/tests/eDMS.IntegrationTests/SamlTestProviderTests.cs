@@ -20,7 +20,8 @@ public sealed class SamlTestProviderTests : IAsyncLifetime
         {
             provider = SamlTestProvider.Create();
             container = provider.CreateBuilder().Build();
-            await container.StartAsync();
+            using var timeout = new CancellationTokenSource(TimeSpan.FromMinutes(5));
+            await container.StartAsync(timeout.Token);
             available = true;
         }
         catch (Exception exception)
