@@ -17,20 +17,29 @@ public sealed class RecentService(
         CancellationToken cancellationToken = default)
     {
         var userId = currentUser.UserId ?? throw new ForbiddenException();
-        var recentAudit = await db.AuditLogEntries.AsNoTracking()
+        // SQLite stores DateTimeOffset as a converted value and cannot reliably
+        // translate the grouped latest-row shape across all four providers. The
+        // user predicate is still served by ix_audit_log_user; grouping the already
+        // ordered, narrow audit stream in memory keeps the result provider-portable
+        // and preserves the exact latest action/timestamp pair.
+        var auditEntries = await db.AuditLogEntries.AsNoTracking()
             .Where(entry => entry.UserId == userId
                 && entry.ObjectType == ObjectType.Document
                 && (entry.Action == AuditAction.View
                     || entry.Action == AuditAction.Upload
                     || entry.Action == AuditAction.CheckIn
                     || entry.Action == AuditAction.EditMetadata))
+            .OrderByDescending(entry => entry.Timestamp)
+            .ThenByDescending(entry => entry.Id)
+            .Select(entry => new RecentAuditRow(entry.ObjectId, entry.Timestamp, entry.Action))
+            .ToListAsync(cancellationToken);
+
+        var recentAudit = auditEntries
             .GroupBy(entry => entry.ObjectId)
-            .Select(group => new RecentAuditRow(
-                group.Key,
-                group.Max(entry => entry.Timestamp)))
+            .Select(group => group.First())
             .OrderByDescending(entry => entry.LastTouchedAt)
             .Take(DefaultLimit)
-            .ToListAsync(cancellationToken);
+            .ToList();
 
         if (recentAudit.Count == 0)
         {
@@ -38,24 +47,6 @@ public sealed class RecentService(
         }
 
         var ids = recentAudit.Select(entry => entry.ObjectId).ToList();
-        // The grouped query above gives us the timestamp/order. Resolve the
-        // corresponding action for all selected documents in one additional query,
-        // rather than looking it up once per row.
-        var latestActions = await db.AuditLogEntries.AsNoTracking()
-            .Where(entry => entry.UserId == userId
-                && entry.ObjectType == ObjectType.Document
-                && ids.Contains(entry.ObjectId)
-                && (entry.Action == AuditAction.View
-                    || entry.Action == AuditAction.Upload
-                    || entry.Action == AuditAction.CheckIn
-                    || entry.Action == AuditAction.EditMetadata))
-            .OrderByDescending(entry => entry.Timestamp)
-            .ThenByDescending(entry => entry.Id)
-            .ToListAsync(cancellationToken);
-        var actionByDocumentId = latestActions
-            .GroupBy(entry => entry.ObjectId)
-            .ToDictionary(group => group.Key, group => group.First().Action);
-
         var documents = await (
             from document in db.Documents.AsNoTracking()
             join library in db.Libraries.AsNoTracking() on document.LibraryId equals library.Id
@@ -105,13 +96,16 @@ public sealed class RecentService(
                 document.FolderId,
                 document.FolderPath,
                 audit.LastTouchedAt,
-                actionByDocumentId.GetValueOrDefault(audit.ObjectId, AuditAction.View)));
+                audit.LastAction));
         }
 
         return result;
     }
 
-    private sealed record RecentAuditRow(Guid ObjectId, DateTimeOffset LastTouchedAt);
+    private sealed record RecentAuditRow(
+        Guid ObjectId,
+        DateTimeOffset LastTouchedAt,
+        AuditAction LastAction);
 
     private sealed record RecentDocumentTarget(
         Guid DocumentId,

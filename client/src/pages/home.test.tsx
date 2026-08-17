@@ -102,4 +102,48 @@ describe("Home", () => {
       await screen.findByText("You do not have access to any sites yet."),
     ).toBeInTheDocument();
   });
+
+  it("shows recent documents with their location, time, and deep link", async () => {
+    server.use(
+      http.get(`${base}/sites`, () => HttpResponse.json([])),
+      http.get(`${base}/me/recent`, () =>
+        HttpResponse.json([
+          {
+            documentId: "d1",
+            name: "Contract.pdf",
+            siteId: "s1",
+            siteName: "Site One",
+            siteSlug: "site-one",
+            libraryId: "l1",
+            libraryName: "Documents",
+            folderId: null,
+            folderPath: null,
+            lastTouchedAt: "2026-08-17T10:00:00Z",
+            lastAction: "View",
+          },
+        ]),
+      ),
+    );
+
+    renderHome();
+
+    expect(await screen.findByRole("heading", { name: "Recent" })).toBeInTheDocument();
+    expect(screen.getByText("Contract.pdf")).toBeInTheDocument();
+    expect(screen.getByText("Site One / Documents")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Contract\.pdf Site One \/ Documents/ })).toHaveAttribute(
+      "href",
+      "/sites/site-one/libraries/l1?documentId=d1",
+    );
+  });
+
+  it("shows the empty recent state for a new user", async () => {
+    server.use(
+      http.get(`${base}/sites`, () => HttpResponse.json([])),
+      http.get(`${base}/me/recent`, () => HttpResponse.json([])),
+    );
+
+    renderHome();
+
+    expect(await screen.findByText("No recent documents yet.")).toBeInTheDocument();
+  });
 });
