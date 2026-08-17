@@ -52,3 +52,22 @@ public sealed record UploadResult(
     string VersionLabel,
     long SizeBytes,
     string Status);
+
+public sealed record BulkMetadataColumnInput(string Name, string? Value);
+
+public sealed record BulkMetadataUpdateRequest(
+    IReadOnlyList<Guid> DocumentIds,
+    bool UpdateTitle,
+    string? Title,
+    bool UpdateDescription,
+    string? Description,
+    bool UpdateTags,
+    IReadOnlyList<string>? Tags,
+    IReadOnlyList<BulkMetadataColumnInput> Columns);
+
+public sealed record BulkMetadataUpdateItem(
+    Guid DocumentId,
+    string Status,
+    string? RejectionReason);
+
+public sealed record BulkMetadataUpdateResult(IReadOnlyList<BulkMetadataUpdateItem> Items);

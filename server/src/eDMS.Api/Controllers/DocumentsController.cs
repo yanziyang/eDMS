@@ -4,6 +4,7 @@ using eDMS.Application.Common.Interfaces;
 using eDMS.Application.Documents;
 using eDMS.Application.Documents.Commands.UpdateDocumentColumnValues;
 using eDMS.Application.Documents.Queries.GetDocumentMetadata;
+using eDMS.Application.Documents.Commands.BulkUpdateMetadata;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -117,6 +118,12 @@ public sealed class DocumentsController(
         await mediator.Send(new UpdateDocumentColumnValuesCommand(id, request.Values), cancellationToken);
         return NoContent();
     }
+
+    [HttpPut("documents/bulk-metadata")]
+    public async Task<IActionResult> BulkUpdateMetadata(
+        [FromBody] BulkUpdateMetadataCommand command,
+        CancellationToken cancellationToken) =>
+        Ok(await mediator.Send(command, cancellationToken));
 
     [HttpDelete("documents/{id:guid}")]
     public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)

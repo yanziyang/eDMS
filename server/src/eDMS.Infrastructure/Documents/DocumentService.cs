@@ -1,4 +1,5 @@
 using System.Security.Cryptography;
+using System.Globalization;
 using System.Text.Json;
 using eDMS.Application.Admin;
 using eDMS.Application.Common.Exceptions;
@@ -440,6 +441,123 @@ public sealed class DocumentService(
         await audit.LogAsync(AuditAction.Restore, ObjectType.Document, document.Id, document.Name, null, cancellationToken);
     }
 
+    public async Task<BulkMetadataUpdateResult> BulkUpdateMetadataAsync(
+        BulkMetadataUpdateRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var userId = currentUser.UserId ?? throw new ForbiddenException();
+        var documents = await db.Documents
+            .Where(document => request.DocumentIds.Contains(document.Id))
+            .ToDictionaryAsync(document => document.Id, cancellationToken);
+        var results = new List<BulkMetadataUpdateItem>(request.DocumentIds.Count);
+
+        foreach (var documentId in request.DocumentIds)
+        {
+            if (!documents.TryGetValue(documentId, out var document))
+            {
+                results.Add(Rejected(documentId, "not-found"));
+                continue;
+            }
+
+            try
+            {
+                await permissions.RequireAsync(
+                    userId,
+                    ObjectType.Document,
+                    documentId,
+                    PermissionLevel.Contribute,
+                    cancellationToken);
+            }
+            catch (ForbiddenException)
+            {
+                results.Add(Rejected(documentId, "forbidden"));
+                continue;
+            }
+
+            if (document.CheckedOutBy is { } checkedOutBy && checkedOutBy != userId)
+            {
+                results.Add(Rejected(documentId, "checked-out-by-other-user"));
+                continue;
+            }
+
+            var definitions = document.ContentTypeId is { } contentTypeId
+                ? await db.ColumnDefinitions
+                    .Where(column => column.ContentTypeId == contentTypeId)
+                    .ToListAsync(cancellationToken)
+                : [];
+            var invalidColumn = request.Columns
+                .Select(input => (Input: input, Definition: definitions.FirstOrDefault(column =>
+                    string.Equals(column.Name, input.Name, StringComparison.OrdinalIgnoreCase))))
+                .FirstOrDefault(item => item.Definition is not null
+                    && !IsValidBulkColumnValue(item.Definition, item.Input.Value));
+            if (invalidColumn.Definition is not null)
+            {
+                results.Add(Rejected(documentId, "invalid-metadata"));
+                continue;
+            }
+
+            if (request.UpdateTitle)
+            {
+                document.Title = request.Title;
+            }
+
+            if (request.UpdateDescription)
+            {
+                document.Description = request.Description;
+            }
+
+            if (request.UpdateTags)
+            {
+                await ReplaceTagsAsync(document.Id, request.Tags ?? [], userId, cancellationToken);
+            }
+
+            if (request.Columns.Count > 0 && definitions.Count > 0)
+            {
+                var values = await db.DocumentColumnValues
+                    .Where(value => value.DocumentId == document.Id)
+                    .ToListAsync(cancellationToken);
+                foreach (var input in request.Columns)
+                {
+                    var definition = definitions.FirstOrDefault(column =>
+                        string.Equals(column.Name, input.Name, StringComparison.OrdinalIgnoreCase));
+                    if (definition is null)
+                    {
+                        continue;
+                    }
+
+                    var existing = values.SingleOrDefault(value => value.ColumnDefinitionId == definition.Id);
+                    if (existing is null)
+                    {
+                        db.DocumentColumnValues.Add(new DocumentColumnValue
+                        {
+                            DocumentId = document.Id,
+                            ColumnDefinitionId = definition.Id,
+                            Value = input.Value ?? string.Empty,
+                        });
+                    }
+                    else
+                    {
+                        existing.Value = input.Value ?? string.Empty;
+                    }
+                }
+            }
+
+            document.ModifiedBy = userId;
+            document.ModifiedAt = DateTimeOffset.UtcNow;
+            await db.SaveChangesAsync(cancellationToken);
+            await audit.LogAsync(
+                AuditAction.EditMetadata,
+                ObjectType.Document,
+                document.Id,
+                document.Name,
+                null,
+                cancellationToken);
+            results.Add(new BulkMetadataUpdateItem(document.Id, "updated", null));
+        }
+
+        return new BulkMetadataUpdateResult(results);
+    }
+
     public async Task<IReadOnlyList<DocumentVersionDto>> ListVersionsAsync(
         Guid documentId,
         CancellationToken cancellationToken = default)
@@ -709,6 +827,86 @@ public sealed class DocumentService(
 
     private static bool HasValue(IReadOnlyDictionary<Guid, string> values, Guid columnId) =>
         values.TryGetValue(columnId, out var value) && !string.IsNullOrWhiteSpace(value);
+
+    private async Task ReplaceTagsAsync(
+        Guid documentId,
+        IReadOnlyList<string> tags,
+        Guid userId,
+        CancellationToken cancellationToken)
+    {
+        var normalizedTags = tags
+            .Select(tag => tag.Trim())
+            .Where(tag => tag.Length > 0)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        var current = await db.DocumentTags
+            .Where(tag => tag.DocumentId == documentId)
+            .ToListAsync(cancellationToken);
+        db.DocumentTags.RemoveRange(current);
+
+        var existingTags = await db.Tags
+            .Where(tag => normalizedTags.Contains(tag.Name))
+            .ToListAsync(cancellationToken);
+        foreach (var name in normalizedTags)
+        {
+            var tag = existingTags.FirstOrDefault(existing =>
+                string.Equals(existing.Name, name, StringComparison.OrdinalIgnoreCase));
+            if (tag is null)
+            {
+                tag = new Tag { Name = name };
+                tag.SetCreator(userId);
+                db.Tags.Add(tag);
+            }
+
+            db.DocumentTags.Add(new DocumentTag { DocumentId = documentId, TagId = tag.Id });
+        }
+    }
+
+    private static bool IsValidBulkColumnValue(ColumnDefinition definition, string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return !definition.IsRequired;
+        }
+
+        return definition.DataType switch
+        {
+            ColumnDataType.Number => decimal.TryParse(
+                value,
+                NumberStyles.Number,
+                CultureInfo.InvariantCulture,
+                out _),
+            ColumnDataType.Date => DateTimeOffset.TryParse(
+                value,
+                CultureInfo.InvariantCulture,
+                DateTimeStyles.None,
+                out _),
+            ColumnDataType.Boolean => bool.TryParse(value, out _),
+            ColumnDataType.Choice => IsChoiceValue(definition.ChoiceOptions, value),
+            _ => true,
+        };
+    }
+
+    private static bool IsChoiceValue(string? optionsJson, string value)
+    {
+        if (string.IsNullOrWhiteSpace(optionsJson))
+        {
+            return false;
+        }
+
+        try
+        {
+            var options = JsonSerializer.Deserialize<List<string>>(optionsJson) ?? [];
+            return options.Contains(value, StringComparer.Ordinal);
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
+    }
+
+    private static BulkMetadataUpdateItem Rejected(Guid documentId, string reason) =>
+        new(documentId, "rejected", reason);
 
     private async Task<List<string>> MissingRequiredColumnsAsync(
         Guid? contentTypeId,

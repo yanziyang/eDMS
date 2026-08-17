@@ -48,6 +48,10 @@ public interface IDocumentService
         string? description,
         CancellationToken cancellationToken = default);
 
+    Task<BulkMetadataUpdateResult> BulkUpdateMetadataAsync(
+        BulkMetadataUpdateRequest request,
+        CancellationToken cancellationToken = default);
+
     Task<IReadOnlyList<DocumentVersionDto>> ListVersionsAsync(
         Guid documentId,
         CancellationToken cancellationToken = default);

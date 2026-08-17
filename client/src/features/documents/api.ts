@@ -1,5 +1,14 @@
 import { request, requestBlob } from "@/lib/api-client";
-import type { DocumentDto, DocumentVersionDto, ItemDto, LibraryDto, MetadataValueInput, UploadResult } from "@/types/api";
+import type {
+  BulkMetadataUpdateRequest,
+  BulkMetadataUpdateResult,
+  DocumentDto,
+  DocumentVersionDto,
+  ItemDto,
+  LibraryDto,
+  MetadataValueInput,
+  UploadResult,
+} from "@/types/api";
 
 export function listLibraries(siteId: string): Promise<LibraryDto[]> {
   return request<LibraryDto[]>(`/sites/${siteId}/libraries`);
@@ -110,6 +119,15 @@ export function updateDocument(
   input: { name?: string; title?: string | null; description?: string | null },
 ): Promise<void> {
   return request<void>(`/documents/${documentId}`, { method: "PUT", body: JSON.stringify(input) });
+}
+
+export function bulkUpdateMetadata(
+  input: BulkMetadataUpdateRequest,
+): Promise<BulkMetadataUpdateResult> {
+  return request<BulkMetadataUpdateResult>("/documents/bulk-metadata", {
+    method: "PUT",
+    body: JSON.stringify(input),
+  });
 }
 
 export function listDocumentVersions(documentId: string): Promise<DocumentVersionDto[]> {

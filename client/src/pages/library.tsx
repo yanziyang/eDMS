@@ -1,5 +1,5 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowDown,
   ArrowUp,
@@ -58,6 +58,7 @@ import {
 } from "@/features/library-views/config";
 import {
   copyDocument,
+  bulkUpdateMetadata,
   createFolder,
   deleteDocument,
   deleteFolder,
@@ -70,8 +71,12 @@ import {
   uploadToFolder,
   uploadToLibrary,
 } from "@/features/documents/api";
-import { listContentTypes } from "@/features/content-types/api";
-import { buildMetadataValues, MetadataFields } from "@/features/content-types/components/MetadataFields";
+import { getDocumentMetadata, listContentTypes } from "@/features/content-types/api";
+import {
+  buildMetadataValues,
+  MetadataFields,
+  type MetadataFieldColumn,
+} from "@/features/content-types/components/MetadataFields";
 import { listSites } from "@/features/sites/api";
 import { abortUpload, completeUpload, startUpload } from "@/features/uploads/api";
 import { LARGE_FILE_THRESHOLD, uploadChunks } from "@/features/uploads/chunkedUpload";
@@ -79,6 +84,8 @@ import { ApiError } from "@/lib/api-client";
 import { queryKeys } from "@/lib/queryKeys";
 import type {
   ContentTypeColumnDto,
+  DocumentMetadataDto,
+  BulkMetadataUpdateRequest,
   ItemDto,
   LibraryDto,
   LibraryViewDto,
@@ -106,6 +113,7 @@ export function LibraryBrowser() {
   const [uploadOpen, setUploadOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [moveOpen, setMoveOpen] = useState(false);
+  const [bulkMetadataOpen, setBulkMetadataOpen] = useState(false);
   const [saveViewOpen, setSaveViewOpen] = useState(false);
   const [saveViewName, setSaveViewName] = useState("");
   const [saveViewShared, setSaveViewShared] = useState(false);
@@ -223,6 +231,9 @@ export function LibraryBrowser() {
   }, [groupBy, items]);
 
   const selectedItems = items.filter((item) => selection.has(item.id));
+  const selectedDocuments = selectedItems.filter(
+    (item) => item.kind === "document" && item.documentId !== null,
+  );
   const singleSelectedDocument =
     selectedItems.length === 1 && selectedItems[0].kind === "document" ? selectedItems[0] : null;
 
@@ -326,6 +337,28 @@ export function LibraryBrowser() {
     },
     onError: (_error, variables) =>
       toast.error(variables.mode === "move" ? "Failed to move document" : "Failed to copy document"),
+  });
+
+  const bulkMetadataMutation = useMutation({
+    mutationFn: (input: BulkMetadataUpdateRequest) => bulkUpdateMetadata(input),
+    onSuccess: (result) => {
+      const names = new Map(selectedDocuments.map((item) => [item.documentId!, item.name]));
+      const rejected = result.items.filter((item) => item.status === "rejected");
+      const updated = result.items.length - rejected.length;
+      if (rejected.length === 0) {
+        toast.success(`Updated metadata for ${updated} document${updated === 1 ? "" : "s"}`);
+      } else {
+        const failures = rejected
+          .map((item) => `${names.get(item.documentId) ?? item.documentId}: ${bulkRejectionMessage(item.rejectionReason)}`)
+          .join("; ");
+        toast.error(`Updated ${updated}; failed ${rejected.length}: ${failures}`);
+      }
+      setBulkMetadataOpen(false);
+      clearSelection();
+      invalidateItems();
+      queryClient.invalidateQueries({ queryKey: queryKeys.documents.libraryItems(libraryId ?? "unknown") });
+    },
+    onError: () => toast.error("Failed to update document metadata"),
   });
 
   const saveViewMutation = useMutation({
@@ -523,6 +556,11 @@ export function LibraryBrowser() {
               <Button variant="ghost" size="sm" onClick={() => setMoveOpen(true)}>
                 <MoveRight className="size-4" />
                 Move / Copy
+              </Button>
+            )}
+            {selectedDocuments.length > 0 && (
+              <Button variant="ghost" size="sm" onClick={() => setBulkMetadataOpen(true)}>
+                Edit properties
               </Button>
             )}
             <Button
@@ -765,6 +803,14 @@ export function LibraryBrowser() {
         onSubmit={() => saveViewMutation.mutate(saveViewName.trim())}
       />
 
+      <BulkMetadataDialog
+        open={bulkMetadataOpen}
+        onOpenChange={setBulkMetadataOpen}
+        items={selectedDocuments}
+        pending={bulkMetadataMutation.isPending}
+        onSubmit={(input) => bulkMetadataMutation.mutate(input)}
+      />
+
       <CreateFolderDialog
         open={createFolderOpen}
         onOpenChange={setCreateFolderOpen}
@@ -857,6 +903,202 @@ function SortHeader({
       {label}
       {active && (desc ? <ArrowDown className="size-3" /> : <ArrowUp className="size-3" />)}
     </button>
+  );
+}
+
+interface BulkMetadataDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  items: ItemDto[];
+  pending: boolean;
+  onSubmit: (input: BulkMetadataUpdateRequest) => void;
+}
+
+function BulkMetadataDialog({
+  open,
+  onOpenChange,
+  items,
+  pending,
+  onSubmit,
+}: BulkMetadataDialogProps) {
+  const [updateTitle, setUpdateTitle] = useState(false);
+  const [title, setTitle] = useState("");
+  const [updateDescription, setUpdateDescription] = useState(false);
+  const [description, setDescription] = useState("");
+  const [updateTags, setUpdateTags] = useState(false);
+  const [tags, setTags] = useState("");
+  const [columnDraft, setColumnDraft] = useState<Record<string, string>>({});
+  const [changedColumns, setChangedColumns] = useState<Set<string>>(new Set());
+  const itemKey = items.map((item) => item.documentId ?? item.id).join(",");
+  const documentIds = items
+    .map((item) => item.documentId)
+    .filter((documentId): documentId is string => documentId !== null);
+  const metadataQueries = useQueries({
+    queries: documentIds.map((documentId) => ({
+      queryKey: queryKeys.documents.metadata(documentId),
+      queryFn: () => getDocumentMetadata(documentId),
+      enabled: open,
+      retry: false,
+    })),
+  });
+  const metadata = metadataQueries
+    .map((query) => query.data)
+    .filter((value): value is DocumentMetadataDto => value !== undefined);
+  const sharedColumns = useMemo<MetadataFieldColumn[]>(() => {
+    const first = metadata[0];
+    if (!first || metadata.length !== documentIds.length) {
+      return [];
+    }
+
+    return first.columns
+      .filter((column) => metadata.every((entry) =>
+        entry.columns.some((candidate) =>
+          candidate.name === column.name && candidate.dataType === column.dataType),
+      ))
+      .map((column) => ({
+        id: column.name,
+        name: column.name,
+        dataType: column.dataType,
+        isRequired: metadata.some((entry) => entry.columns.some((candidate) =>
+          candidate.name === column.name && candidate.isRequired)),
+        choiceOptions: column.choiceOptions,
+      }));
+  }, [documentIds.length, metadata]);
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    setUpdateTitle(false);
+    setTitle("");
+    setUpdateDescription(false);
+    setDescription("");
+    setUpdateTags(false);
+    setTags("");
+    setColumnDraft({});
+    setChangedColumns(new Set());
+  }, [itemKey, open]);
+
+  const metadataLoading = metadataQueries.some((query) => query.isLoading);
+  const hasChanges = updateTitle || updateDescription || updateTags || changedColumns.size > 0;
+
+  const submit = () => {
+    onSubmit({
+      documentIds,
+      updateTitle,
+      title: updateTitle ? title : null,
+      updateDescription,
+      description: updateDescription ? description : null,
+      updateTags,
+      tags: updateTags
+        ? tags.split(",").map((tag) => tag.trim()).filter((tag) => tag.length > 0)
+        : null,
+      columns: sharedColumns
+        .filter((column) => changedColumns.has(column.id))
+        .map((column) => ({ name: column.name, value: columnDraft[column.id] ?? null })),
+    });
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-h-[85vh] max-w-3xl overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Edit properties</DialogTitle>
+          <DialogDescription>
+            Apply shared metadata to the selected documents. Each item is authorized and saved independently.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="grid gap-4">
+          <div className="rounded-lg border bg-muted/30 p-3">
+            <div className="mb-2 text-sm font-medium">Selected documents ({items.length})</div>
+            <div className="grid gap-1 text-sm sm:grid-cols-2">
+              {items.map((item) => <div key={item.id} className="truncate">{item.name}</div>)}
+            </div>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="grid gap-2 rounded-lg border p-3">
+              <label className="flex items-center gap-2 text-sm font-medium">
+                <Checkbox
+                  checked={updateTitle}
+                  onCheckedChange={(checked) => setUpdateTitle(checked === true)}
+                />
+                Set title
+              </label>
+              {updateTitle && (
+                <Input
+                  aria-label="Bulk title"
+                  value={title}
+                  onChange={(event) => setTitle(event.target.value)}
+                  placeholder="Title"
+                />
+              )}
+            </div>
+            <div className="grid gap-2 rounded-lg border p-3">
+              <label className="flex items-center gap-2 text-sm font-medium">
+                <Checkbox
+                  checked={updateDescription}
+                  onCheckedChange={(checked) => setUpdateDescription(checked === true)}
+                />
+                Set description
+              </label>
+              {updateDescription && (
+                <Input
+                  aria-label="Bulk description"
+                  value={description}
+                  onChange={(event) => setDescription(event.target.value)}
+                  placeholder="Description"
+                />
+              )}
+            </div>
+            <div className="grid gap-2 rounded-lg border p-3 sm:col-span-2">
+              <label className="flex items-center gap-2 text-sm font-medium">
+                <Checkbox
+                  checked={updateTags}
+                  onCheckedChange={(checked) => setUpdateTags(checked === true)}
+                />
+                Replace tags
+              </label>
+              {updateTags && (
+                <Input
+                  aria-label="Bulk tags"
+                  value={tags}
+                  onChange={(event) => setTags(event.target.value)}
+                  placeholder="Comma-separated tags"
+                />
+              )}
+            </div>
+          </div>
+
+          {metadataLoading && (
+            <p className="text-sm text-muted-foreground">Loading shared content-type fields…</p>
+          )}
+          {!metadataLoading && sharedColumns.length > 0 && (
+            <div className="rounded-lg border p-3">
+              <div className="mb-2 text-sm font-medium">Shared content-type fields</div>
+              <MetadataFields
+                columns={sharedColumns}
+                draft={columnDraft}
+                onChange={(columnId, value) => {
+                  setColumnDraft((current) => ({ ...current, [columnId]: value }));
+                  setChangedColumns((current) => new Set(current).add(columnId));
+                }}
+              />
+            </div>
+          )}
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+          <Button disabled={pending || metadataLoading || !hasChanges} onClick={submit}>
+            {pending && <LoaderCircle data-icon="inline-start" className="animate-spin" />}
+            Apply changes
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -1561,4 +1803,19 @@ function formatBytes(bytes: number): string {
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   if (bytes < 1024 * 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
   return `${(bytes / 1024 / 1024 / 1024).toFixed(1)} GB`;
+}
+
+function bulkRejectionMessage(reason: string | null): string {
+  switch (reason) {
+    case "checked-out-by-other-user":
+      return "checked out by another user";
+    case "forbidden":
+      return "insufficient permission";
+    case "not-found":
+      return "document not found";
+    case "invalid-metadata":
+      return "invalid metadata";
+    default:
+      return "unknown error";
+  }
 }

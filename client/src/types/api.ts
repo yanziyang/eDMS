@@ -309,3 +309,35 @@ export interface MetadataValueInput {
   columnDefinitionId: string;
   value: string | null;
 }
+
+export interface BulkMetadataColumnInput {
+  name: string;
+  value: string | null;
+}
+
+export interface BulkMetadataUpdateRequest {
+  documentIds: string[];
+  updateTitle: boolean;
+  title: string | null;
+  updateDescription: boolean;
+  description: string | null;
+  updateTags: boolean;
+  tags: string[] | null;
+  columns: BulkMetadataColumnInput[];
+}
+
+export type BulkMetadataRejectionReason =
+  | "not-found"
+  | "forbidden"
+  | "checked-out-by-other-user"
+  | "invalid-metadata";
+
+export interface BulkMetadataUpdateItem {
+  documentId: string;
+  status: "updated" | "rejected";
+  rejectionReason: BulkMetadataRejectionReason | null;
+}
+
+export interface BulkMetadataUpdateResult {
+  items: BulkMetadataUpdateItem[];
+}

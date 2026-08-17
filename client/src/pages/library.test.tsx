@@ -1329,6 +1329,124 @@ describe("LibraryBrowser", () => {
     expect(screen.queryByText("2 selected")).not.toBeInTheDocument();
   });
 
+  it("bulk edits shared properties and lists per-item failures", async () => {
+    mockNav();
+    let requestBody: unknown;
+    server.use(
+      http.get(`${base}/libraries/l1/items`, () =>
+        HttpResponse.json([item(), item({ id: "i2", name: "locked.txt", documentId: "d2" })]),
+      ),
+      http.get(`${base}/documents/d1/metadata`, () =>
+        HttpResponse.json({ contentTypeId: null, contentTypeName: null, columns: [] }),
+      ),
+      http.get(`${base}/documents/d2/metadata`, () =>
+        HttpResponse.json({ contentTypeId: null, contentTypeName: null, columns: [] }),
+      ),
+      http.put(`${base}/documents/bulk-metadata`, async ({ request }) => {
+        requestBody = await request.json();
+        return HttpResponse.json({
+          items: [
+            { documentId: "d1", status: "updated", rejectionReason: null },
+            {
+              documentId: "d2",
+              status: "rejected",
+              rejectionReason: "checked-out-by-other-user",
+            },
+          ],
+        });
+      }),
+    );
+
+    const user = userEvent.setup();
+    renderLibrary();
+    await screen.findByText("contract.pdf");
+
+    await user.click(screen.getByRole("checkbox", { name: "Select contract.pdf" }));
+    await user.click(screen.getByRole("checkbox", { name: "Select locked.txt" }));
+    await user.click(screen.getByRole("button", { name: "Edit properties" }));
+    expect(await screen.findByRole("heading", { name: "Edit properties" })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("checkbox", { name: "Set title" }));
+    await user.type(screen.getByRole("textbox", { name: "Bulk title" }), "Shared title");
+    await user.click(screen.getByRole("button", { name: "Apply changes" }));
+
+    await waitFor(() => expect(requestBody).toMatchObject({
+      documentIds: ["d1", "d2"],
+      updateTitle: true,
+      title: "Shared title",
+      updateDescription: false,
+      updateTags: false,
+      columns: [],
+    }));
+    expect(mockedToast.error).toHaveBeenCalledWith(
+      "Updated 1; failed 1: locked.txt: checked out by another user",
+    );
+  });
+
+  it("bulk edits tags, description, and shared content-type fields successfully", async () => {
+    mockNav();
+    let requestBody: unknown;
+    const metadata = {
+      contentTypeId: "ct-policy",
+      contentTypeName: "Policy",
+      columns: [
+        {
+          columnDefinitionId: "c-department",
+          name: "Department",
+          dataType: "Text",
+          isRequired: false,
+          choiceOptions: null,
+          defaultValue: null,
+          value: null,
+        },
+      ],
+    };
+    server.use(
+      http.get(`${base}/libraries/l1/items`, () =>
+        HttpResponse.json([item(), item({ id: "i2", name: "policy.docx", documentId: "d2" })]),
+      ),
+      http.get(`${base}/documents/d1/metadata`, () => HttpResponse.json(metadata)),
+      http.get(`${base}/documents/d2/metadata`, () => HttpResponse.json(metadata)),
+      http.put(`${base}/documents/bulk-metadata`, async ({ request }) => {
+        requestBody = await request.json();
+        return HttpResponse.json({
+          items: [
+            { documentId: "d1", status: "updated", rejectionReason: null },
+            { documentId: "d2", status: "updated", rejectionReason: null },
+          ],
+        });
+      }),
+    );
+
+    const user = userEvent.setup();
+    renderLibrary();
+    await screen.findByText("contract.pdf");
+
+    await user.click(screen.getByRole("checkbox", { name: "Select contract.pdf" }));
+    await user.click(screen.getByRole("checkbox", { name: "Select policy.docx" }));
+    await user.click(screen.getByRole("button", { name: "Edit properties" }));
+    expect(await screen.findByText("Shared content-type fields")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("checkbox", { name: "Set description" }));
+    await user.type(screen.getByRole("textbox", { name: "Bulk description" }), "Reviewed policy");
+    await user.click(screen.getByRole("checkbox", { name: "Replace tags" }));
+    await user.type(screen.getByRole("textbox", { name: "Bulk tags" }), "policy, reviewed");
+    await user.type(screen.getByLabelText("Department"), "Legal");
+    await user.click(screen.getByRole("button", { name: "Apply changes" }));
+
+    await waitFor(() => expect(requestBody).toMatchObject({
+      documentIds: ["d1", "d2"],
+      updateTitle: false,
+      title: null,
+      updateDescription: true,
+      description: "Reviewed policy",
+      updateTags: true,
+      tags: ["policy", "reviewed"],
+      columns: [{ name: "Department", value: "Legal" }],
+    }));
+    expect(mockedToast.success).toHaveBeenCalledWith("Updated metadata for 2 documents");
+  }, 15000);
+
   it("selects all items and clears the selection", async () => {
     mockNav();
     server.use(
