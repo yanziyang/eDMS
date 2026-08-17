@@ -125,10 +125,19 @@ public class Program
                     options.ClientId = oidcOptions.ClientId;
                     options.ClientSecret = oidcOptions.ClientSecret;
                     options.CallbackPath = oidcOptions.CallbackPath;
+                    options.RequireHttpsMetadata = oidcOptions.RequireHttpsMetadata;
                     options.ResponseType = OpenIdConnectResponseType.Code;
                     options.UsePkce = true;
                     options.SaveTokens = false;
                     options.GetClaimsFromUserInfoEndpoint = false;
+                    if (builder.Environment.IsEnvironment("Testing"))
+                    {
+                        // WebApplicationFactory exercises the callback over HTTP. The
+                        // framework default is Secure=Always for remote-auth
+                        // correlation cookies, which is correct for production HTTPS
+                        // but prevents the test browser from returning the cookie.
+                        options.CorrelationCookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+                    }
                     options.Scope.Clear();
                     options.Scope.Add("openid");
                     options.Scope.Add("profile");

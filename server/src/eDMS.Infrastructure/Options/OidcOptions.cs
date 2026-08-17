@@ -11,4 +11,6 @@ public sealed class OidcOptions
     public string ClientSecret { get; set; } = string.Empty;
 
     public string CallbackPath { get; set; } = "/api/v1/auth/sso/oidc/callback";
+
+    public bool RequireHttpsMetadata { get; set; } = true;
 }

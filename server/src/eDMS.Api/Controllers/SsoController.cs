@@ -89,6 +89,16 @@ public sealed class SsoController(
         RemoteFailureContext context,
         ClientOptions clientOptions)
     {
+        if (string.Equals(
+                context.HttpContext.RequestServices.GetRequiredService<IHostEnvironment>().EnvironmentName,
+                "Testing",
+                StringComparison.Ordinal)
+            && context.Failure is not null)
+        {
+            context.Response.Headers["X-EDMS-Test-Remote-Failure"] =
+                $"{context.Failure.GetType().FullName}: {context.Failure.Message}";
+        }
+
         var redirect = $"{clientOptions.BaseUrl.TrimEnd('/')}/sso/complete?error=provider-error";
         context.Response.Redirect(redirect);
         context.HandleResponse();

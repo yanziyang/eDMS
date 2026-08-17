@@ -13,6 +13,7 @@ public sealed class MockOidcProviderTests : IAsyncLifetime
 {
     private IContainer? _container;
     private bool _available;
+    private Exception? _startupException;
 
     public async Task InitializeAsync()
     {
@@ -22,9 +23,10 @@ public sealed class MockOidcProviderTests : IAsyncLifetime
             await _container.StartAsync();
             _available = true;
         }
-        catch (Exception)
+        catch (Exception exception)
         {
             _available = false;
+            _startupException = exception;
         }
     }
 
@@ -41,6 +43,12 @@ public sealed class MockOidcProviderTests : IAsyncLifetime
     {
         if (!_available)
         {
+            if (string.Equals(Environment.GetEnvironmentVariable("CI"), "true", StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidOperationException(
+                    $"The OIDC Testcontainer could not start on CI: {_startupException}",
+                    _startupException);
+            }
             return;
         }
 

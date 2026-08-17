@@ -11,6 +11,8 @@ const connectionString =
   providerName === "Sqlite"
     ? "Data Source=e2e.db"
     : "Host=localhost;Port=5432;Database=edms_e2e;Username=postgres;Password=Password1";
+const oidcEnabled = process.env.E2E_OIDC_ENABLED === "1";
+const oidcAuthority = process.env.E2E_OIDC_AUTHORITY ?? "http://localhost:4011/default";
 
 export default defineConfig({
   testDir: "./e2e",
@@ -53,6 +55,11 @@ export default defineConfig({
           Storage__RootPath: "e2e-storage",
           Smtp__Host: "localhost",
           Smtp__Port: "1025",
+          Oidc__Authority: oidcEnabled ? oidcAuthority : "",
+          Oidc__ClientId: "edms-demo-client",
+          Oidc__ClientSecret: "edms-demo-secret",
+          Oidc__CallbackPath: "/api/v1/auth/sso/oidc/callback",
+          Oidc__RequireHttpsMetadata: oidcEnabled ? "false" : "true",
         },
       }]),
     {

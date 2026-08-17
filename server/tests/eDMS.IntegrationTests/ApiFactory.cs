@@ -16,7 +16,7 @@ namespace eDMS.IntegrationTests;
 /// exercise the production SQL paths — including the permission-hierarchy recursive
 /// CTE — instead of the EF InMemory provider, which has no raw-SQL support.
 /// </summary>
-public sealed class ApiFactory : WebApplicationFactory<eDMS.Api.Program>
+public class ApiFactory : WebApplicationFactory<eDMS.Api.Program>
 {
     private readonly string _dbPath = Path.Combine(
         Path.GetTempPath(), $"edms-api-tests-{Guid.NewGuid():N}.db");
@@ -33,6 +33,7 @@ public sealed class ApiFactory : WebApplicationFactory<eDMS.Api.Program>
                 ["Storage:RootPath"] = Path.Combine(
                     Path.GetTempPath(), "edms-test-storage", Guid.NewGuid().ToString("N")),
             });
+            ConfigureAdditionalAppConfiguration(config);
         });
         builder.ConfigureServices(services =>
         {
@@ -49,6 +50,10 @@ public sealed class ApiFactory : WebApplicationFactory<eDMS.Api.Program>
                         $"Data Source={_dbPath}",
                         sqlite => sqlite.MigrationsAssembly("eDMS.Infrastructure.Migrations.Sqlite")));
         });
+    }
+
+    protected virtual void ConfigureAdditionalAppConfiguration(IConfigurationBuilder config)
+    {
     }
 
     protected override void Dispose(bool disposing)

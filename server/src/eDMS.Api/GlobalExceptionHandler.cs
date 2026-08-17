@@ -18,7 +18,7 @@ public sealed class GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logge
             NotFoundException => Problem(404, "urn:edms:not-found", "Not Found", exception.Message),
             ForbiddenException => Problem(403, "urn:edms:forbidden", "Forbidden", exception.Message),
             ConflictException => Problem(409, "urn:edms:conflict", "Conflict", exception.Message),
-            _ => InternalError(exception),
+            _ => InternalError(httpContext, exception),
         };
 
         httpContext.Response.StatusCode = problem.Status ?? 500;
@@ -26,10 +26,14 @@ public sealed class GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logge
         return true;
     }
 
-    private ProblemDetails InternalError(Exception exception)
+    private ProblemDetails InternalError(HttpContext httpContext, Exception exception)
     {
         logger.LogError(exception, "Unhandled exception: {Message}", exception.Message);
-        return Problem(500, "urn:edms:internal-error", "An error occurred.", "An unexpected error occurred.");
+        var environment = httpContext.RequestServices.GetRequiredService<IHostEnvironment>();
+        var detail = string.Equals(environment.EnvironmentName, "Testing", StringComparison.Ordinal)
+            ? exception.ToString()
+            : "An unexpected error occurred.";
+        return Problem(500, "urn:edms:internal-error", "An error occurred.", detail);
     }
 
     private static ProblemDetails Problem(int status, string type, string title, string detail) =>

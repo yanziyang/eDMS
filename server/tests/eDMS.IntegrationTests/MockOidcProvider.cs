@@ -4,7 +4,7 @@ namespace eDMS.IntegrationTests;
 
 internal static class MockOidcProvider
 {
-    public const string Image = "ghcr.io/navikt/mock-oauth2-server:3.1.4";
+    public const string Image = "ghcr.io/navikt/mock-oauth2-server:4.0.0";
     public const string IssuerId = "default";
     public const string ClientId = "edms-demo-client";
     public const string ClientSecret = "edms-demo-secret";
