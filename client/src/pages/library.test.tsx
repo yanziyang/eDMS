@@ -570,6 +570,34 @@ describe("LibraryBrowser", () => {
     expect(uploaded).toEqual(["a.txt", "b.txt"]);
   });
 
+  it("uploads a text file dropped onto the upload dropzone", async () => {
+    const items: unknown[] = [];
+    const uploaded: string[] = [];
+    stubUploadFetch(items, [], uploaded, (_path, file) => {
+      items.push(item({ id: `d-${file.name}`, name: file.name, documentId: `d-${file.name}` }));
+      return jsonResponse(
+        { documentId: "x", name: file.name, versionId: "v1", versionLabel: "1.0", sizeBytes: file.size, status: "ok" },
+        201,
+      );
+    });
+
+    renderLibrary();
+    await screen.findByText("This folder is empty");
+    await openUploadDialog();
+
+    const dropzone = screen.getByText(/or drag files here/).closest("label");
+    expect(dropzone).not.toBeNull();
+    fireEvent.drop(dropzone!, {
+      dataTransfer: { files: [new File(["x"], "notes.txt", { type: "text/plain" })] },
+    });
+
+    expect(await screen.findByText("notes.txt")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(mockedToast.success).toHaveBeenCalledWith("Uploaded notes.txt (v1.0)");
+      expect(uploaded).toEqual(["notes.txt"]);
+    });
+  });
+
   it("uploads into the current folder", async () => {
     const folderItems: unknown[] = [];
     const libraryItems: unknown[] = [

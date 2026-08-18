@@ -1596,6 +1596,19 @@ function UploadDialog({
     }
   }
 
+  function enqueueFiles(files: File[]): void {
+    if (files.length === 0 || pending || uploadingRef.current) {
+      return;
+    }
+
+    const metadata = buildMetadataValues(metadataColumns, draft);
+    const small = files.filter((file) => file.size < LARGE_FILE_THRESHOLD);
+    const large = files.filter((file) => file.size >= LARGE_FILE_THRESHOLD);
+    queueRef.current = large.map((file) => ({ file, metadata, sessionId: null }));
+    pendingSmallRef.current = { files: small, metadata };
+    void processQueue();
+  }
+
   function requestClose(): void {
     if (uploadingRef.current) {
       return;
@@ -1617,7 +1630,10 @@ function UploadDialog({
         requestClose();
       }}
     >
-      <DialogContent>
+      <DialogContent
+        onDragOver={(event) => event.preventDefault()}
+        onDrop={(event) => event.preventDefault()}
+      >
         <DialogHeader>
           <DialogTitle>Upload files</DialogTitle>
           <DialogDescription>
@@ -1648,6 +1664,14 @@ function UploadDialog({
               <Label
                 htmlFor="upload-files"
                 className="flex cursor-pointer flex-col items-center gap-2 rounded-lg border border-dashed p-8 text-center"
+                onDragOver={(event) => {
+                  event.preventDefault();
+                  event.dataTransfer.dropEffect = "copy";
+                }}
+                onDrop={(event) => {
+                  event.preventDefault();
+                  enqueueFiles(Array.from(event.dataTransfer.files));
+                }}
               >
                 <Upload className="size-8 text-muted-foreground" />
                 <span className="text-sm">
@@ -1664,15 +1688,7 @@ function UploadDialog({
                 onChange={(event) => {
                   const files = Array.from(event.target.files ?? []);
                   event.target.value = "";
-                  if (files.length === 0) {
-                    return;
-                  }
-                  const metadata = buildMetadataValues(metadataColumns, draft);
-                  const small = files.filter((file) => file.size < LARGE_FILE_THRESHOLD);
-                  const large = files.filter((file) => file.size >= LARGE_FILE_THRESHOLD);
-                  queueRef.current = large.map((file) => ({ file, metadata, sessionId: null }));
-                  pendingSmallRef.current = { files: small, metadata };
-                  void processQueue();
+                  enqueueFiles(files);
                 }}
               />
             </>
