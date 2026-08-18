@@ -5,13 +5,37 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { createSite, deleteSite, listSites } from "@/features/sites/api";
+import { ApiError } from "@/lib/api-client";
 import { queryKeys } from "@/lib/queryKeys";
 import type { SiteDto } from "@/types/api";
+
+function toUrlSlug(value: string): string {
+  return value
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 128)
+    .replace(/-+$/, "");
+}
+
+function siteCreationErrorMessage(error: unknown): string {
+  if (!(error instanceof ApiError)) {
+    return "Failed to create site";
+  }
+
+  const validationMessage = Object.values(error.problem.errors ?? {})
+    .flat()
+    .find(Boolean);
+  return error.problem.detail ?? validationMessage ?? "Failed to create site";
+}
 
 export function AdminSites() {
   const queryClient = useQueryClient();
   const [name, setName] = useState("");
   const [urlSlug, setUrlSlug] = useState("");
+  const [slugEdited, setSlugEdited] = useState(false);
 
   const sitesQuery = useQuery({
     queryKey: queryKeys.sites.list(),
@@ -25,10 +49,11 @@ export function AdminSites() {
     onSuccess: () => {
       setName("");
       setUrlSlug("");
+      setSlugEdited(false);
       toast.success("Site created");
       invalidate();
     },
-    onError: () => toast.error("Failed to create site"),
+    onError: (error) => toast.error(siteCreationErrorMessage(error)),
   });
 
   const remove = useMutation({
@@ -50,11 +75,34 @@ export function AdminSites() {
       <form onSubmit={submit} className="flex flex-wrap items-end gap-3 rounded-lg border bg-card p-4">
         <div className="flex flex-col gap-1">
           <Label htmlFor="site-name" className="text-xs text-muted-foreground">Name</Label>
-          <Input id="site-name" value={name} onChange={(event) => setName(event.target.value)} required />
+          <Input
+            id="site-name"
+            value={name}
+            onChange={(event) => {
+              const nextName = event.target.value;
+              setName(nextName);
+              if (!slugEdited) {
+                setUrlSlug(toUrlSlug(nextName));
+              }
+            }}
+            required
+          />
         </div>
         <div className="flex flex-col gap-1">
           <Label htmlFor="site-slug" className="text-xs text-muted-foreground">URL slug</Label>
-          <Input id="site-slug" value={urlSlug} onChange={(event) => setUrlSlug(event.target.value)} required />
+          <Input
+            id="site-slug"
+            value={urlSlug}
+            onChange={(event) => {
+              setSlugEdited(true);
+              setUrlSlug(event.target.value);
+            }}
+            aria-describedby="site-slug-help"
+            required
+          />
+          <p id="site-slug-help" className="text-xs text-muted-foreground">
+            Lowercase letters, numbers, and single hyphens. Generated from the name unless edited.
+          </p>
         </div>
         <Button type="submit" disabled={create.isPending}>Create site</Button>
       </form>

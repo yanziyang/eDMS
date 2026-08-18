@@ -78,7 +78,7 @@ describe("AdminSites", () => {
 
     const inputs = screen.getAllByRole("textbox");
     await user.type(inputs[0], "New Site");
-    await user.type(inputs[1], "new-site");
+    expect(inputs[1]).toHaveValue("new-site");
     await user.click(screen.getByRole("button", { name: "Create site" }));
 
     expect(await screen.findByText("New Site")).toBeInTheDocument();
@@ -97,11 +97,41 @@ describe("AdminSites", () => {
     renderSites();
     await screen.findByText("Site One");
 
-    await user.type(screen.getAllByRole("textbox")[0], "New Site");
-    await user.type(screen.getAllByRole("textbox")[1], "new-site");
+    const inputs = screen.getAllByRole("textbox");
+    await user.type(inputs[0], "New Site");
+    await user.clear(inputs[1]);
+    await user.type(inputs[1], "new-site");
     await user.click(screen.getByRole("button", { name: "Create site" }));
 
     await waitFor(() => expect(mockedToast.error).toHaveBeenCalledWith("Failed to create site"));
+  });
+
+  it("shows the server validation message when site creation is rejected", async () => {
+    server.use(
+      http.get(`${base}/sites`, () => HttpResponse.json([siteDto()])),
+      http.post(`${base}/sites`, () =>
+        HttpResponse.json(
+          {
+            type: "urn:edms:validation-error",
+            title: "One or more validation errors occurred.",
+            status: 400,
+            errors: { UrlSlug: ["URL slug must be lowercase letters, numbers, and single hyphens."] },
+          },
+          { status: 400 },
+        ),
+      ),
+    );
+
+    const user = userEvent.setup();
+    renderSites();
+    await user.type((await screen.findAllByRole("textbox"))[0], "New Site");
+    await user.click(screen.getByRole("button", { name: "Create site" }));
+
+    await waitFor(() =>
+      expect(mockedToast.error).toHaveBeenCalledWith(
+        "URL slug must be lowercase letters, numbers, and single hyphens.",
+      ),
+    );
   });
 
   it("deletes a site and reloads", async () => {
