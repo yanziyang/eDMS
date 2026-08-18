@@ -40,6 +40,7 @@ function renderShell(initialPath = "/") {
             <Route element={<AppShell />}>
               <Route path="/" element={<div>HOME_CONTENT</div>} />
               <Route path="/admin" element={<div>ADMIN_CONTENT</div>} />
+              <Route path="/sites/:siteSlug/libraries/:libraryId" element={<div>LIBRARY_CONTENT</div>} />
             </Route>
             <Route path="/login" element={<div>LOGIN_PAGE</div>} />
           </Routes>
@@ -110,6 +111,24 @@ describe("AppShell", () => {
 
     expect(screen.queryByRole("link", { name: "Admin Center" })).not.toBeInTheDocument();
     expect(screen.queryByText("Administration")).not.toBeInTheDocument();
+  });
+
+  it("keeps the current site when opening the recycle bin from a library", () => {
+    mockedUseAuth.mockReturnValue({
+      user: adminUser(),
+      status: "authenticated",
+      login: vi.fn(),
+      completeSso: vi.fn(),
+      logout: vi.fn(),
+    });
+
+    renderShell("/sites/site-one/libraries/l1");
+
+    expect(screen.getByText("LIBRARY_CONTENT")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Recycle Bin" })).toHaveAttribute(
+      "href",
+      "/recycle-bin/site-one",
+    );
   });
 
   it("shows the admin section for system admins", () => {

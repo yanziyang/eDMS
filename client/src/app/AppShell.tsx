@@ -3,7 +3,7 @@ import { Bell } from "lucide-react";
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTheme } from "next-themes";
-import { Navigate, NavLink, Outlet, useNavigate } from "react-router-dom";
+import { Navigate, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/features/auth/auth-context";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -27,6 +27,7 @@ import { Badge } from "@/components/ui/badge";
 export function AppShell() {
   const { user, status, logout } = useAuth();
   const { resolvedTheme, setTheme } = useTheme();
+  const location = useLocation();
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -47,6 +48,9 @@ export function AppShell() {
     navigate("/login");
   };
 
+  const currentSiteSlug = location.pathname.match(/^\/sites\/([^/]+)/)?.[1];
+  const recycleBinPath = currentSiteSlug ? `/recycle-bin/${currentSiteSlug}` : "/recycle-bin";
+
   const nav = (
     <>
       <NavLink to="/" end className={navClass}>
@@ -61,7 +65,7 @@ export function AppShell() {
         <Star className="size-4" />
         Favorites
       </NavLink>
-      <NavLink to="/recycle-bin" className={navClass}>
+      <NavLink to={recycleBinPath} className={navClass}>
         <Recycle className="size-4" />
         Recycle Bin
       </NavLink>
