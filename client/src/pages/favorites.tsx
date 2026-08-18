@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { BookOpen, Building2, FileText, Folder, Star } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
+import { EmptyState, PageHeader, Surface } from "@/components/app/page-frame";
 import { ItemContextMenu } from "@/components/common/ItemContextMenu";
 import { FavoriteToggle } from "@/features/favorites/components/FavoriteToggle";
 import { listFavorites, removeFavorite } from "@/features/favorites/api";
@@ -40,23 +41,18 @@ export function Favorites() {
   const items = favorites.data ?? [];
 
   return (
-    <div>
-      <div className="mb-6 flex items-end justify-between gap-3">
-        <div>
-          <h1 className="flex items-center gap-2 text-2xl font-semibold">
-            <Star className="size-5 text-primary" />
-            Favorites
-          </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Your pinned sites, libraries, folders, and documents.
-          </p>
-        </div>
-      </div>
+    <div className="flex flex-col gap-6">
+      <PageHeader
+        title={<span className="flex items-center gap-2"><Star className="size-5 text-primary" />Favorites</span>}
+        description="Your pinned sites, libraries, folders, and documents."
+      />
 
       {items.length === 0 ? (
-        <div className="rounded-lg border border-dashed p-10 text-center text-sm text-muted-foreground">
-          You have no favorites yet.
-        </div>
+        <EmptyState
+          icon={<Star />}
+          title="You have no favorites yet."
+          description="Favorite a site, library, folder, or document to keep it close at hand."
+        />
       ) : (
         <div className="flex flex-col gap-6">
           {favoriteGroups.map((group) => {
@@ -66,15 +62,13 @@ export function Favorites() {
             }
 
             return (
-              <section key={group.type} aria-labelledby={`favorites-${group.type}`}>
-                <h2
-                  id={`favorites-${group.type}`}
-                  className="mb-2 flex items-center gap-2 text-sm font-semibold"
-                >
-                  <group.icon className="size-4 text-muted-foreground" />
-                  {group.label}
-                </h2>
-                <div className="flex flex-col gap-2">
+              <Surface key={group.type} className="overflow-hidden">
+                <div className="flex items-center gap-2 border-b px-5 py-4">
+                  <group.icon className="size-4 text-primary" />
+                  <h2 id={`favorites-${group.type}`} className="font-semibold">{group.label}</h2>
+                  <span className="text-xs text-muted-foreground">{groupItems.length}</span>
+                </div>
+                <div className="flex flex-col gap-2 p-3 sm:p-4">
                   {groupItems.map((item) => (
                     <FavoriteRow
                       key={`${item.objectType}-${item.objectId}`}
@@ -83,7 +77,7 @@ export function Favorites() {
                     />
                   ))}
                 </div>
-              </section>
+              </Surface>
             );
           })}
         </div>
@@ -117,7 +111,7 @@ function FavoriteRow({ item, onUnfavorite }: { item: FavoriteItemDto; onUnfavori
 
 function FavoriteRowContent({ item }: { item: FavoriteItemDto }) {
   return (
-    <div className="flex items-center gap-3 rounded-lg border bg-card px-4 py-3">
+    <div className="flex items-center gap-3 rounded-lg border bg-card px-4 py-3 transition-colors hover:bg-muted/30">
       <Link
         to={favoriteHref(item)}
         className="flex min-w-0 flex-1 items-center gap-3 hover:underline"

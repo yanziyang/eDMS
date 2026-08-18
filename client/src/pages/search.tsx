@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Search as SearchIcon } from "lucide-react";
+import { EmptyState, PageHeader, Surface } from "@/components/app/page-frame";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { search } from "@/features/search/api";
@@ -27,28 +28,44 @@ export function Search() {
   const results = searchQuery.data ?? [];
 
   return (
-    <div>
-      <h1 className="text-2xl font-semibold">Search</h1>
-      <form onSubmit={submit} className="mt-4 flex gap-2">
-        <Input
-          value={input}
-          onChange={(event) => setInput(event.target.value)}
-          placeholder="Search documents…"
-          aria-label="Search documents"
-          className="max-w-md"
-        />
-        <Button type="submit" disabled={loading}>
-          <SearchIcon className="size-4" />
-          {loading ? "Searching…" : "Search"}
-        </Button>
-      </form>
+    <div className="flex flex-col gap-6">
+      <PageHeader
+        title="Search"
+        description="Find documents across the sites and libraries you can access."
+      />
 
-      <div className="mt-6 flex flex-col gap-2">
+      <Surface className="p-4 sm:p-5">
+        <form onSubmit={submit} className="flex flex-col gap-3 sm:flex-row">
+          <Input
+            value={input}
+            onChange={(event) => setInput(event.target.value)}
+            placeholder="Search documents…"
+            aria-label="Search documents"
+            className="min-w-0 flex-1"
+          />
+          <Button type="submit" disabled={loading}>
+            <SearchIcon className="size-4" />
+            {loading ? "Searching…" : "Search"}
+          </Button>
+        </form>
+      </Surface>
+
+      <Surface className="overflow-hidden">
+        <div className="flex items-center justify-between gap-3 border-b px-5 py-4">
+          <div>
+            <h2 className="font-semibold">Results</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {query ? `Matches for “${query}”` : "Enter a term to search your documents."}
+            </p>
+          </div>
+          {query && <span className="text-sm text-muted-foreground">{results.length}</span>}
+        </div>
+        <div className="flex flex-col gap-2 p-4 sm:p-5">
         {searchQuery.isError && (
           <p className="text-sm text-destructive">Search failed. Please try again.</p>
         )}
         {results.map((result) => (
-          <div key={result.documentId} className="rounded-lg border bg-card p-4">
+          <div key={result.documentId} className="rounded-lg border p-4 transition-colors hover:bg-muted/30">
             <div className="font-medium">{result.name}</div>
             <div className="mt-1 text-xs text-muted-foreground">
               {result.folderPath} · {new Date(result.modifiedAt).toLocaleDateString()}
@@ -56,9 +73,15 @@ export function Search() {
           </div>
         ))}
         {results.length === 0 && !loading && (
-          <p className="text-sm text-muted-foreground">No results.</p>
+          <EmptyState
+            icon={<SearchIcon />}
+            title="No results."
+            description={query ? "Try a broader search term or check your spelling." : "Search results will appear here."}
+            className="border-0 bg-transparent"
+          />
         )}
-      </div>
+        </div>
+      </Surface>
     </div>
   );
 }

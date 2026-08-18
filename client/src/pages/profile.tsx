@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { PageHeader } from "@/components/app/page-frame";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -51,14 +52,17 @@ export function Profile() {
   });
 
   return (
-    <div>
-      <h1 className="text-2xl font-semibold">My Profile</h1>
+    <div className="flex flex-col gap-6">
+      <PageHeader
+        title="My Profile"
+        description="Review your account details and notification preferences."
+      />
       {meQuery.isLoading && <p className="mt-4 text-sm text-muted-foreground">Loading…</p>}
       {meQuery.isError && (
-        <p className="mt-4 text-sm text-destructive">Failed to load profile.</p>
+        <p className="text-sm text-destructive">Failed to load profile.</p>
       )}
       {meQuery.data && (
-        <Card className="mt-4 max-w-md">
+        <Card className="max-w-md shadow-sm">
           <CardHeader>
             <CardTitle>{meQuery.data.displayName}</CardTitle>
             <CardDescription>{meQuery.data.email}</CardDescription>
@@ -68,7 +72,7 @@ export function Profile() {
           </CardContent>
         </Card>
       )}
-      <Card className="mt-6">
+      <Card className="shadow-sm">
         <CardHeader>
           <CardTitle>Alert preferences</CardTitle>
           <CardDescription>
@@ -87,7 +91,7 @@ export function Profile() {
           )}
           <div className="flex flex-col gap-3">
             {subscriptions.data?.map((subscription) => (
-              <div key={subscription.id} className="flex flex-wrap items-center gap-3 rounded-lg border p-3">
+              <div key={subscription.id} className="flex flex-wrap items-center gap-3 rounded-lg border p-3 transition-colors hover:bg-muted/30">
                 <div className="min-w-0 flex-1">
                   <div className="truncate font-medium">{subscription.objectName}</div>
                   <div className="text-xs text-muted-foreground">{subscription.objectType}</div>

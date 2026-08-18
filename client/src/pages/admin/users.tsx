@@ -76,7 +76,7 @@ export function AdminUsers() {
 
   return (
     <div className="flex flex-col gap-6">
-      <form onSubmit={submit} className="flex flex-wrap items-end gap-3 rounded-lg border bg-card p-4">
+      <form onSubmit={submit} className="flex flex-wrap items-end gap-3 rounded-xl border bg-card p-5 shadow-sm">
         <div className="flex flex-col gap-1">
           <Label htmlFor="user-email" className="text-xs text-muted-foreground">Email</Label>
           <Input id="user-email" value={email} onChange={(event) => setEmail(event.target.value)} required />
@@ -100,10 +100,10 @@ export function AdminUsers() {
         <Button type="submit" disabled={create.isPending}>Create user</Button>
       </form>
 
-      <div className="overflow-x-auto rounded-lg border">
+      <div className="overflow-x-auto rounded-xl border bg-card shadow-sm">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b bg-muted/50 text-left">
+            <tr className="border-b bg-muted/40 text-left">
               <th className="px-4 py-2 font-medium">Name</th>
               <th className="px-4 py-2 font-medium">Email</th>
               <th className="px-4 py-2 font-medium">Status</th>
@@ -115,7 +115,7 @@ export function AdminUsers() {
           </thead>
           <tbody>
             {(usersQuery.data ?? []).map((user) => (
-              <tr key={user.id} className="border-b last:border-0">
+              <tr key={user.id} className="border-b transition-colors last:border-0 hover:bg-muted/30">
                 <td className="px-4 py-2">{user.displayName}</td>
                 <td className="px-4 py-2 text-muted-foreground">{user.email}</td>
                 <td className="px-4 py-2">

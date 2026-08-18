@@ -119,12 +119,12 @@ export function AdminAuditLog() {
       </div>
 
       {sites.data && sites.data.length === 0 && (
-        <div className="rounded-lg border border-dashed p-10 text-center text-sm text-muted-foreground">
+        <div className="rounded-xl border border-dashed bg-card/60 p-10 text-center text-sm text-muted-foreground">
           No sites are available.
         </div>
       )}
       {sites.data && sites.data.length > 0 && siteId === "" && (
-        <div className="rounded-lg border border-dashed p-10 text-center text-sm text-muted-foreground">
+        <div className="rounded-xl border border-dashed bg-card/60 p-10 text-center text-sm text-muted-foreground">
           Select a site to view its audit log.
         </div>
       )}
@@ -137,16 +137,16 @@ export function AdminAuditLog() {
       )}
 
       {siteId !== "" && auditLog.data && filtered.length === 0 && (
-        <div className="rounded-lg border border-dashed p-10 text-center text-sm text-muted-foreground">
+        <div className="rounded-xl border border-dashed bg-card/60 p-10 text-center text-sm text-muted-foreground">
           No audit events found.
         </div>
       )}
 
       {siteId !== "" && auditLog.data && filtered.length > 0 && (
-        <div className="overflow-x-auto rounded-lg border">
+        <div className="overflow-x-auto rounded-xl border bg-card shadow-sm">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b bg-muted/50 text-left">
+              <tr className="border-b bg-muted/40 text-left">
                 <th className="px-4 py-2 font-medium">Time</th>
                 <th className="px-4 py-2 font-medium">User ID</th>
                 <th className="px-4 py-2 font-medium">Action</th>

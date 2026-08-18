@@ -18,7 +18,7 @@ export function AdminStorage() {
 
   if (!report.data || report.data.length === 0) {
     return (
-      <div className="rounded-lg border border-dashed p-10 text-center text-sm text-muted-foreground">
+      <div className="rounded-xl border border-dashed bg-card/60 p-10 text-center text-sm text-muted-foreground">
         No storage data available.
       </div>
     );
@@ -30,22 +30,22 @@ export function AdminStorage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="rounded-lg border bg-card p-4">
+      <div className="rounded-xl border bg-card p-5 shadow-sm">
         <div className="text-sm text-muted-foreground">Total storage used</div>
         <div className="mt-1 text-2xl font-semibold">{formatBytes(total)}</div>
       </div>
 
-      <div className="overflow-x-auto rounded-lg border">
+      <div className="overflow-x-auto rounded-xl border bg-card shadow-sm">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b bg-muted/50 text-left">
+            <tr className="border-b bg-muted/40 text-left">
               <th className="px-4 py-2 font-medium">Site</th>
               <th className="px-4 py-2 font-medium">Usage</th>
             </tr>
           </thead>
           <tbody>
             {sites.map((site) => (
-              <tr key={site.siteId} className="border-b last:border-0">
+              <tr key={site.siteId} className="border-b transition-colors last:border-0 hover:bg-muted/30">
                 <td className="px-4 py-2">{site.siteName}</td>
                 <td className="px-4 py-2">
                   <div className="flex items-center gap-3">
@@ -67,7 +67,7 @@ export function AdminStorage() {
                 </td>
               </tr>
             ))}
-            <tr className="border-b bg-muted/50 last:border-0">
+            <tr className="border-b bg-muted/30 last:border-0">
               <td className="px-4 py-2 font-medium">Total</td>
               <td className="px-4 py-2 font-medium">{formatBytes(total)}</td>
             </tr>

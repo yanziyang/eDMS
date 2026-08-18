@@ -109,7 +109,7 @@ export function AdminContentTypes() {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-end gap-3 rounded-lg border bg-card p-4">
+      <div className="flex flex-wrap items-end gap-3 rounded-xl border bg-card p-5 shadow-sm">
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="ct-scope-site" className="text-xs text-muted-foreground">
             Scope
@@ -165,7 +165,7 @@ export function AdminContentTypes() {
       </div>
 
       {siteId !== "" && libraryId === "" && (
-        <div className="rounded-lg border border-dashed p-10 text-center text-sm text-muted-foreground">
+        <div className="rounded-xl border border-dashed bg-card/60 p-10 text-center text-sm text-muted-foreground">
           Pick a library to see its content types.
         </div>
       )}
@@ -176,16 +176,16 @@ export function AdminContentTypes() {
       )}
 
       {contentTypes.data && contentTypes.data.length === 0 && (
-        <div className="rounded-lg border border-dashed p-10 text-center text-sm text-muted-foreground">
+        <div className="rounded-xl border border-dashed bg-card/60 p-10 text-center text-sm text-muted-foreground">
           No content types in this scope yet.
         </div>
       )}
 
       {contentTypes.data && contentTypes.data.length > 0 && (
-        <div className="overflow-x-auto rounded-lg border">
+        <div className="overflow-x-auto rounded-xl border bg-card shadow-sm">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b bg-muted/50 text-left">
+              <tr className="border-b bg-muted/40 text-left">
                 <th className="px-4 py-2 font-medium">Name</th>
                 <th className="px-4 py-2 font-medium">Scope</th>
                 <th className="px-4 py-2 font-medium">Columns</th>

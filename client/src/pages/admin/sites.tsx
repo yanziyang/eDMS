@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { Building2 } from "lucide-react";
+import { Surface } from "@/components/app/page-frame";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -72,56 +74,68 @@ export function AdminSites() {
 
   return (
     <div className="flex flex-col gap-6">
-      <form onSubmit={submit} className="flex flex-wrap items-start gap-3 rounded-lg border bg-card p-4">
-        <div className="flex flex-col gap-1">
-          <Label htmlFor="site-name" className="text-xs text-muted-foreground">Name</Label>
-          <Input
-            id="site-name"
-            value={name}
-            onChange={(event) => {
-              const nextName = event.target.value;
-              setName(nextName);
-              if (!slugEdited) {
-                setUrlSlug(toUrlSlug(nextName));
-              }
-            }}
-            required
-          />
-        </div>
-        <div className="flex flex-col gap-1">
-          <Label htmlFor="site-slug" className="text-xs text-muted-foreground">URL slug</Label>
-          <Input
-            id="site-slug"
-            value={urlSlug}
-            onChange={(event) => {
-              setSlugEdited(true);
-              setUrlSlug(event.target.value);
-            }}
-            aria-describedby="site-slug-help"
-            required
-          />
-          <p id="site-slug-help" className="text-xs text-muted-foreground">
-            Lowercase letters, numbers, and single hyphens. Generated from the name unless edited.
-          </p>
-        </div>
-        <Button type="submit" className="mt-6" disabled={create.isPending}>Create site</Button>
-      </form>
+      <Surface>
+        <form onSubmit={submit} className="flex flex-wrap items-start gap-4 p-5">
+          <div className="min-w-52 flex-1">
+            <Label htmlFor="site-name" className="text-xs text-muted-foreground">Name</Label>
+            <Input
+              id="site-name"
+              className="mt-1.5"
+              value={name}
+              onChange={(event) => {
+                const nextName = event.target.value;
+                setName(nextName);
+                if (!slugEdited) {
+                  setUrlSlug(toUrlSlug(nextName));
+                }
+              }}
+              required
+            />
+          </div>
+          <div className="min-w-64 flex-1">
+            <Label htmlFor="site-slug" className="text-xs text-muted-foreground">URL slug</Label>
+            <Input
+              id="site-slug"
+              className="mt-1.5"
+              value={urlSlug}
+              onChange={(event) => {
+                setSlugEdited(true);
+                setUrlSlug(event.target.value);
+              }}
+              aria-describedby="site-slug-help"
+              required
+            />
+            <p id="site-slug-help" className="mt-1.5 text-xs text-muted-foreground">
+              Lowercase letters, numbers, and single hyphens. Generated from the name unless edited.
+            </p>
+          </div>
+          <Button type="submit" className="mt-6" disabled={create.isPending}>Create site</Button>
+        </form>
+      </Surface>
 
-      <div className="overflow-x-auto rounded-lg border">
+      <Surface className="overflow-hidden">
+        <div className="flex items-center gap-2 border-b px-5 py-4">
+          <Building2 className="size-4 text-primary" />
+          <div>
+            <h2 className="font-semibold">Available sites</h2>
+            <p className="text-sm text-muted-foreground">Workspaces and their URL slugs.</p>
+          </div>
+        </div>
+        <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b bg-muted/50 text-left">
-              <th className="px-4 py-2 font-medium">Name</th>
-              <th className="px-4 py-2 font-medium">Slug</th>
-              <th className="px-4 py-2 font-medium">Actions</th>
+            <tr className="border-b bg-muted/40 text-left">
+              <th className="px-5 py-3 font-medium">Name</th>
+              <th className="px-5 py-3 font-medium">Slug</th>
+              <th className="px-5 py-3 font-medium">Actions</th>
             </tr>
           </thead>
           <tbody>
             {(sitesQuery.data ?? []).map((site) => (
-              <tr key={site.id} className="border-b last:border-0">
-                <td className="px-4 py-2">{site.name}</td>
-                <td className="px-4 py-2 text-muted-foreground">{site.urlSlug}</td>
-                <td className="px-4 py-2">
+              <tr key={site.id} className="border-b transition-colors last:border-0 hover:bg-muted/30">
+                <td className="px-5 py-3 font-medium">{site.name}</td>
+                <td className="px-5 py-3 text-muted-foreground">{site.urlSlug}</td>
+                <td className="px-5 py-3">
                   <Button
                     variant="destructive"
                     size="sm"
@@ -135,7 +149,8 @@ export function AdminSites() {
             ))}
           </tbody>
         </table>
-      </div>
+        </div>
+      </Surface>
     </div>
   );
 }

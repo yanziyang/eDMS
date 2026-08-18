@@ -83,7 +83,7 @@ export function AdminSettings() {
 
   if (!settings.data) {
     return (
-      <div className="rounded-lg border border-dashed p-10 text-center text-sm text-muted-foreground">
+      <div className="rounded-xl border border-dashed bg-card/60 p-10 text-center text-sm text-muted-foreground">
         No settings are available.
       </div>
     );
@@ -92,7 +92,7 @@ export function AdminSettings() {
   return (
     <div className="flex flex-col gap-6">
       <form
-        className="rounded-lg border bg-card p-4"
+        className="rounded-xl border bg-card p-5 shadow-sm"
         onSubmit={(event) => {
           event.preventDefault();
           save.mutate();
@@ -174,7 +174,7 @@ export function AdminSettings() {
         </div>
       </form>
 
-      <section className="rounded-lg border bg-card p-4" aria-labelledby="sso-providers-heading">
+      <section className="rounded-xl border bg-card p-5 shadow-sm" aria-labelledby="sso-providers-heading">
         <div id="sso-providers-heading" className="text-base font-medium">SSO providers</div>
         <p className="mt-1 text-sm text-muted-foreground">
           Provider availability is configured by the deployment environment.
@@ -201,7 +201,7 @@ export function AdminSettings() {
         )}
       </section>
 
-      <div className="rounded-lg border bg-card p-4">
+      <div className="rounded-xl border bg-card p-5 shadow-sm">
         <div className="text-base font-medium">Session &amp; security</div>
         <p className="mt-1 text-sm text-muted-foreground">
           Applies to local database authentication.

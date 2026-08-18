@@ -3,7 +3,6 @@ import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/rea
 import {
   ArrowDown,
   ArrowUp,
-  ChevronRight,
   Copy,
   Download,
   FileText,
@@ -19,7 +18,8 @@ import {
   X,
 } from "lucide-react";
 import { toast } from "sonner";
-import { Link, useParams, useSearchParams } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router-dom";
+import { Breadcrumbs, EmptyState, PageHeader, Surface } from "@/components/app/page-frame";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -549,45 +549,29 @@ export function LibraryBrowser() {
   const libraryName = library?.name ?? "Documents";
 
   return (
-    <div>
-      <div className="mb-4 flex items-center gap-1 text-sm">
-        <Link to="/" className="text-muted-foreground hover:text-foreground">
-          Sites
-        </Link>
-        <ChevronRight className="size-4 text-muted-foreground" />
-        <Link
-          to={`/sites/${siteSlug}`}
-          className="text-muted-foreground hover:text-foreground"
-        >
-          {siteName}
-        </Link>
-        <ChevronRight className="size-4 text-muted-foreground" />
-        <button
-          className="text-muted-foreground hover:text-foreground"
-          onClick={() => {
-            setFolderId(null);
-            setFolderName("");
-            clearSelection();
-          }}
-        >
-          {libraryName}
-        </button>
-        {folderId && (
-          <>
-            <ChevronRight className="size-4 text-muted-foreground" />
-            <span className="text-foreground">{folderName}</span>
-          </>
-        )}
-      </div>
+    <div className="flex flex-col gap-6">
+      <Breadcrumbs
+        items={[
+          { label: "Sites", to: "/" },
+          { label: siteName, to: `/sites/${siteSlug}` },
+          {
+            label: libraryName,
+            onClick: () => {
+              setFolderId(null);
+              setFolderName("");
+              clearSelection();
+            },
+          },
+          ...(folderId ? [{ label: folderName }] : []),
+        ]}
+      />
 
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold">{libraryName}</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Upload, organize, and manage documents with version history and permissions.
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
+      <PageHeader
+        className="mb-0"
+        title={libraryName}
+        description="Upload, organize, and manage documents with version history and permissions."
+        actions={
+          <>
           {libraryId && (
             <FollowToggle objectType="Library" objectId={libraryId} itemName={libraryName} />
           )}
@@ -602,10 +586,12 @@ export function LibraryBrowser() {
           <Button variant="ghost" size="icon" aria-label="Library settings" onClick={() => setSettingsOpen(true)}>
             <Settings2 className="size-4" />
           </Button>
-        </div>
-      </div>
+          </>
+        }
+      />
 
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+      <Surface className="p-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2">
           <Select
             value={activeViewId ?? "custom"}
@@ -728,6 +714,7 @@ export function LibraryBrowser() {
           </div>
         )}
       </div>
+      </Surface>
 
       {itemsQuery.isLoading && <div className="text-sm text-muted-foreground">Loading…</div>}
       {itemsQuery.isError && (
@@ -735,21 +722,20 @@ export function LibraryBrowser() {
       )}
 
       {itemsQuery.data && items.length === 0 && (
-        <div className="rounded-lg border border-dashed p-10 text-center">
-          <Folder className="mx-auto size-10 text-muted-foreground" />
-          <h2 className="mt-3 font-medium">
-            {filterText.trim() ? "No matching items" : "This folder is empty"}
-          </h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {filterText.trim()
+        <EmptyState
+          icon={<Folder />}
+          title={filterText.trim() ? "No matching items" : "This folder is empty"}
+          description={
+            filterText.trim()
               ? "Try a different name filter."
-              : "Upload files or create a subfolder to get started."}
-          </p>
-        </div>
+              : "Upload files or create a subfolder to get started."
+          }
+        />
       )}
 
       {viewMode === "list" && items.length > 0 && (
-        <div className="overflow-x-auto rounded-lg border">
+        <Surface className="overflow-hidden">
+          <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b bg-muted/50 text-left">
@@ -888,10 +874,12 @@ export function LibraryBrowser() {
               ))}
             </tbody>
           </table>
-        </div>
+          </div>
+        </Surface>
       )}
 
       {viewMode === "grid" && items.length > 0 && (
+        <Surface className="p-4">
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
           {groupedItems.map((group) => (
             <Fragment key={group.label ?? "all-items"}>
@@ -952,6 +940,7 @@ export function LibraryBrowser() {
             </Fragment>
           ))}
         </div>
+        </Surface>
       )}
 
       <SaveLibraryViewDialog

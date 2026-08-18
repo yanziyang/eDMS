@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { FileText, Folder, Info, LoaderCircle, RotateCcw, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { useParams } from "react-router-dom";
+import { Breadcrumbs, EmptyState, PageHeader, Surface } from "@/components/app/page-frame";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -83,17 +84,18 @@ export function RecycleBin() {
   });
 
   return (
-    <div>
-      <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold">Recycle Bin</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
+    <div className="flex flex-col gap-6">
+      {siteSlug && <Breadcrumbs items={[{ label: "Home", to: "/" }, { label: "Recycle Bin" }]} />}
+      <PageHeader
+        title={<span className="flex items-center gap-2"><Trash2 className="size-5 text-primary" />Recycle Bin</span>}
+        description={
+          <>
             {items.data ? `${items.data.length} items · ` : ""}deleted items are kept for 90 days
             before being permanently purged.
-          </p>
-        </div>
-        {!siteSlug && (
-          <div className="flex flex-col gap-1.5">
+          </>
+        }
+        actions={!siteSlug ? (
+          <div className="flex min-w-52 flex-col gap-1.5">
             <Label htmlFor="recycle-site">Site</Label>
             {sites.isLoading && <p className="text-sm text-muted-foreground">Loading…</p>}
             {sites.isError && <p className="text-sm text-destructive">Failed to load sites.</p>}
@@ -112,10 +114,10 @@ export function RecycleBin() {
               </Select>
             )}
           </div>
-        )}
-      </div>
+        ) : undefined}
+      />
 
-      <Alert className="mb-4">
+      <Alert>
         <Info className="size-4" />
         <AlertTitle>About the recycle bin</AlertTitle>
         <AlertDescription>
@@ -134,14 +136,10 @@ export function RecycleBin() {
         <div className="text-sm text-muted-foreground">Site not found.</div>
       )}
       {!siteSlug && sites.data && sites.data.length === 0 && (
-        <div className="rounded-lg border border-dashed p-10 text-center text-sm text-muted-foreground">
-          You do not have access to any sites yet.
-        </div>
+        <EmptyState title="You do not have access to any sites yet." description="Ask a Site Owner to add you to a workspace." />
       )}
       {!siteSlug && sites.data && sites.data.length > 0 && pickedSiteId === "" && (
-        <div className="rounded-lg border border-dashed p-10 text-center text-sm text-muted-foreground">
-          Select a site to see its recycle bin.
-        </div>
+        <EmptyState title="Select a site to see its recycle bin." description="Choose a workspace above to review deleted items." />
       )}
 
       {siteId !== undefined && items.isLoading && (
@@ -151,17 +149,16 @@ export function RecycleBin() {
         <div className="text-sm text-destructive">Failed to load recycle bin.</div>
       )}
       {items.data && items.data.length === 0 && (
-        <div className="rounded-lg border border-dashed p-10 text-center">
-          <Trash2 className="mx-auto size-10 text-muted-foreground" />
-          <h2 className="mt-3 font-medium">Recycle Bin is empty</h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Items you delete from any library will appear here for 90 days.
-          </p>
-        </div>
+        <EmptyState
+          icon={<Trash2 />}
+          title="Recycle Bin is empty"
+          description="Items you delete from any library will appear here for 90 days."
+        />
       )}
 
       {items.data && items.data.length > 0 && (
-        <div className="overflow-x-auto rounded-lg border">
+        <Surface className="overflow-hidden">
+          <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b bg-muted/50 text-left">
@@ -238,7 +235,8 @@ export function RecycleBin() {
               ))}
             </tbody>
           </table>
-        </div>
+          </div>
+        </Surface>
       )}
 
       <Dialog

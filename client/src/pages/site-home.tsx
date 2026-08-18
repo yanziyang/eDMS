@@ -1,11 +1,13 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Folder, LoaderCircle, ShieldCheck, Undo2, UserPlus, Users, X } from "lucide-react";
+import { ArrowUpRight, Building2, Folder, HardDrive, LoaderCircle, Settings, ShieldCheck, Undo2, UserPlus, Users, X } from "lucide-react";
 import { toast } from "sonner";
 import { Link, useParams } from "react-router-dom";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
   DialogContent,
@@ -32,13 +34,15 @@ import {
   resetPermissions,
   revokePermission,
 } from "@/features/permissions/api";
-import { getSite, listSites } from "@/features/sites/api";
+import { getSite, listSites, updateSite } from "@/features/sites/api";
 import { queryKeys } from "@/lib/queryKeys";
+import { Breadcrumbs, EmptyState, SectionHeader, Surface } from "@/components/app/page-frame";
 import type { PermissionLevel, PermissionsStateDto, PrincipalType } from "@/types/api";
 
 export function SiteHome() {
   const { siteSlug } = useParams();
   const [accessOpen, setAccessOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const sites = useQuery({
     queryKey: queryKeys.sites.list(),
@@ -74,82 +78,134 @@ export function SiteHome() {
   }
 
   const displaySite = site.data ?? siteFromList;
+  const members = new Set((groups.data ?? []).flatMap((group) => group.memberIds)).size;
+  const quotaPercent = displaySite.storageQuotaBytes
+    ? Math.min(100, Math.round((displaySite.storageUsedBytes / displaySite.storageQuotaBytes) * 100))
+    : null;
 
   return (
-    <div>
-      <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold">{displaySite.name}</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {displaySite.description || "No description"}
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <FavoriteToggle objectType="Site" objectId={displaySite.id} itemName={displaySite.name} />
-          <FollowToggle objectType="Site" objectId={displaySite.id} itemName={displaySite.name} />
-          <Button variant="outline" size="sm" onClick={() => setAccessOpen(true)}>
-            <ShieldCheck className="size-4" />
-            Manage access
-          </Button>
-        </div>
-      </div>
+    <div className="flex flex-col gap-6">
+      <Breadcrumbs items={[{ label: "Home", to: "/" }, { label: displaySite.name }]} />
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <section className="lg:col-span-2">
-          <h2 className="mb-3 text-sm font-semibold">Libraries</h2>
-          <div className="flex flex-col gap-2">
-            {libraries.isLoading && (
-              <div className="text-sm text-muted-foreground">Loading…</div>
-            )}
-            {libraries.isError && (
-              <div className="text-sm text-destructive">Failed to load libraries.</div>
-            )}
-            {libraries.data && libraries.data.length === 0 && (
-              <div className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
-                No libraries in this site yet.
+      <Surface>
+        <div className="flex flex-wrap items-start gap-5 p-5 sm:p-6">
+          <div className="flex size-14 shrink-0 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-sm">
+            <Building2 />
+          </div>
+          <div className="min-w-[220px] flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="text-2xl font-semibold tracking-tight">{displaySite.name}</h1>
+              <Badge variant="secondary">{members || "No"} total members</Badge>
+            </div>
+            <p className="mt-1 text-sm text-muted-foreground">{displaySite.description || "No description"}</p>
+            <div className="mt-4 flex max-w-sm items-center justify-between gap-3 text-xs text-muted-foreground">
+              <span className="inline-flex items-center gap-1.5"><HardDrive /> {formatBytes(displaySite.storageUsedBytes)} used</span>
+              <span>{quotaPercent === null ? "Unlimited quota" : `${quotaPercent}% of ${formatBytes(displaySite.storageQuotaBytes!)}`}</span>
+            </div>
+            {quotaPercent !== null && (
+              <div className="mt-2 h-2 max-w-sm overflow-hidden rounded-full bg-muted" role="progressbar" aria-label={`${displaySite.name} storage usage`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={quotaPercent}>
+                <div className="h-full rounded-full bg-primary" style={{ width: `${quotaPercent}%` }} />
               </div>
             )}
-            {libraries.data?.map((library) => (
+            <p className="mt-2 text-xs text-muted-foreground">Uploads and new versions stop when this quota would be exceeded.</p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <FavoriteToggle objectType="Site" objectId={displaySite.id} itemName={displaySite.name} />
+            <FollowToggle objectType="Site" objectId={displaySite.id} itemName={displaySite.name} />
+            <Button variant="outline" size="sm" onClick={() => setAccessOpen(true)}>
+              <ShieldCheck data-icon="inline-start" />
+              Manage access
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => setSettingsOpen(true)}>
+              <Settings data-icon="inline-start" />
+              Site settings
+            </Button>
+          </div>
+        </div>
+      </Surface>
+
+      <section aria-labelledby="libraries-heading">
+        <SectionHeader
+          title="Document libraries"
+          description="Libraries keep documents, version history, and metadata organized."
+          className="mb-3"
+          action={<Badge variant="outline">{libraries.data?.length ?? 0} libraries</Badge>}
+        />
+        {libraries.isLoading && <div className="text-sm text-muted-foreground">Loading…</div>}
+        {libraries.isError && <div className="text-sm text-destructive">Failed to load libraries.</div>}
+        {libraries.data && libraries.data.length === 0 && (
+          <EmptyState icon={<Folder />} title="No libraries in this site yet." description="A Site Owner can create a document library for this workspace." />
+        )}
+        {libraries.data && libraries.data.length > 0 && (
+          <div className="grid gap-4 md:grid-cols-2">
+            {libraries.data.map((library) => (
               <Link
                 key={library.id}
                 to={`/sites/${displaySite.urlSlug}/libraries/${library.id}`}
-                className="flex items-center gap-2 rounded-lg border bg-card p-5 font-medium hover:bg-muted/50"
+                aria-label={library.name}
+                className="group rounded-xl border bg-card p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
-                <Folder className="size-4 text-primary" />
-                {library.name}
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex size-11 items-center justify-center rounded-xl bg-amber-500/15 text-amber-700 dark:text-amber-300">
+                    <Folder />
+                  </div>
+                  <ArrowUpRight className="text-muted-foreground transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
+                </div>
+                <div className="mt-4 font-semibold">{library.name}</div>
+                <p className="mt-1 min-h-10 text-sm text-muted-foreground">{library.description || "Upload, organize, and manage documents with version history."}</p>
+                <div className="mt-4 flex flex-wrap gap-1.5">
+                  {library.enableVersioning && <Badge variant="secondary">Versioning</Badge>}
+                  {library.requireCheckout && <Badge variant="outline">Check-out required</Badge>}
+                  {library.enableMinorVersions && <Badge variant="outline">Minor versions</Badge>}
+                </div>
               </Link>
             ))}
           </div>
-        </section>
+        )}
+      </section>
 
-        <section>
-          <h2 className="mb-3 text-sm font-semibold">Permission groups</h2>
-          <div className="flex flex-col gap-2">
+      <div className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
+        <Surface>
+          <div className="border-b px-5 py-4">
+            <h2 className="font-semibold">Site activity</h2>
+            <p className="mt-1 text-sm text-muted-foreground">Recent actions within this site.</p>
+          </div>
+          <div className="p-5">
+            <EmptyState icon={<ArrowUpRight />} title="Activity is ready when your team starts working." description="Uploads, edits, and permission changes will be visible here as the site is used." className="min-h-36" />
+          </div>
+        </Surface>
+
+        <Surface>
+          <div className="flex items-start justify-between gap-3 border-b px-5 py-4">
+            <div>
+              <h2 className="font-semibold">Permission groups</h2>
+              <p className="mt-1 text-sm text-muted-foreground">Default groups control access to this site.</p>
+            </div>
+            <Users className="text-muted-foreground" />
+          </div>
+          <div className="flex flex-col gap-2 p-4">
             {groups.isLoading && <div className="text-sm text-muted-foreground">Loading…</div>}
-            {groups.isError && (
-              <div className="text-sm text-destructive">Failed to load groups.</div>
-            )}
+            {groups.isError && <div className="text-sm text-destructive">Failed to load groups.</div>}
             {groups.data && groups.data.length === 0 && (
-              <div className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
-                No groups in this site yet.
-              </div>
+              <EmptyState icon={<Users />} title="No groups in this site yet." className="min-h-32" />
             )}
             {groups.data?.map((group) => (
-              <div
-                key={group.id}
-                className="flex items-center justify-between rounded-lg border bg-card px-4 py-3"
-              >
-                <div className="flex items-center gap-2 text-sm">
-                  <Users className="size-4 text-muted-foreground" />
-                  {group.name}
+              <div key={group.id} className="flex items-center justify-between gap-3 rounded-lg border px-3 py-3">
+                <div className="flex min-w-0 items-center gap-2 text-sm">
+                  <Users className="shrink-0 text-muted-foreground" />
+                  <span className="truncate font-medium">{group.name}</span>
                 </div>
-                <span className="text-xs text-muted-foreground">
-                  {group.memberIds.length} members
-                </span>
+                <Badge variant={group.isSystem ? "secondary" : "outline"}>{group.memberIds.length} members</Badge>
               </div>
             ))}
           </div>
-        </section>
+          <div className="border-t p-4">
+            <Button variant="outline" size="sm" className="w-full" onClick={() => setAccessOpen(true)}>
+              <UserPlus data-icon="inline-start" />
+              Manage members
+            </Button>
+          </div>
+        </Surface>
       </div>
 
       <SiteAccessDialog
@@ -158,7 +214,83 @@ export function SiteHome() {
         open={accessOpen}
         onOpenChange={setAccessOpen}
       />
+      <SiteSettingsDialog
+        site={displaySite}
+        open={settingsOpen}
+        onOpenChange={setSettingsOpen}
+      />
     </div>
+  );
+}
+
+function SiteSettingsDialog({
+  site,
+  open,
+  onOpenChange,
+}: {
+  site: { id: string; name: string; description: string | null; storageQuotaBytes: number | null };
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
+  const queryClient = useQueryClient();
+  const [name, setName] = useState(site.name);
+  const [description, setDescription] = useState(site.description ?? "");
+  const [quota, setQuota] = useState(site.storageQuotaBytes === null ? "" : String(site.storageQuotaBytes / (1024 * 1024 * 1024)));
+
+  useEffect(() => {
+    if (open) {
+      setName(site.name);
+      setDescription(site.description ?? "");
+      setQuota(site.storageQuotaBytes === null ? "" : String(site.storageQuotaBytes / (1024 * 1024 * 1024)));
+    }
+  }, [open, site]);
+
+  const save = useMutation({
+    mutationFn: () => updateSite(site.id, {
+      name: name.trim(),
+      description: description.trim(),
+      storageQuotaBytes: quota.trim() === "" ? null : Math.round(Number(quota) * 1024 * 1024 * 1024),
+    }),
+    onSuccess: () => {
+      toast.success("Site settings saved");
+      queryClient.invalidateQueries({ queryKey: queryKeys.sites.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.sites.detail(site.id) });
+      onOpenChange(false);
+    },
+    onError: () => toast.error("Failed to save site settings"),
+  });
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Site settings</DialogTitle>
+          <DialogDescription>Update the workspace description and storage quota.</DialogDescription>
+        </DialogHeader>
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="site-settings-name">Name</Label>
+            <Input id="site-settings-name" value={name} onChange={(event) => setName(event.target.value)} />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="site-settings-description">Description</Label>
+            <Textarea id="site-settings-description" rows={3} value={description} onChange={(event) => setDescription(event.target.value)} />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="site-settings-quota">Storage quota (GB)</Label>
+            <Input id="site-settings-quota" type="number" min={0} step="0.1" placeholder="Blank for unlimited" value={quota} onChange={(event) => setQuota(event.target.value)} />
+            <p className="text-xs text-muted-foreground">Leave blank to allow unlimited storage.</p>
+          </div>
+        </div>
+        <div className="flex justify-end gap-2">
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+          <Button onClick={() => save.mutate()} disabled={save.isPending || name.trim() === ""}>
+            {save.isPending && <LoaderCircle data-icon="inline-start" className="animate-spin" />}
+            Save
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -434,4 +566,11 @@ function levelLabel(level: PermissionLevel): string {
     default:
       return "Read";
   }
+}
+
+function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  if (bytes < 1024 * 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+  return `${(bytes / 1024 / 1024 / 1024).toFixed(1)} GB`;
 }

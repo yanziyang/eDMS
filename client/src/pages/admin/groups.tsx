@@ -77,10 +77,10 @@ export function AdminGroups() {
       )}
 
       {groupsQuery.data && (
-        <div className="overflow-x-auto rounded-lg border">
+        <div className="overflow-x-auto rounded-xl border bg-card shadow-sm">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b bg-muted/50 text-left">
+            <tr className="border-b bg-muted/40 text-left">
                 <th className="px-4 py-2 font-medium">Name</th>
                 <th className="px-4 py-2 font-medium">Scope</th>
                 <th className="px-4 py-2 font-medium">Members</th>
@@ -89,7 +89,7 @@ export function AdminGroups() {
             </thead>
             <tbody>
               {orgGroups.map((group) => (
-                <tr key={group.id} className="border-b last:border-0">
+                <tr key={group.id} className="border-b transition-colors last:border-0 hover:bg-muted/30">
                   <td className="px-4 py-2">
                     <div className="flex items-center gap-2">
                       {group.name}
