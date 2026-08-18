@@ -102,9 +102,9 @@ export function Home() {
         </div>
       </Surface>
 
-      <div className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1.4fr_1fr]">
         <Surface>
-          <div className="flex items-start justify-between gap-3 border-b px-5 py-4">
+          <div className="flex flex-wrap items-start justify-between gap-3 border-b px-5 py-4">
             <div>
               <h2 className="font-semibold">Recent activity</h2>
               <p className="mt-1 text-sm text-muted-foreground">Latest notifications across the workspace.</p>

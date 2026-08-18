@@ -175,7 +175,7 @@ export function SiteHome() {
         )}
       </section>
 
-      <div className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1.4fr_1fr]">
         <Surface>
           <div className="border-b px-5 py-4">
             <h2 className="font-semibold">Site activity</h2>

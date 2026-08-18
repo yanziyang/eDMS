@@ -293,7 +293,7 @@ function WorkspaceNavigation({
     <TooltipProvider>
       <nav aria-label="Workspace navigation" className="flex flex-col gap-1">
         <div className={cn(
-          "px-2 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground/70",
+          "px-2 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground",
           collapsed && "px-0 text-center",
         )}>
           <span className={collapsed ? "sr-only" : undefined}>Workspace</span>
@@ -331,7 +331,7 @@ function WorkspaceNavigation({
         {shortcutSites.length > 0 && (
           <>
             <div className={cn(
-              "mt-4 px-2 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground/70",
+              "mt-4 px-2 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground",
               collapsed && "px-0 text-center",
             )}>
               <span className={collapsed ? "sr-only" : undefined}>Sites</span>
@@ -351,7 +351,7 @@ function WorkspaceNavigation({
           <>
             <Separator className="my-3" />
             <div className={cn(
-              "px-2 pb-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground/70",
+              "px-2 pb-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground",
               collapsed && "px-0 text-center",
             )}>
               <span className={collapsed ? "sr-only" : undefined}>Administration</span>

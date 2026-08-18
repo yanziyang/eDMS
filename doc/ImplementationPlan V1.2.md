@@ -211,7 +211,7 @@ Phase 3 (M20→M23) and Phase 4 (M24–M30→M31) are two separate trees, both r
 | [M30](#m30--right-click--long-press-context-menus) | Context menus (FR-UI-12) | Right-clicking a document or folder — or long-pressing it on touch — opens a menu of everything you're allowed to do with it, without opening it first | Done |
 | [M31](#m31--phase-4-hardening--sign-off) | Phase 4 sign-off | FS Phase 4 checklist (§4.5's seven FRs) satisfied; same hardening bar as M23, re-run for Phase 4's additions | Done |
 | [M32](#m32--html-prototype-parity--visual-polish) | HTML prototype parity | The React client presents the same clear shell, page hierarchy, card/table rhythm, navigation, and responsive polish as the stronger HTML reference while retaining production APIs and behavior | Done |
-| [M34](#m34--collapsible-navigation--library-folder-tree) | Collapsible navigation and folder tree | On desktop, users can collapse global navigation and browse a library's folders beside its document list; on mobile, both remain usable through accessible drawers/sheets | Not Started |
+| [M34](#m34--collapsible-navigation--library-folder-tree) | Collapsible navigation and folder tree | On desktop, users can collapse global navigation and browse a library's folders beside its document list; on mobile, both remain usable through accessible drawers/sheets | Done |
 | [M33](#m33--site-home-library-creation) | Site Home library creation | A user with Site Contribute access can open New library on Site Home, configure the library, and see it immediately in the site's library list | Done |
 
 ## 7. Detailed Milestones — Phase 3 (FS §15)
@@ -371,7 +371,7 @@ This newly scoped UX milestone responds to a direct UI review. Keep global navig
 |---|---|---|---|---|---|---|
 | Done | M34.1 | FE | Make the global `AppShell` navigation expanded by default on desktop and collapsible to an icon rail with a clear expand/collapse control. Persist the user's preference, retain accessible active labels/tooltips and keyboard focus behavior, and use a drawer on mobile without changing route or auth behavior. | M32.2 | M | FR-UI-01, FR-UI-07, TDS §7.2 |
 | Done | M34.2 | FE | Add a collapsible/resizable library folder tree beside the document list. Use the existing folder queries and routes, keep the selected folder reflected in navigation state/URL, preserve list/grid/toolbar interactions, and provide loading, empty, error, keyboard, and mobile drawer/sheet states without horizontal overflow. | M32.3 | L | FR-DOC-01, FR-UI-07, TDS §7.2 |
-| Not Started | M34.3 | Both | Add frontend coverage for global-nav collapse, folder selection/tree visibility, keyboard and responsive states, and no-regression list/grid behavior. Verify desktop/mobile layout, focus management, semantic contrast, and run the client quality gates. | M34.1, M34.2 | M | FS §7 NFR, TDS §12.2 |
+| Done | M34.3 | Both | Add frontend coverage for global-nav collapse, folder selection/tree visibility, keyboard and responsive states, and no-regression list/grid behavior. Verify desktop/mobile layout, focus management, semantic contrast, and run the client quality gates. | M34.1, M34.2 | M | FS §7 NFR, TDS §12.2 |
 
 ## 9. Sequencing Risks
 

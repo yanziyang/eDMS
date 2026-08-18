@@ -83,8 +83,12 @@ test.describe.serial("Phase 4 acceptance flows", () => {
     const fileName = `phase4-recent-${Date.now()}.txt`;
     await apiUpload(request, session.token, libraryId, fileName, "recent me");
     await session.page.goto("/");
-    await expect(session.page.getByRole("heading", { name: "Recent" })).toBeVisible();
-    await expect(session.page.getByRole("link", { name: new RegExp(escapeRegExp(fileName)) })).toBeVisible();
+    await expect(
+      session.page.getByRole("heading", { name: "Recent", exact: true }),
+    ).toBeVisible();
+    await expect(
+      session.page.getByRole("link", { name: new RegExp(`^${escapeRegExp(fileName)} `) }),
+    ).toBeVisible();
   });
 
   test("a saved library view can be reapplied after changing the filter", async () => {

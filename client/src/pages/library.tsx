@@ -724,7 +724,7 @@ export function LibraryBrowser() {
         </div>
 
         {selection.size > 0 && (
-          <div className="flex items-center gap-2 rounded-lg border bg-muted/50 px-3 py-1.5 text-sm">
+          <div className="flex flex-wrap items-center gap-2 rounded-lg border bg-muted/50 px-3 py-1.5 text-sm">
             <span className="text-muted-foreground">{selection.size} selected</span>
             {singleSelectedDocument && (
               <Button variant="ghost" size="sm" onClick={() => setMoveOpen(true)}>

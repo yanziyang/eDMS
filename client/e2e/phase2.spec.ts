@@ -222,7 +222,9 @@ test.describe.serial("Phase 2 acceptance flows", () => {
 
     await session.page.goto("/");
     await session.page.getByRole("button", { name: /Notifications/ }).click();
-    await expect(session.page.getByText(`${renamed} was renamed.`)).toBeVisible();
+    await expect(
+      session.page.getByRole("menu").getByText(`${renamed} was renamed.`),
+    ).toBeVisible();
   });
 
   test("search renders a result for a phrase sourced from indexed body text", async () => {
@@ -264,7 +266,9 @@ test.describe.serial("Phase 2 acceptance flows", () => {
     });
 
     await session.page.goto("/search");
-    await session.page.getByLabel("Search documents").fill("body-only-phrase");
+    await session.page
+      .getByRole("textbox", { name: "Search documents" })
+      .fill("body-only-phrase");
     await session.page.getByRole("button", { name: "Search", exact: true }).click();
     await expect(session.page.getByText(bodyOnlyName, { exact: true })).toBeVisible();
     await session.page.unroute("**/api/v1/search**");

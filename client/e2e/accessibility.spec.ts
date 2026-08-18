@@ -148,9 +148,13 @@ test.describe.serial("WCAG 2.1 AA axe scans", () => {
 
   test("home", async () => {
     await session.page.goto("/");
-    await expect(session.page.getByRole("heading", { name: "My Sites" })).toBeVisible();
-    await expect(session.page.getByRole("heading", { name: "Recent" })).toBeVisible();
-    await expect(session.page.getByRole("link", { name: new RegExp(fileName) })).toBeVisible();
+    await expect(session.page.getByRole("heading", { name: "Welcome back" })).toBeVisible();
+    await expect(
+      session.page.getByRole("heading", { name: "Recent", exact: true }),
+    ).toBeVisible();
+    await expect(
+      session.page.getByRole("link", { name: new RegExp(`^${fileName} `) }),
+    ).toBeVisible();
     await scanAndExpectClean(session.page, "home");
   });
 

@@ -99,7 +99,7 @@ test("global SSO blocks local login but preserves the exempt admin path", async 
       await exemptPage.locator("#login-password").fill(ADMIN.password);
       await exemptPage.getByRole("button", { name: "Sign in", exact: true }).click();
       await expect(exemptPage).toHaveURL("/");
-      await expect(exemptPage.getByRole("heading", { name: "My Sites" })).toBeVisible();
+      await expect(exemptPage.getByRole("heading", { name: "Welcome back" })).toBeVisible();
     } finally {
       await exemptContext.close();
     }

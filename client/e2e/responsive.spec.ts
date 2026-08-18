@@ -98,7 +98,7 @@ test.describe.serial("responsive key flow", () => {
       await session.page.setViewportSize({ width: viewport.width, height: viewport.height });
 
       await session.page.goto("/");
-      await expect(session.page.getByRole("heading", { name: "My Sites" })).toBeVisible();
+      await expect(session.page.getByRole("heading", { name: "Welcome back" })).toBeVisible();
       await expectNoHorizontalScroll(session.page, `${viewport.name} home`);
 
       if (viewport.width < 768) {
@@ -209,8 +209,12 @@ test.describe.serial("responsive key flow", () => {
     await session.page.setViewportSize({ width, height: 667 });
 
     await session.page.goto("/");
-    await expect(session.page.getByRole("heading", { name: "Recent" })).toBeVisible();
-    await expect(session.page.getByRole("link", { name: new RegExp(fileName) })).toBeVisible();
+    await expect(
+      session.page.getByRole("heading", { name: "Recent", exact: true }),
+    ).toBeVisible();
+    await expect(
+      session.page.getByRole("link", { name: new RegExp(`^${fileName} `) }),
+    ).toBeVisible();
     await expectNoHorizontalScroll(session.page, "mobile Phase 4 home Recent");
 
     await session.page.goto("/favorites");
@@ -303,7 +307,7 @@ test.describe.serial("responsive SSO surfaces", () => {
         await expect(session.page.getByRole("switch", { name: /Disable local login for/ }).first()).toBeVisible();
         await expectWithinViewport(
           session.page,
-          "div.overflow-x-auto.rounded-lg.border",
+          "div.overflow-x-auto.rounded-xl.border.bg-card",
           `${viewport.name} admin users table`,
           viewport.width,
         );
