@@ -138,7 +138,11 @@ export async function apiShare(
 // Signs in through the UI and returns the access token captured from the login
 // response, so callers can reuse the same session for API seeding without an
 // extra (rate-limited) /auth/login call.
-export async function loginUi(page: Page): Promise<string> {
+export async function loginUiAs(
+  page: Page,
+  email: string,
+  password: string,
+): Promise<string> {
   const tokenPromise = page
     .waitForResponse(
       (response) => response.url().endsWith("/api/v1/auth/login") && response.ok(),
@@ -147,12 +151,16 @@ export async function loginUi(page: Page): Promise<string> {
     .then((body) => (body as { accessToken: string }).accessToken);
 
   await page.goto("/login");
-  await page.locator('input[type="email"]').fill(ADMIN.email);
-  await page.locator('input[type="password"]').fill(ADMIN.password);
+  await page.locator('input[type="email"]').fill(email);
+  await page.locator('input[type="password"]').fill(password);
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
   await expect(page).toHaveURL("/");
 
   return tokenPromise;
+}
+
+export function loginUi(page: Page): Promise<string> {
+  return loginUiAs(page, ADMIN.email, ADMIN.password);
 }
 
 export interface AdminSession {
