@@ -587,7 +587,7 @@ export function LibraryBrowser() {
             Upload, organize, and manage documents with version history and permissions.
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {libraryId && (
             <FollowToggle objectType="Library" objectId={libraryId} itemName={libraryName} />
           )}

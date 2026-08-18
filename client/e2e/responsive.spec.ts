@@ -1,5 +1,6 @@
 import { test, expect, type Page } from "@playwright/test";
 import {
+  API_BASE,
   adminRequest,
   apiCreateSite,
   apiGetDefaultLibrary,
@@ -17,6 +18,12 @@ const VIEWPORTS = [
 async function expectNoHorizontalScroll(page: Page, label: string): Promise<void> {
   const overflow = await page.evaluate(() => document.body.scrollWidth - window.innerWidth);
   expect(overflow, `${label}: body overflows horizontally by ${overflow}px`).toBeLessThanOrEqual(1);
+}
+
+async function waitForToastToClear(page: Page, message: string): Promise<void> {
+  const toast = page.getByText(message, { exact: true });
+  await expect(toast).toBeVisible();
+  await expect(toast).toBeHidden({ timeout: 10_000 });
 }
 
 async function expectWithinViewport(
@@ -51,6 +58,7 @@ test.describe.serial("responsive key flow", () => {
   let siteSlug: string;
   let libraryId: string;
   let fileName: string;
+  let secondFileName: string;
 
   test.beforeAll(async ({ browser, playwright }) => {
     session = await getAdminSession(browser);
@@ -59,7 +67,13 @@ test.describe.serial("responsive key flow", () => {
     siteSlug = site.slug;
     libraryId = await apiGetDefaultLibrary(request, session.token, site.id);
     fileName = `responsive-${Date.now()}.txt`;
-    await apiUpload(request, session.token, libraryId, fileName, "responsive");
+    const documentId = await apiUpload(request, session.token, libraryId, fileName, "responsive");
+    secondFileName = `responsive-second-${Date.now()}.txt`;
+    await apiUpload(request, session.token, libraryId, secondFileName, "responsive second");
+    const favorite = await request.post(`${API_BASE}/Document/objects/${documentId}/favorite`, {
+      headers: { Authorization: `Bearer ${session.token}` },
+    });
+    expect(favorite.status()).toBe(204);
     await request.dispose();
   });
 
@@ -135,6 +149,60 @@ test.describe.serial("responsive key flow", () => {
       await expectNoHorizontalScroll(session.page, `${viewport.name} sheet closed`);
     });
   }
+
+  test("mobile (375x667): Phase 4 surfaces remain usable without horizontal overflow", async () => {
+    const width = 375;
+    await session.page.setViewportSize({ width, height: 667 });
+
+    await session.page.goto("/");
+    await expect(session.page.getByRole("heading", { name: "Recent" })).toBeVisible();
+    await expect(session.page.getByRole("link", { name: new RegExp(fileName) })).toBeVisible();
+    await expectNoHorizontalScroll(session.page, "mobile Phase 4 home Recent");
+
+    await session.page.goto("/favorites");
+    await expect(session.page.getByRole("heading", { name: "Favorites" })).toBeVisible();
+    await expect(session.page.getByText(fileName, { exact: true })).toBeVisible();
+    await expectNoHorizontalScroll(session.page, "mobile Phase 4 favorites");
+
+    await session.page.goto(`/sites/${siteSlug}/libraries/${libraryId}`);
+    await expect(session.page.getByRole("combobox", { name: "Saved view" })).toBeVisible();
+    await session.page.getByRole("combobox", { name: "Saved view" }).click();
+    await expect(session.page.getByRole("option", { name: "Save current as…" })).toBeVisible();
+    await session.page.keyboard.press("Escape");
+    await expectNoHorizontalScroll(session.page, "mobile Phase 4 view picker");
+
+    const followLibrary = session.page.getByRole("button", { name: "Follow", exact: true });
+    await expect(followLibrary).toBeVisible();
+    await followLibrary.click();
+    await expect(session.page.getByRole("button", { name: "Unfollow", exact: true })).toBeVisible();
+    await waitForToastToClear(session.page, "Following library");
+    await expectNoHorizontalScroll(session.page, "mobile Phase 4 library follow");
+    await session.page.getByRole("button", { name: "Unfollow", exact: true }).click();
+
+    await session.page.getByRole("checkbox", { name: `Select ${fileName}` }).click();
+    await session.page.getByRole("checkbox", { name: `Select ${secondFileName}` }).click();
+    await session.page.getByRole("button", { name: "Edit properties", exact: true }).click();
+    const bulkDialog = session.page.getByRole("dialog");
+    await expect(bulkDialog).toBeVisible();
+    await expectWithinViewport(session.page, '[data-slot="dialog-content"]', "mobile Phase 4 bulk edit", width);
+    await expectNoHorizontalScroll(session.page, "mobile Phase 4 bulk edit");
+    await bulkDialog.getByRole("button", { name: "Cancel", exact: true }).click();
+
+    const row = session.page.locator("tr", { hasText: fileName });
+    await row.focus();
+    await row.press("Shift+F10");
+    await expect(session.page.getByRole("menuitem", { name: "Open" })).toBeVisible();
+    await expectNoHorizontalScroll(session.page, "mobile Phase 4 context menu");
+    await session.page.keyboard.press("Escape");
+
+    await session.page.goto(`/sites/${siteSlug}`);
+    await expect(session.page.getByRole("button", { name: "Follow", exact: true })).toBeVisible();
+    await session.page.getByRole("button", { name: "Follow", exact: true }).click();
+    await expect(session.page.getByRole("button", { name: "Unfollow", exact: true })).toBeVisible();
+    await waitForToastToClear(session.page, "Following site");
+    await expectNoHorizontalScroll(session.page, "mobile Phase 4 site follow");
+    await session.page.getByRole("button", { name: "Unfollow", exact: true }).click();
+  });
 });
 
 test.describe.serial("responsive SSO surfaces", () => {
