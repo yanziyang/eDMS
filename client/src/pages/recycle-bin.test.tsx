@@ -121,6 +121,29 @@ describe("RecycleBin", () => {
     expect(screen.queryByRole("combobox", { name: "Site" })).not.toBeInTheDocument();
   });
 
+  it("falls back to the user ID or an unknown-user label", async () => {
+    mockSites();
+    server.use(
+      http.get(`${base}/sites/s1/recycle-bin`, () =>
+        HttpResponse.json([
+          recycleItem({ id: "r2", name: "legacy.pdf", deletedByDisplayName: null }),
+          recycleItem({
+            id: "r3",
+            name: "orphaned.txt",
+            deletedBy: null,
+            deletedByDisplayName: null,
+          }),
+        ]),
+      ),
+    );
+
+    renderRecycleBin("/recycle-bin/site-one");
+
+    expect(await screen.findByText("u-alice")).toBeInTheDocument();
+    expect(screen.getByText("Unknown user")).toBeInTheDocument();
+    expect(screen.getByTitle("User ID: u-alice")).toHaveTextContent("u-alice");
+  });
+
   it("shows not-found when the slug does not match any site", async () => {
     mockSites();
 
