@@ -72,7 +72,7 @@ export function AdminSites() {
 
   return (
     <div className="flex flex-col gap-6">
-      <form onSubmit={submit} className="flex flex-wrap items-end gap-3 rounded-lg border bg-card p-4">
+      <form onSubmit={submit} className="flex flex-wrap items-start gap-3 rounded-lg border bg-card p-4">
         <div className="flex flex-col gap-1">
           <Label htmlFor="site-name" className="text-xs text-muted-foreground">Name</Label>
           <Input
@@ -104,7 +104,7 @@ export function AdminSites() {
             Lowercase letters, numbers, and single hyphens. Generated from the name unless edited.
           </p>
         </div>
-        <Button type="submit" disabled={create.isPending}>Create site</Button>
+        <Button type="submit" className="mt-6" disabled={create.isPending}>Create site</Button>
       </form>
 
       <div className="overflow-x-auto rounded-lg border">

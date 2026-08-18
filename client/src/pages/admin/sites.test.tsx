@@ -76,6 +76,9 @@ describe("AdminSites", () => {
     renderSites();
     await screen.findByText("Site One");
 
+    expect(screen.getByRole("button", { name: "Create site" }).closest("form")).toHaveClass("items-start");
+    expect(screen.getByRole("button", { name: "Create site" })).toHaveClass("mt-6");
+
     const inputs = screen.getAllByRole("textbox");
     await user.type(inputs[0], "New Site");
     expect(inputs[1]).toHaveValue("new-site");
