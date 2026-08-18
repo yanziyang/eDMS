@@ -8,7 +8,11 @@ import { Home } from "./home";
 
 const base = "http://localhost:5080/api/v1";
 
-function site(overrides: Partial<Record<"id" | "name" | "description" | "urlSlug" | "storageUsedBytes", unknown>> = {}) {
+function site(
+  overrides: Partial<
+    Record<"id" | "name" | "description" | "urlSlug" | "storageQuotaBytes" | "storageUsedBytes" | "createdAt", unknown>
+  > = {},
+) {
   return {
     id: "s1",
     name: "Site One",
@@ -145,5 +149,67 @@ describe("Home", () => {
     renderHome();
 
     expect(await screen.findByText("No recent documents yet.")).toBeInTheDocument();
+  });
+
+  it("shows recent activity notifications with unread markers", async () => {
+    server.use(
+      http.get(`${base}/sites`, () => HttpResponse.json([])),
+      http.get(`${base}/me/recent`, () => HttpResponse.json([])),
+      http.get(`${base}/me/notifications`, () =>
+        HttpResponse.json([
+          {
+            id: "n1",
+            message: "Contract.pdf was uploaded",
+            objectName: "Documents",
+            occurredAt: "2026-08-17T09:00:00Z",
+            isRead: false,
+          },
+          {
+            id: "n2",
+            message: "Access was granted",
+            objectName: "Policies",
+            occurredAt: "2026-08-17T08:00:00Z",
+            isRead: true,
+          },
+        ]),
+      ),
+    );
+
+    renderHome();
+
+    expect(await screen.findByText("Contract.pdf was uploaded")).toBeInTheDocument();
+    expect(screen.getByText("Access was granted")).toBeInTheDocument();
+    const unreadRow = screen
+      .getByText("Contract.pdf was uploaded")
+      .closest("div")!.parentElement!.parentElement!;
+    expect(unreadRow.querySelector("span")?.className).toContain("bg-primary");
+    const readRow = screen.getByText("Access was granted").closest("div")!.parentElement!.parentElement!;
+    expect(readRow.querySelector("span")?.className).toContain("bg-muted-foreground/40");
+  });
+
+  it("shows the provisioned quota detail and storage progress", async () => {
+    server.use(
+      http.get(`${base}/sites`, () =>
+        HttpResponse.json([
+          site({
+            id: "s1",
+            name: "Quota Site",
+            storageQuotaBytes: 10 * 1024 * 1024,
+            storageUsedBytes: 2 * 1024 * 1024,
+          }),
+        ]),
+      ),
+      http.get(`${base}/me/recent`, () => HttpResponse.json([])),
+      http.get(`${base}/me/notifications`, () => HttpResponse.json([])),
+    );
+
+    renderHome();
+
+    expect(await screen.findByText("of 10.0 MB provisioned")).toBeInTheDocument();
+    expect(screen.getByRole("progressbar", { name: "Quota Site storage usage" })).toHaveAttribute(
+      "aria-valuenow",
+      "20",
+    );
+    expect(screen.getByText("20% used")).toBeInTheDocument();
   });
 });

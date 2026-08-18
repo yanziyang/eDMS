@@ -543,4 +543,85 @@ describe("SiteHome", () => {
 
     await waitFor(() => expect(mockedToast.error).toHaveBeenCalledWith("Failed to reset permissions"));
   });
+
+  it("edits site settings from the Site settings dialog", async () => {
+    mockSiteRequests();
+    let requestBody: unknown;
+    server.use(
+      http.put(`${base}/sites/s1`, async ({ request }) => {
+        requestBody = await request.json();
+        return new HttpResponse(null, { status: 204 });
+      }),
+    );
+
+    const user = userEvent.setup();
+    renderSiteHome();
+    await screen.findByRole("heading", { name: "Site One" });
+
+    await user.click(screen.getByRole("button", { name: "Site settings" }));
+    expect(await screen.findByRole("heading", { name: "Site settings" })).toBeInTheDocument();
+
+    await user.clear(screen.getByLabelText("Name"));
+    await user.type(screen.getByLabelText("Name"), "Renamed Site");
+    await user.clear(screen.getByLabelText("Description"));
+    await user.type(screen.getByLabelText("Description"), "New description");
+    await user.clear(screen.getByLabelText("Storage quota (GB)"));
+    await user.type(screen.getByLabelText("Storage quota (GB)"), "2.5");
+    await user.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() =>
+      expect(requestBody).toEqual({
+        name: "Renamed Site",
+        description: "New description",
+        storageQuotaBytes: Math.round(2.5 * 1024 * 1024 * 1024),
+      }),
+    );
+    expect(mockedToast.success).toHaveBeenCalledWith("Site settings saved");
+  });
+
+  it("cancels the Site settings dialog without saving", async () => {
+    mockSiteRequests();
+    let putCalls = 0;
+    server.use(
+      http.put(`${base}/sites/s1`, () => {
+        putCalls += 1;
+        return new HttpResponse(null, { status: 204 });
+      }),
+    );
+
+    const user = userEvent.setup();
+    renderSiteHome();
+    await screen.findByRole("heading", { name: "Site One" });
+
+    await user.click(screen.getByRole("button", { name: "Site settings" }));
+    await screen.findByRole("heading", { name: "Site settings" });
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+
+    await waitFor(() =>
+      expect(screen.queryByRole("heading", { name: "Site settings" })).not.toBeInTheDocument(),
+    );
+    expect(putCalls).toBe(0);
+  });
+
+  it("formats the storage summary across KB and MB", async () => {
+    mockSiteRequests({
+      sites: [site({ storageQuotaBytes: 5 * 1024 * 1024, storageUsedBytes: 1536 })],
+    });
+
+    renderSiteHome();
+
+    expect(await screen.findByText("1.5 KB used")).toBeInTheDocument();
+    expect(screen.getByText("0% of 5.0 MB")).toBeInTheDocument();
+  });
+
+  it("formats the storage summary across GB quotas", async () => {
+    mockSiteRequests({
+      sites: [site({ storageQuotaBytes: 2 * 1024 * 1024 * 1024, storageUsedBytes: 500 })],
+    });
+
+    renderSiteHome();
+
+    expect(await screen.findByText("500 B used")).toBeInTheDocument();
+    expect(screen.getByText("0% of 2.0 GB")).toBeInTheDocument();
+  });
 });

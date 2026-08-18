@@ -1,5 +1,5 @@
 import { http, HttpResponse } from "msw";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it } from "vitest";
@@ -105,5 +105,67 @@ describe("Favorites", () => {
     renderFavorites();
 
     expect(await screen.findByText("Failed to load favorites.")).toBeInTheDocument();
+  });
+
+  it("removes a document favorite from its context menu", async () => {
+    let deletes = 0;
+    const items: unknown[] = [
+      {
+        objectId: "d1",
+        objectType: "Document",
+        name: "contract.pdf",
+        location: "Site One / Documents",
+        siteSlug: "site-one",
+        libraryId: "l1",
+        folderId: null,
+      },
+    ];
+    server.use(
+      http.get(`${base}/me/favorites`, () => HttpResponse.json(items)),
+      http.delete(`${base}/Document/objects/d1/favorite`, () => {
+        deletes += 1;
+        items.length = 0;
+        return new HttpResponse(null, { status: 204 });
+      }),
+    );
+
+    const { default: userEvent } = await import("@testing-library/user-event");
+    renderFavorites();
+
+    const row = await screen.findByText("contract.pdf");
+    fireEvent.contextMenu(row);
+    await userEvent.click(await screen.findByRole("menuitem", { name: "Unfavorite" }));
+
+    await screen.findByText("You have no favorites yet.");
+    expect(deletes).toBe(1);
+  });
+
+  it("navigates to a document favorite from its context menu", async () => {
+    server.use(
+      http.get(`${base}/me/favorites`, () =>
+        HttpResponse.json([
+          {
+            objectId: "d1",
+            objectType: "Document",
+            name: "contract.pdf",
+            location: "Site One / Documents",
+            siteSlug: "site-one",
+            libraryId: "l1",
+            folderId: null,
+          },
+        ]),
+      ),
+    );
+
+    const { default: userEvent } = await import("@testing-library/user-event");
+    renderFavorites();
+
+    const row = await screen.findByText("contract.pdf");
+    fireEvent.contextMenu(row);
+    await userEvent.click(await screen.findByRole("menuitem", { name: "Open" }));
+
+    expect(
+      screen.getByRole("link", { name: "contract.pdf Site One / Documents" }),
+    ).toHaveAttribute("href", "/sites/site-one/libraries/l1?documentId=d1");
   });
 });

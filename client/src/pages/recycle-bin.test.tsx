@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -359,5 +359,55 @@ describe("RecycleBin", () => {
     await user.click(screen.getByRole("button", { name: "Delete forever" }));
 
     await waitFor(() => expect(mockedToast.error).toHaveBeenCalledWith("Failed to delete item"));
+  });
+
+  it("restores an item from the row context menu", async () => {
+    mockSites();
+    const items: unknown[] = [recycleItem()];
+    const posts: string[] = [];
+    server.use(
+      http.get(`${base}/sites/s1/recycle-bin`, () => HttpResponse.json(items)),
+      http.post(`${base}/recycle-bin/r1/restore`, ({ request }) => {
+        posts.push(request.url);
+        items.length = 0;
+        return new HttpResponse(null, { status: 204 });
+      }),
+    );
+
+    const user = userEvent.setup();
+    renderRecycleBin("/recycle-bin/site-one");
+    const row = await screen.findByText("old-contract.pdf");
+
+    fireEvent.contextMenu(row);
+    await user.click(await screen.findByRole("menuitem", { name: "Restore" }));
+
+    await waitFor(() => expect(posts).toHaveLength(1));
+    expect(mockedToast.success).toHaveBeenCalledWith("Item restored");
+  });
+
+  it("permanently deletes an item from the row context menu", async () => {
+    mockSites();
+    const items: unknown[] = [recycleItem()];
+    let deletes = 0;
+    server.use(
+      http.get(`${base}/sites/s1/recycle-bin`, () => HttpResponse.json(items)),
+      http.delete(`${base}/recycle-bin/r1`, () => {
+        deletes += 1;
+        items.length = 0;
+        return new HttpResponse(null, { status: 204 });
+      }),
+    );
+
+    const user = userEvent.setup();
+    renderRecycleBin("/recycle-bin/site-one");
+    const row = await screen.findByText("old-contract.pdf");
+
+    fireEvent.contextMenu(row);
+    await user.click(await screen.findByRole("menuitem", { name: "Permanently delete" }));
+    expect(screen.getByRole("button", { name: "Delete forever" })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Delete forever" }));
+    await waitFor(() => expect(deletes).toBe(1));
+    expect(mockedToast.success).toHaveBeenCalledWith("Item permanently deleted");
   });
 });

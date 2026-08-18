@@ -63,6 +63,7 @@ DEV-Credentials.md
 # Node / Vite / frontend
 node_modules/
 dist/
+.vite/
 *.tsbuildinfo
 coverage/
 

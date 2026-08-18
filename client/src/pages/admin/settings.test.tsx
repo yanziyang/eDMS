@@ -142,6 +142,75 @@ describe("AdminSettings", () => {
     );
   });
 
+  it("falls back to a generic message when the safety-rail response has no detail", async () => {
+    server.use(
+      http.get(`${base}/admin/settings`, () => HttpResponse.json(settingsDto())),
+      http.put(`${base}/admin/settings`, () =>
+        HttpResponse.json({ type: "urn:edms:sso-safety-rail" }, { status: 409 })),
+    );
+
+    const user = userEvent.setup();
+    renderSettings();
+    await screen.findByLabelText("Max file size (MB)");
+
+    await user.click(screen.getByRole("switch", { name: "Require SSO for all local logins" }));
+    await user.click(screen.getByRole("button", { name: "Save" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Add an active SSO-exempt system administrator before enabling global SSO.",
+    );
+  });
+
+  it("shows both providers as configured when both are enabled", async () => {
+    server.use(
+      http.get(`${base}/admin/settings`, () => HttpResponse.json(settingsDto())),
+    );
+
+    renderSettings({ oidc: true, saml: true });
+
+    expect(await screen.findByText("SSO providers")).toBeInTheDocument();
+    await waitFor(() => expect(screen.getAllByText("Configured")).toHaveLength(2));
+  });
+
+  it("shows a loading state while the SSO provider list is pending", async () => {
+    server.use(
+      http.get(`${base}/admin/settings`, () => HttpResponse.json(settingsDto())),
+      http.get(`${base}/auth/sso/providers`, () =>
+        new Promise((resolve) =>
+          setTimeout(() => resolve(HttpResponse.json({ oidc: false, saml: false })), 250)),
+      ),
+    );
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+    });
+    render(
+      <QueryClientProvider client={queryClient}>
+        <AdminSettings />
+      </QueryClientProvider>,
+    );
+    await screen.findByLabelText("Max file size (MB)");
+
+    expect(screen.getByText("Loading providers…")).toBeInTheDocument();
+    await waitFor(() => expect(screen.getAllByText("Not configured")).toHaveLength(2));
+  });
+
+  it("shows an error when the SSO provider list fails to load", async () => {
+    server.use(
+      http.get(`${base}/admin/settings`, () => HttpResponse.json(settingsDto())),
+      http.get(`${base}/auth/sso/providers`, () => new HttpResponse(null, { status: 500 })),
+    );
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+    });
+    render(
+      <QueryClientProvider client={queryClient}>
+        <AdminSettings />
+      </QueryClientProvider>,
+    );
+
+    expect(await screen.findByText("Failed to load SSO providers.")).toBeInTheDocument();
+  });
+
   it("disables the save button while submitting", async () => {
     let resolvePut!: (response: Response) => void;
     server.use(

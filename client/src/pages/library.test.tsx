@@ -1241,6 +1241,133 @@ describe("LibraryBrowser", () => {
     expect(within(screen.getByRole("navigation", { name: "Breadcrumb" })).getByText("Archived")).toBeInTheDocument();
   });
 
+  it("supports folder-tree controls, keyboard expansion, and the mobile sheet", async () => {
+    mockNav();
+    server.use(
+      http.get(`${base}/libraries/l1/items`, () =>
+        HttpResponse.json([item({ kind: "folder", id: "i3", name: "Archived", documentId: null, folderId: "f3" })]),
+      ),
+      http.get(`${base}/folders/f3/items`, () =>
+        HttpResponse.json([item({ kind: "folder", id: "i4", name: "Subfolder", documentId: null, folderId: "f4" })]),
+      ),
+    );
+
+    const user = userEvent.setup();
+    renderLibrary();
+
+    expect(await screen.findByRole("tree", { name: "Library folders" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Collapse folder tree" }));
+    await user.click(screen.getByRole("button", { name: "Expand folder tree" }));
+    await user.click(screen.getByRole("button", { name: "Widen folder tree" }));
+    expect(screen.getByRole("button", { name: "Narrow folder tree" })).not.toBeDisabled();
+
+    await user.click(screen.getByRole("button", { name: "Folders" }));
+    const sheet = screen.getByRole("dialog", { name: "Folders" });
+    expect(within(sheet).getByRole("tree", { name: "Library folders" })).toBeInTheDocument();
+    await user.click(within(sheet).getByRole("button", { name: "Open folder Archived" }));
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: "Folders" })).not.toBeInTheDocument());
+
+    const archivedTreeButton = screen.getByRole("button", { name: "Open folder Archived" });
+    await user.click(archivedTreeButton);
+    await user.keyboard("{ArrowRight}");
+    expect(await screen.findByRole("button", { name: "Open folder Subfolder" })).toBeInTheDocument();
+  });
+
+  it("clears the folder selection from the tree's All documents button", async () => {
+    mockNav();
+    server.use(
+      http.get(`${base}/libraries/l1/items`, () =>
+        HttpResponse.json([item({ kind: "folder", id: "i3", name: "Archived", documentId: null, folderId: "f3" })]),
+      ),
+      http.get(`${base}/folders/f3/items`, () =>
+        HttpResponse.json([item({ id: "i9", name: "inside.txt", documentId: "d9" })]),
+      ),
+    );
+
+    const user = userEvent.setup();
+    renderLibrary();
+
+    await user.click(await screen.findByRole("button", { name: "Open folder Archived" }));
+    expect(await screen.findByText("inside.txt")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "All documents" }));
+
+    await waitFor(() =>
+      expect(screen.getByTestId("location")).not.toHaveTextContent("folderId"),
+    );
+    expect(await screen.findByRole("button", { name: "Archived" })).toBeInTheDocument();
+  });
+
+  it("surfaces each bulk-edit rejection reason distinctly", async () => {
+    mockNav();
+    server.use(
+      http.get(`${base}/libraries/l1/items`, () =>
+        HttpResponse.json([
+          item({ id: "i1", name: "a.pdf" }),
+          item({ id: "i2", name: "b.pdf", documentId: "d2" }),
+          item({ id: "i3", name: "c.pdf", documentId: "d3" }),
+          item({ id: "i4", name: "d.pdf", documentId: "d4" }),
+        ]),
+      ),
+      http.get(`${base}/documents/:id/metadata`, () =>
+        HttpResponse.json({ contentTypeId: null, contentTypeName: null, columns: [] }),
+      ),
+      http.put(`${base}/documents/bulk-metadata`, () =>
+        HttpResponse.json({
+          items: [
+            { documentId: "d1", status: "rejected", rejectionReason: "forbidden" },
+            { documentId: "d2", status: "rejected", rejectionReason: "not-found" },
+            { documentId: "d3", status: "rejected", rejectionReason: "invalid-metadata" },
+            { documentId: "d4", status: "rejected", rejectionReason: null },
+          ],
+        }),
+      ),
+    );
+
+    const user = userEvent.setup();
+    renderLibrary();
+    await screen.findByText("a.pdf");
+
+    for (const name of ["a.pdf", "b.pdf", "c.pdf", "d.pdf"]) {
+      await user.click(screen.getByRole("checkbox", { name: `Select ${name}` }));
+    }
+    await user.click(screen.getByRole("button", { name: "Edit properties" }));
+    await screen.findByRole("heading", { name: "Edit properties" });
+
+    await user.click(screen.getByRole("checkbox", { name: "Set title" }));
+    await user.type(screen.getByRole("textbox", { name: "Bulk title" }), "Shared title");
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Apply changes" })).toBeEnabled(),
+    );
+    await user.click(screen.getByRole("button", { name: "Apply changes" }));
+
+    await waitFor(() =>
+      expect(mockedToast.error).toHaveBeenCalledWith(
+        "Updated 0; failed 4: a.pdf: insufficient permission; b.pdf: document not found; c.pdf: invalid metadata; d.pdf: unknown error",
+      ),
+    );
+  });
+
+  it("cancels the library settings dialog", async () => {
+    mockNav();
+    server.use(
+      http.get(`${base}/libraries/l1/items`, () => HttpResponse.json([item()])),
+    );
+
+    const user = userEvent.setup();
+    renderLibrary();
+    await screen.findByText("contract.pdf");
+
+    await user.click(screen.getByRole("button", { name: "Library settings" }));
+    expect(await screen.findByText("Library settings")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+
+    await waitFor(() =>
+      expect(screen.queryByText("Library settings")).not.toBeInTheDocument(),
+    );
+  });
+
   it("opens the details sheet from a grid card", async () => {
     mockNav();
     server.use(

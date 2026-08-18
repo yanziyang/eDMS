@@ -25,6 +25,17 @@ function renderToggle(objectType: "Site" | "Library" | "Document", objectId: str
   );
 }
 
+function renderToggleWithoutName(objectType: "Site" | "Library" | "Document", objectId: string) {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <FollowToggle objectType={objectType} objectId={objectId} />
+    </QueryClientProvider>,
+  );
+}
+
 describe("FollowToggle", () => {
   afterEach(() => {
     vi.clearAllMocks();
@@ -124,5 +135,40 @@ describe("FollowToggle", () => {
     await screen.findByRole("button", { name: "Unfollow" });
     await user.click(screen.getByRole("button", { name: "Unfollow" }));
     await waitFor(() => expect(mockedToast.error).toHaveBeenCalledWith("Failed to unfollow document"));
+  });
+
+  it("falls back to the object label in titles without an item name", async () => {
+    server.use(
+      http.get(`${base}/me/notifications/subscriptions`, () => HttpResponse.json([])),
+    );
+
+    renderToggleWithoutName("Site", "s1");
+
+    expect(await screen.findByRole("button", { name: "Follow" })).toHaveAttribute(
+      "title",
+      "Follow site",
+    );
+  });
+
+  it("falls back to the object label for the unfollow title without an item name", async () => {
+    server.use(
+      http.get(`${base}/me/notifications/subscriptions`, () =>
+        HttpResponse.json([{
+          id: "sub-1",
+          objectType: "Library",
+          objectId: "l1",
+          objectName: "Policies",
+          frequency: "Immediate",
+          createdAt: "2026-08-17T00:00:00Z",
+        }]),
+      ),
+    );
+
+    renderToggleWithoutName("Library", "l1");
+
+    expect(await screen.findByRole("button", { name: "Unfollow" })).toHaveAttribute(
+      "title",
+      "Unfollow library",
+    );
   });
 });

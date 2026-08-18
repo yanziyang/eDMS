@@ -14,4 +14,14 @@ describe("library view config serialization", () => {
     expect(deserializeFilterConfig(serializeFilterConfig(filter))).toEqual(filter);
     expect(deserializeSortConfig(serializeSortConfig(sort))).toEqual(sort);
   });
+
+  it("falls back to defaults for malformed or partial config", () => {
+    expect(deserializeFilterConfig("not-json")).toEqual({ text: "" });
+    expect(deserializeFilterConfig('{"text": 42}')).toEqual({ text: "" });
+    expect(deserializeSortConfig("not-json")).toEqual({ key: "name", descending: false });
+    expect(deserializeSortConfig('{"key": "bogus", "descending": true}')).toEqual({
+      key: "name",
+      descending: false,
+    });
+  });
 });

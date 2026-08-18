@@ -109,9 +109,15 @@ function FavoriteRow({ item, onUnfavorite }: { item: FavoriteItemDto; onUnfavori
   );
 }
 
-function FavoriteRowContent({ item }: { item: FavoriteItemDto }) {
+function FavoriteRowContent({
+  item,
+  ...props
+}: { item: FavoriteItemDto } & React.HTMLAttributes<HTMLDivElement>) {
   return (
-    <div className="flex items-center gap-3 rounded-lg border bg-card px-4 py-3 transition-colors hover:bg-muted/30">
+    <div
+      {...props}
+      className="flex items-center gap-3 rounded-lg border bg-card px-4 py-3 transition-colors hover:bg-muted/30"
+    >
       <Link
         to={favoriteHref(item)}
         className="flex min-w-0 flex-1 items-center gap-3 hover:underline"

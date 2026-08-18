@@ -16,6 +16,7 @@ function renderAdmin(initialPath = "/admin/users") {
           <Route path="content-types" element={<div>CONTENT_TYPES_PANEL</div>} />
           <Route path="audit-log" element={<div>AUDIT_LOG_PANEL</div>} />
           <Route path="settings" element={<div>SETTINGS_PANEL</div>} />
+          <Route path="*" element={null} />
         </Route>
       </Routes>
     </MemoryRouter>,
@@ -82,5 +83,14 @@ describe("Admin", () => {
 
     await user.click(screen.getByRole("link", { name: "Users" }));
     expect(screen.getByText("USERS_PANEL")).toBeInTheDocument();
+  });
+
+  it("falls back to the first tab for an unknown admin path", () => {
+    renderAdmin("/admin/does-not-exist");
+
+    expect(
+      screen.getByText("Manage accounts, roles, and access across the organization."),
+    ).toBeInTheDocument();
+    expect(screen.getAllByText("Users").length).toBeGreaterThanOrEqual(2);
   });
 });

@@ -34,10 +34,10 @@ export function deserializeSortConfig(serialized: string): LibraryViewSortConfig
   try {
     const parsed = JSON.parse(serialized) as Partial<LibraryViewSortConfig>;
     const key = parsed.key;
-    return {
-      key: key === "name" || key === "size" || key === "modifiedAt" ? key : defaultSortConfig.key,
-      descending: parsed.descending === true,
-    };
+    if (key !== "name" && key !== "size" && key !== "modifiedAt") {
+      return { ...defaultSortConfig };
+    }
+    return { key, descending: parsed.descending === true };
   } catch {
     return { ...defaultSortConfig };
   }

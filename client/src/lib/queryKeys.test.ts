@@ -29,5 +29,11 @@ describe("queryKeys", () => {
     expect(queryKeys.admin.storage()).toEqual(["admin", "storage"]);
     expect(queryKeys.admin.auditLog("s1")).toEqual(["admin", "audit-log", "s1"]);
     expect(queryKeys.me.current()).toEqual(["me", "current"]);
+    expect(queryKeys.me.favorites()).toEqual(["me", "favorites"]);
+    expect(queryKeys.me.recent()).toEqual(["me", "recent"]);
+    expect(queryKeys.notifications.list()).toEqual(["notifications", "list", false]);
+    expect(queryKeys.notifications.list(true)).toEqual(["notifications", "list", true]);
+    expect(queryKeys.notifications.subscriptions()).toEqual(["notifications", "subscriptions"]);
+    expect(queryKeys.auth.ssoProviders()).toEqual(["auth", "sso-providers"]);
   });
 });

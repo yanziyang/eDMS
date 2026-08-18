@@ -57,6 +57,9 @@ test.describe.serial("responsive key flow", () => {
   let session: AdminSession;
   let siteSlug: string;
   let libraryId: string;
+  let folderId: string;
+  let folderName: string;
+  let childFolderName: string;
   let fileName: string;
   let secondFileName: string;
 
@@ -66,6 +69,19 @@ test.describe.serial("responsive key flow", () => {
     const site = await apiCreateSite(request, session.token, "E2E Responsive");
     siteSlug = site.slug;
     libraryId = await apiGetDefaultLibrary(request, session.token, site.id);
+    folderName = `Responsive folder ${Date.now()}`;
+    const folderResponse = await request.post(`${API_BASE}/libraries/${libraryId}/folders`, {
+      headers: { Authorization: `Bearer ${session.token}` },
+      data: { name: folderName },
+    });
+    expect(folderResponse.status()).toBe(201);
+    folderId = (await folderResponse.text()).replaceAll('"', "");
+    childFolderName = `Responsive child ${Date.now()}`;
+    const childFolderResponse = await request.post(`${API_BASE}/folders/${folderId}/folders`, {
+      headers: { Authorization: `Bearer ${session.token}` },
+      data: { name: childFolderName },
+    });
+    expect(childFolderResponse.status()).toBe(201);
     fileName = `responsive-${Date.now()}.txt`;
     const documentId = await apiUpload(request, session.token, libraryId, fileName, "responsive");
     secondFileName = `responsive-second-${Date.now()}.txt`;
@@ -104,6 +120,15 @@ test.describe.serial("responsive key flow", () => {
         ).toHaveCount(0);
       }
 
+      if (viewport.width >= 1024) {
+        await session.page.getByRole("button", { name: "Collapse navigation" }).click();
+        await expect(
+          session.page.getByRole("button", { name: "Expand navigation" }),
+        ).toBeVisible();
+        await expectNoHorizontalScroll(session.page, `${viewport.name} collapsed navigation`);
+        await session.page.getByRole("button", { name: "Expand navigation" }).click();
+      }
+
       await session.page.goto(`/sites/${siteSlug}`);
       await expect(session.page.getByRole("heading", { name: "E2E Responsive" })).toBeVisible();
       await expectNoHorizontalScroll(session.page, `${viewport.name} site home`);
@@ -114,6 +139,35 @@ test.describe.serial("responsive key flow", () => {
         session.page.getByRole("button", { name: "Upload", exact: true }),
       ).toBeVisible();
       await expectNoHorizontalScroll(session.page, `${viewport.name} library`);
+
+      if (viewport.width >= 1024) {
+        const tree = session.page.getByRole("tree", { name: "Library folders" });
+        await expect(tree).toBeVisible();
+        const rootFolder = tree.getByRole("button", { name: `Open folder ${folderName}` });
+        await expect(rootFolder).toBeVisible();
+        await rootFolder.focus();
+        await session.page.keyboard.press("ArrowRight");
+        await expect(
+          tree.getByRole("button", { name: `Open folder ${childFolderName}` }),
+        ).toBeVisible();
+        await rootFolder.click();
+        await expect(session.page).toHaveURL(new RegExp(`[?&]folderId=${folderId}`));
+        await expectNoHorizontalScroll(session.page, `${viewport.name} folder tree`);
+      } else {
+        await session.page.getByRole("button", { name: "Folders", exact: true }).click();
+        const folderSheet = session.page.getByRole("dialog", { name: "Folders" });
+        await expect(folderSheet).toBeVisible();
+        await expect(
+          folderSheet.getByRole("tree", { name: "Library folders" }),
+        ).toBeVisible();
+        await folderSheet
+          .getByRole("button", { name: `Open folder ${folderName}` })
+          .click();
+        await expect(session.page).toHaveURL(new RegExp(`[?&]folderId=${folderId}`));
+        await expectNoHorizontalScroll(session.page, `${viewport.name} mobile folder sheet`);
+      }
+
+      await session.page.goto(`/sites/${siteSlug}/libraries/${libraryId}`);
 
       await session.page
         .locator("tr", { hasText: fileName })
