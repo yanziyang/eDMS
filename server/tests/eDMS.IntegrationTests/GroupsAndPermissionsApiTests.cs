@@ -172,4 +172,47 @@ public sealed class GroupsAndPermissionsApiTests : IClassFixture<ApiFactory>
             });
         await TestSupport.AssertProblemAsync(grant, HttpStatusCode.Forbidden);
     }
+
+    [Fact]
+    public async Task Child_folder_creation_is_authorized_against_the_parent_library()
+    {
+        using var admin = await AdminAsync();
+        var (siteId, firstLibraryId) = await TestSupport.CreateSiteWithLibraryAsync(admin);
+        var rootId = await TestSupport.CreateFolderAsync(admin, firstLibraryId, "Root");
+
+        var secondLibraryResponse = await admin.PostAsJsonAsync(
+            $"/api/v1/sites/{siteId}/libraries",
+            new
+            {
+                name = "Second Library",
+                description = (string?)null,
+                enableVersioning = true,
+                enableMinorVersions = false,
+                requireCheckout = false,
+            });
+        Assert.Equal(HttpStatusCode.Created, secondLibraryResponse.StatusCode);
+        var secondLibraryId = Guid.Parse(
+            (await secondLibraryResponse.Content.ReadAsStringAsync()).Trim('"'));
+
+        var otherEmail = TestSupport.UniqueEmail();
+        var otherUser = await TestSupport.SeedUserAsync(_factory, otherEmail, "Password1!");
+        var grant = await admin.PostAsJsonAsync(
+            $"/api/v1/Library/objects/{secondLibraryId}/permissions",
+            new
+            {
+                principalType = PrincipalType.User,
+                principalId = otherUser.Id,
+                level = PermissionLevel.Contribute,
+            });
+        Assert.Equal(HttpStatusCode.NoContent, grant.StatusCode);
+
+        // The user has Contribute on the claimed library but not on the parent's; the
+        // request must be rejected because authorization uses the parent's library.
+        var (token, _) = await TestSupport.LoginAsync(_factory.CreateClient(), otherEmail, "Password1!");
+        using var otherClient = TestSupport.AuthorizedClient(_factory, token);
+        var hijack = await otherClient.PostAsJsonAsync(
+            $"/api/v1/folders/{rootId}/folders",
+            new { name = "Hijack", libraryId = secondLibraryId });
+        await TestSupport.AssertProblemAsync(hijack, HttpStatusCode.Forbidden);
+    }
 }

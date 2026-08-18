@@ -49,6 +49,52 @@ public sealed class FoldersAndDocumentsApiTests : IClassFixture<ApiFactory>
     }
 
     [Fact]
+    public async Task Child_folder_creation_derives_library_from_parent()
+    {
+        var (admin, siteId, libraryId) = await AdminAsync();
+        var rootId = await TestSupport.CreateFolderAsync(admin, libraryId, "Root");
+
+        // The frontend sends only { name } for child folders; the library must be
+        // derived from the parent rather than required in the body.
+        var noLibraryBody = await admin.PostAsJsonAsync(
+            $"/api/v1/folders/{rootId}/folders",
+            new { name = "Child Without Library" });
+        Assert.Equal(HttpStatusCode.Created, noLibraryBody.StatusCode);
+
+        // A libraryId claimed in the body is ignored: the parent's library wins, so a
+        // child folder cannot be created under one library while its parent lives in
+        // another (which would break the folder hierarchy's storage scoping).
+        var libraryResponse = await admin.PostAsJsonAsync(
+            $"/api/v1/sites/{siteId}/libraries",
+            new
+            {
+                name = "Other Library",
+                description = (string?)null,
+                enableVersioning = true,
+                enableMinorVersions = false,
+                requireCheckout = false,
+            });
+        Assert.Equal(HttpStatusCode.Created, libraryResponse.StatusCode);
+        var otherLibraryId = Guid.Parse(
+            (await libraryResponse.Content.ReadAsStringAsync()).Trim('"'));
+
+        var claimed = await admin.PostAsJsonAsync(
+            $"/api/v1/folders/{rootId}/folders",
+            new { name = "Claimed Library", libraryId = otherLibraryId });
+        Assert.Equal(HttpStatusCode.Created, claimed.StatusCode);
+        var claimedFolderId = Guid.Parse(
+            (await claimed.Content.ReadAsStringAsync()).Trim('"'));
+
+        var rootItems = await (await admin.GetAsync($"/api/v1/folders/{rootId}/items"))
+            .Content.ReadFromJsonAsync<List<ItemDto>>();
+        Assert.Contains(rootItems!, item => item.Kind == "folder" && item.Id == claimedFolderId);
+
+        var otherItems = await (await admin.GetAsync($"/api/v1/libraries/{otherLibraryId}/items"))
+            .Content.ReadFromJsonAsync<List<ItemDto>>();
+        Assert.DoesNotContain(otherItems!, item => item.Id == claimedFolderId);
+    }
+
+    [Fact]
     public async Task Folder_error_paths()
     {
         var (client, _, libraryId) = await AdminAsync();

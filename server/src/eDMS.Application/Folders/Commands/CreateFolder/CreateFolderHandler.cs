@@ -14,13 +14,19 @@ public sealed class CreateFolderHandler(
     public async Task<Guid> Handle(CreateFolderCommand command, CancellationToken cancellationToken)
     {
         var userId = currentUser.UserId ?? throw new ForbiddenException();
-        await permissions.RequireAsync(userId, ObjectType.Library, command.LibraryId, PermissionLevel.Contribute, cancellationToken);
 
+        // The library is resolved here, not trusted from the request: for a root folder
+        // it comes from the route, for a child folder it is the parent's actual library.
+        // Authorization is then evaluated against that resolved library, so a client can
+        // neither bypass the check by claiming a different LibraryId in the body nor get
+        // away with omitting it entirely (the frontend sends only { name } for children).
+        var libraryId = command.LibraryId;
         var parentPath = "/";
         if (command.ParentFolderId is { } parentId)
         {
             var parent = await db.Folders.SingleOrDefaultAsync(folder => folder.Id == parentId, cancellationToken)
                 ?? throw new NotFoundException(nameof(Folder), parentId);
+            libraryId = parent.LibraryId;
             parentPath = parent.Path;
 
             var depth = parentPath.Trim('/').Split('/', StringSplitOptions.RemoveEmptyEntries).Length;
@@ -30,9 +36,11 @@ public sealed class CreateFolderHandler(
             }
         }
 
+        await permissions.RequireAsync(userId, ObjectType.Library, libraryId, PermissionLevel.Contribute, cancellationToken);
+
         var folder = new Folder
         {
-            LibraryId = command.LibraryId,
+            LibraryId = libraryId,
             ParentFolderId = command.ParentFolderId,
             Name = command.Name,
             Path = $"{parentPath.TrimEnd('/')}/{command.Name}/",
