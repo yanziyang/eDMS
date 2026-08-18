@@ -816,7 +816,7 @@ export function LibraryBrowser() {
                       isFollowed={isFollowed(item)}
                       onAction={(action) => handleContextAction(item, action)}
                     >
-                    <tr className="border-b last:border-0">
+                    <tr className="border-b last:border-0" tabIndex={0}>
                   <td className="px-4 py-2">
                     <Checkbox
                       aria-label={`Select ${item.name}`}
@@ -910,7 +910,7 @@ export function LibraryBrowser() {
                   isFollowed={isFollowed(item)}
                   onAction={(action) => handleContextAction(item, action)}
                 >
-                <div className="group relative flex flex-col gap-2 rounded-lg border bg-card p-4">
+                <div className="group relative flex flex-col gap-2 rounded-lg border bg-card p-4" tabIndex={0}>
               <div className="absolute left-3 top-3">
                 <Checkbox
                   aria-label={`Select ${item.name}`}

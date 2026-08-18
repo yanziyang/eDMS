@@ -1,6 +1,7 @@
 import AxeBuilder from "@axe-core/playwright";
 import { test, expect, type Page } from "@playwright/test";
 import {
+  API_BASE,
   adminRequest,
   apiCreateSite,
   apiCreateUser,
@@ -25,10 +26,10 @@ function unapproved(violations: Violation[]): Violation[] {
   return violations.filter((violation) => !(violation.id in JUSTIFIED_VIOLATIONS));
 }
 
-async function scanAndExpectClean(page: Page, label: string): Promise<void> {
-  const results = await new AxeBuilder({ page })
-    .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
-    .analyze();
+async function scanAndExpectClean(page: Page, label: string, include?: string): Promise<void> {
+  let builder = new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"]);
+  if (include) builder = builder.include(include);
+  const results = await builder.analyze();
   const violations = unapproved(results.violations);
   if (violations.length > 0) {
     console.log(`[axe] ${label} — ${violations.length} unapproved violation(s)`);
@@ -43,12 +44,19 @@ async function scanAndExpectClean(page: Page, label: string): Promise<void> {
   expect(violations, `axe violations on "${label}"`).toEqual([]);
 }
 
+async function waitForToastToClear(page: Page, message: string): Promise<void> {
+  const toast = page.getByText(message, { exact: true });
+  await expect(toast).toBeVisible();
+  await expect(toast).toBeHidden({ timeout: 10_000 });
+}
+
 test.describe.serial("WCAG 2.1 AA axe scans", () => {
   let session: AdminSession;
   let siteSlug: string;
   let siteName: string;
   let libraryId: string;
   let fileName: string;
+  let secondFileName: string;
   let deletedFileName: string;
   let userEmail: string;
 
@@ -60,7 +68,13 @@ test.describe.serial("WCAG 2.1 AA axe scans", () => {
     siteSlug = site.slug;
     libraryId = await apiGetDefaultLibrary(request, session.token, site.id);
     fileName = `a11y-doc-${Date.now()}.txt`;
-    await apiUpload(request, session.token, libraryId, fileName, "a11y");
+    const documentId = await apiUpload(request, session.token, libraryId, fileName, "a11y");
+    secondFileName = `a11y-bulk-${Date.now()}.txt`;
+    await apiUpload(request, session.token, libraryId, secondFileName, "a11y bulk");
+    const favorite = await request.post(`${API_BASE}/Document/objects/${documentId}/favorite`, {
+      headers: { Authorization: `Bearer ${session.token}` },
+    });
+    expect(favorite.status()).toBe(204);
     deletedFileName = `a11y-deleted-${Date.now()}.txt`;
     const deletedId = await apiUpload(request, session.token, libraryId, deletedFileName, "gone");
     await request.delete(`http://localhost:5190/api/v1/documents/${deletedId}`, {
@@ -135,7 +149,26 @@ test.describe.serial("WCAG 2.1 AA axe scans", () => {
   test("home", async () => {
     await session.page.goto("/");
     await expect(session.page.getByRole("heading", { name: "My Sites" })).toBeVisible();
+    await expect(session.page.getByRole("heading", { name: "Recent" })).toBeVisible();
+    await expect(session.page.getByRole("link", { name: new RegExp(fileName) })).toBeVisible();
     await scanAndExpectClean(session.page, "home");
+  });
+
+  test("favorites list and toggle", async () => {
+    await session.page.goto("/favorites");
+    await expect(session.page.getByRole("heading", { name: "Favorites" })).toBeVisible();
+    await expect(session.page.getByText(fileName, { exact: true })).toBeVisible();
+    await scanAndExpectClean(session.page, "favorites list");
+
+    await session.page.goto(`/sites/${siteSlug}/libraries/${libraryId}`);
+    await session.page
+      .locator("tr", { hasText: fileName })
+      .getByRole("button", { name: fileName, exact: true })
+      .click();
+    await expect(
+      session.page.getByRole("button", { name: `Remove from favorites` }),
+    ).toBeVisible();
+    await scanAndExpectClean(session.page, "favorites toggle in document properties");
   });
 
   test("site home", async () => {
@@ -149,6 +182,29 @@ test.describe.serial("WCAG 2.1 AA axe scans", () => {
     await expect(session.page.getByRole("heading", { name: "Documents" })).toBeVisible();
     await expect(session.page.locator("td", { hasText: fileName })).toBeVisible();
     await scanAndExpectClean(session.page, "library");
+  });
+
+  test("library view picker and site/library follow controls", async () => {
+    await session.page.goto(`/sites/${siteSlug}/libraries/${libraryId}`);
+    await scanAndExpectClean(session.page, "saved view picker");
+    await session.page.getByRole("combobox", { name: "Saved view" }).click();
+    await expect(session.page.getByRole("option", { name: "Save current as…" })).toBeVisible();
+    await session.page.keyboard.press("Escape");
+
+    await expect(session.page.getByRole("button", { name: "Follow", exact: true })).toBeVisible();
+    await session.page.getByRole("button", { name: "Follow", exact: true }).click();
+    await expect(session.page.getByRole("button", { name: "Unfollow", exact: true })).toBeVisible();
+    await waitForToastToClear(session.page, "Following library");
+    await scanAndExpectClean(session.page, "library follow toggle");
+    await session.page.getByRole("button", { name: "Unfollow", exact: true }).click();
+
+    await session.page.goto(`/sites/${siteSlug}`);
+    await expect(session.page.getByRole("button", { name: "Follow", exact: true })).toBeVisible();
+    await session.page.getByRole("button", { name: "Follow", exact: true }).click();
+    await expect(session.page.getByRole("button", { name: "Unfollow", exact: true })).toBeVisible();
+    await waitForToastToClear(session.page, "Following site");
+    await scanAndExpectClean(session.page, "site follow toggle");
+    await session.page.getByRole("button", { name: "Unfollow", exact: true }).click();
   });
 
   test("document details sheet open", async () => {
@@ -175,6 +231,24 @@ test.describe.serial("WCAG 2.1 AA axe scans", () => {
     await expect(dialog.getByRole("heading", { name: new RegExp("Share") })).toBeVisible();
     await scanAndExpectClean(session.page, "share dialog");
     await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
+  });
+
+  test("bulk edit dialog and keyboard context menu", async () => {
+    await session.page.goto(`/sites/${siteSlug}/libraries/${libraryId}`);
+    await session.page.getByRole("checkbox", { name: `Select ${fileName}` }).click();
+    await session.page.getByRole("checkbox", { name: `Select ${secondFileName}` }).click();
+    await session.page.getByRole("button", { name: "Edit properties", exact: true }).click();
+    await expect(session.page.getByRole("dialog")).toBeVisible();
+    await scanAndExpectClean(session.page, "bulk edit dialog");
+    await session.page.getByRole("button", { name: "Cancel", exact: true }).click();
+
+    const row = session.page.locator("tr", { hasText: fileName });
+    await row.focus();
+    await row.press("Shift+F10");
+    const menu = session.page.getByRole("menu");
+    await expect(menu.getByRole("menuitem", { name: "Open" })).toBeVisible();
+    await scanAndExpectClean(session.page, "keyboard-opened context menu", '[data-slot="context-menu-content"]');
+    await session.page.keyboard.press("Escape");
   });
 
   test("search", async () => {
