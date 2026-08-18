@@ -8,10 +8,15 @@ import {
   FileText,
   Folder,
   FolderPlus,
+  FolderTree as FolderTreeIcon,
   LayoutGrid,
   List,
   LoaderCircle,
+  Minus,
   MoveRight,
+  PanelLeftClose,
+  PanelLeftOpen,
+  Plus,
   Settings2,
   Trash2,
   Upload,
@@ -34,6 +39,13 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import {
   Select,
   SelectContent,
@@ -78,6 +90,7 @@ import {
   uploadToFolder,
   uploadToLibrary,
 } from "@/features/documents/api";
+import { LibraryFolderTree } from "@/features/documents/components/LibraryFolderTree";
 import { getDocumentMetadata, listContentTypes } from "@/features/content-types/api";
 import {
   buildMetadataValues,
@@ -89,6 +102,7 @@ import { abortUpload, completeUpload, startUpload } from "@/features/uploads/api
 import { LARGE_FILE_THRESHOLD, uploadChunks } from "@/features/uploads/chunkedUpload";
 import { ApiError } from "@/lib/api-client";
 import { queryKeys } from "@/lib/queryKeys";
+import { cn } from "@/lib/utils";
 import type {
   ContentTypeColumnDto,
   DocumentMetadataDto,
@@ -104,12 +118,14 @@ type ViewMode = "list" | "grid";
 
 export function LibraryBrowser() {
   const { siteSlug, libraryId } = useParams();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const requestedFolderId = searchParams.get("folderId");
+  const requestedDocumentId = searchParams.get("documentId");
   const queryClient = useQueryClient();
   const { user } = useAuth();
 
-  const [folderId, setFolderId] = useState<string | null>(null);
-  const [folderName, setFolderName] = useState("");
+  const [folderId, setFolderId] = useState<string | null>(requestedFolderId);
+  const [folderName, setFolderName] = useState(requestedFolderId ? "Folder" : "");
   const [viewMode, setViewMode] = useState<ViewMode>("list");
   const [sortKey, setSortKey] = useState<SortKey>("name");
   const [sortDesc, setSortDesc] = useState(false);
@@ -128,13 +144,14 @@ export function LibraryBrowser() {
   const [selectedDocumentId, setSelectedDocumentId] = useState<string | null>(null);
   const [shareOnOpen, setShareOnOpen] = useState(false);
   const [renameItem, setRenameItem] = useState<ItemDto | null>(null);
+  const [folderTreeOpen, setFolderTreeOpen] = useState(false);
+  const [folderTreeCollapsed, setFolderTreeCollapsed] = useState(false);
+  const [folderTreeWidth, setFolderTreeWidth] = useState<"compact" | "wide">("compact");
   const defaultViewAppliedLibraryRef = useRef<string | null>(null);
-  const requestedFolderId = searchParams.get("folderId");
-  const requestedDocumentId = searchParams.get("documentId");
 
   useEffect(() => {
     setFolderId(requestedFolderId);
-    setFolderName(requestedFolderId ? "Folder" : "");
+    setFolderName((current) => requestedFolderId ? current || "Folder" : "");
     setSelectedDocumentId(requestedDocumentId);
     setSelection(new Set());
   }, [libraryId, requestedDocumentId, requestedFolderId]);
@@ -277,6 +294,24 @@ export function LibraryBrowser() {
   };
 
   const clearSelection = () => setSelection(new Set());
+
+  const navigateToFolder = useCallback((nextFolderId: string | null, nextFolderName: string) => {
+    setSearchParams((current) => {
+      const next = new URLSearchParams(current);
+      next.delete("documentId");
+      if (nextFolderId) {
+        next.set("folderId", nextFolderId);
+      } else {
+        next.delete("folderId");
+      }
+      return next;
+    }, { replace: true });
+    setFolderId(nextFolderId);
+    setFolderName(nextFolderId ? nextFolderName || "Folder" : "");
+    setSelectedDocumentId(null);
+    setShareOnOpen(false);
+    clearSelection();
+  }, [setSearchParams]);
 
   const deleteItem = useMutation({
     mutationFn: (item: ItemDto) =>
@@ -482,9 +517,7 @@ export function LibraryBrowser() {
     switch (action) {
       case "open":
         if (item.kind === "folder") {
-          setFolderId(item.folderId!);
-          setFolderName(item.name);
-          clearSelection();
+          navigateToFolder(item.folderId!, item.name);
         } else {
           setShareOnOpen(false);
           setSelectedDocumentId(item.documentId!);
@@ -547,6 +580,11 @@ export function LibraryBrowser() {
 
   const siteName = site?.name ?? siteSlug ?? "Site";
   const libraryName = library?.name ?? "Documents";
+  const folderTreeWidthClass = folderTreeCollapsed
+    ? "lg:w-12"
+    : folderTreeWidth === "wide"
+      ? "lg:w-80"
+      : "lg:w-60";
 
   return (
     <div className="flex flex-col gap-6">
@@ -556,11 +594,7 @@ export function LibraryBrowser() {
           { label: siteName, to: `/sites/${siteSlug}` },
           {
             label: libraryName,
-            onClick: () => {
-              setFolderId(null);
-              setFolderName("");
-              clearSelection();
-            },
+            onClick: () => navigateToFolder(null, "All documents"),
           },
           ...(folderId ? [{ label: folderName }] : []),
         ]}
@@ -575,6 +609,15 @@ export function LibraryBrowser() {
           {libraryId && (
             <FollowToggle objectType="Library" objectId={libraryId} itemName={libraryName} />
           )}
+          <Button
+            variant="outline"
+            size="sm"
+            className="lg:hidden"
+            onClick={() => setFolderTreeOpen(true)}
+          >
+            <FolderTreeIcon data-icon="inline-start" />
+            Folders
+          </Button>
           <Button variant="outline" size="sm" onClick={() => setCreateFolderOpen(true)}>
             <FolderPlus className="size-4" />
             New folder
@@ -716,22 +759,90 @@ export function LibraryBrowser() {
       </div>
       </Surface>
 
-      {itemsQuery.isLoading && <div className="text-sm text-muted-foreground">Loading…</div>}
-      {itemsQuery.isError && (
-        <div className="text-sm text-destructive">Failed to load items.</div>
-      )}
+      <div className="flex min-w-0 flex-col gap-4 lg:flex-row lg:items-start">
+        <Surface className={cn(
+          "hidden max-h-[calc(100dvh-8rem)] shrink-0 overflow-hidden lg:sticky lg:top-24 lg:flex lg:flex-col",
+          folderTreeWidthClass,
+        )}>
+          {folderTreeCollapsed ? (
+            <div className="flex justify-center p-2">
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                aria-label="Expand folder tree"
+                title="Expand folder tree"
+                onClick={() => setFolderTreeCollapsed(false)}
+              >
+                <PanelLeftOpen data-icon="inline-start" />
+              </Button>
+            </div>
+          ) : (
+            <>
+              <div className="flex items-center justify-between gap-2 border-b px-3 py-2">
+                <div className="flex min-w-0 items-center gap-2 text-sm font-medium">
+                  <FolderTreeIcon data-icon="inline-start" />
+                  <span>Folders</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="ghost"
+                    size="icon-xs"
+                    aria-label="Narrow folder tree"
+                    disabled={folderTreeWidth === "compact"}
+                    onClick={() => setFolderTreeWidth("compact")}
+                  >
+                    <Minus data-icon="inline-start" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon-xs"
+                    aria-label="Widen folder tree"
+                    disabled={folderTreeWidth === "wide"}
+                    onClick={() => setFolderTreeWidth("wide")}
+                  >
+                    <Plus data-icon="inline-start" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon-xs"
+                    aria-label="Collapse folder tree"
+                    title="Collapse folder tree"
+                    onClick={() => setFolderTreeCollapsed(true)}
+                  >
+                    <PanelLeftClose data-icon="inline-start" />
+                  </Button>
+                </div>
+              </div>
+              <div className="min-h-0 flex-1 overflow-y-auto p-2">
+                {libraryId && (
+                  <LibraryFolderTree
+                    libraryId={libraryId}
+                    selectedFolderId={folderId}
+                    onSelectFolder={navigateToFolder}
+                  />
+                )}
+              </div>
+            </>
+          )}
+        </Surface>
 
-      {itemsQuery.data && items.length === 0 && (
-        <EmptyState
-          icon={<Folder />}
-          title={filterText.trim() ? "No matching items" : "This folder is empty"}
-          description={
-            filterText.trim()
-              ? "Try a different name filter."
-              : "Upload files or create a subfolder to get started."
-          }
-        />
-      )}
+        <div className="flex min-w-0 flex-1 flex-col gap-4">
+          {itemsQuery.isLoading && <div className="text-sm text-muted-foreground">Loading…</div>}
+          {itemsQuery.isError && (
+            <div className="text-sm text-destructive">Failed to load items.</div>
+          )}
+
+          {itemsQuery.data && items.length === 0 && (
+            <EmptyState
+              icon={<Folder />}
+              title={filterText.trim() ? "No matching items" : "This folder is empty"}
+              description={
+                filterText.trim()
+                  ? "Try a different name filter."
+                  : "Upload files or create a subfolder to get started."
+              }
+            />
+          )}
 
       {viewMode === "list" && items.length > 0 && (
         <Surface className="overflow-hidden">
@@ -813,11 +924,7 @@ export function LibraryBrowser() {
                   <td className="px-4 py-2">
                     {item.kind === "folder" ? (
                       <button
-                        onClick={() => {
-                          setFolderId(item.folderId!);
-                          setFolderName(item.name);
-                          clearSelection();
-                        }}
+                        onClick={() => navigateToFolder(item.folderId!, item.name)}
                         className="flex items-center gap-2 font-medium hover:underline"
                       >
                         <Folder className="size-4 text-amber-500" />
@@ -878,9 +985,9 @@ export function LibraryBrowser() {
         </Surface>
       )}
 
-      {viewMode === "grid" && items.length > 0 && (
-        <Surface className="p-4">
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+          {viewMode === "grid" && items.length > 0 && (
+            <Surface className="p-4">
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
           {groupedItems.map((group) => (
             <Fragment key={group.label ?? "all-items"}>
               {group.label && (
@@ -910,9 +1017,7 @@ export function LibraryBrowser() {
                 className="flex flex-1 flex-col items-center gap-2 pt-4 text-center"
                 onClick={() => {
                   if (item.kind === "folder") {
-                    setFolderId(item.folderId!);
-                    setFolderName(item.name);
-                    clearSelection();
+                    navigateToFolder(item.folderId!, item.name);
                   } else {
                     setSelectedDocumentId(item.documentId!);
                   }
@@ -939,8 +1044,31 @@ export function LibraryBrowser() {
               ))}
             </Fragment>
           ))}
+            </div>
+            </Surface>
+          )}
         </div>
-        </Surface>
+      </div>
+
+      {libraryId && (
+        <Sheet open={folderTreeOpen} onOpenChange={setFolderTreeOpen}>
+          <SheetContent side="left" className="w-[min(20rem,calc(100vw-2rem))]">
+            <SheetHeader>
+              <SheetTitle>Folders</SheetTitle>
+              <SheetDescription>Browse folders in {libraryName}.</SheetDescription>
+            </SheetHeader>
+            <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4">
+              <LibraryFolderTree
+                libraryId={libraryId}
+                selectedFolderId={folderId}
+                onSelectFolder={(nextFolderId, nextFolderName) => {
+                  navigateToFolder(nextFolderId, nextFolderName);
+                  setFolderTreeOpen(false);
+                }}
+              />
+            </div>
+          </SheetContent>
+        </Sheet>
       )}
 
       <SaveLibraryViewDialog

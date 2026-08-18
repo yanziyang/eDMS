@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { server } from "@/test/server";
 import { toast } from "sonner";
 import { LibraryBrowser } from "./library";
@@ -91,6 +91,7 @@ function renderLibrary(libraryId = "l1", siteSlug = "site-one") {
     ...render(
       <QueryClientProvider client={queryClient}>
         <MemoryRouter initialEntries={[`/sites/${siteSlug}/libraries/${libraryId}`]}>
+          <LocationProbe />
           <Routes>
             <Route path="/sites/:siteSlug/libraries/:libraryId" element={<LibraryBrowser />} />
             <Route path="/sites/:siteSlug" element={<div>SITE_HOME</div>} />
@@ -100,6 +101,11 @@ function renderLibrary(libraryId = "l1", siteSlug = "site-one") {
       </QueryClientProvider>,
     ),
   };
+}
+
+function LocationProbe() {
+  const location = useLocation();
+  return <output data-testid="location">{location.pathname}{location.search}</output>;
 }
 
 function fileInput(): HTMLInputElement {
@@ -393,11 +399,13 @@ describe("LibraryBrowser", () => {
     await user.click(await screen.findByRole("button", { name: "Archived" }));
 
     expect(await screen.findByText("inside.txt")).toBeInTheDocument();
-    expect(screen.getByText("Archived")).toBeInTheDocument();
+    expect(screen.getByTestId("location")).toHaveTextContent("/sites/site-one/libraries/l1?folderId=f3");
+    expect(within(screen.getByRole("navigation", { name: "Breadcrumb" })).getByText("Archived")).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Policies" }));
 
     expect(await screen.findByRole("button", { name: "Archived" })).toBeInTheDocument();
+    expect(screen.getByTestId("location")).toHaveTextContent("/sites/site-one/libraries/l1");
   });
 
   it("creates a folder at the library root", async () => {
@@ -1230,7 +1238,7 @@ describe("LibraryBrowser", () => {
     await user.click(screen.getByRole("button", { name: "Archived" }));
 
     expect(await screen.findByText("inside.txt")).toBeInTheDocument();
-    expect(screen.getByText("Archived")).toBeInTheDocument();
+    expect(within(screen.getByRole("navigation", { name: "Breadcrumb" })).getByText("Archived")).toBeInTheDocument();
   });
 
   it("opens the details sheet from a grid card", async () => {
@@ -1969,7 +1977,7 @@ describe("LibraryBrowser", () => {
 
     const user = userEvent.setup();
     renderLibrary();
-    await screen.findByText("Archive");
+    await screen.findByRole("row", { name: /Archive/ });
     const row = () => screen.getByRole("row", { name: /Archive/ });
 
     fireEvent.contextMenu(row());
