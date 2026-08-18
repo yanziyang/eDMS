@@ -14,6 +14,23 @@ export function listLibraries(siteId: string): Promise<LibraryDto[]> {
   return request<LibraryDto[]>(`/sites/${siteId}/libraries`);
 }
 
+export function createLibrary(
+  siteId: string,
+  input: {
+    name: string;
+    description?: string | null;
+    enableVersioning?: boolean;
+    enableMinorVersions?: boolean;
+    requireCheckout?: boolean;
+    minorVersionsRetained?: number | null;
+  },
+): Promise<string> {
+  return request<string>(`/sites/${siteId}/libraries`, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
 export function updateLibrary(
   siteId: string,
   libraryId: string,

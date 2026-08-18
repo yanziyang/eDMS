@@ -137,6 +137,47 @@ describe("SiteHome", () => {
     expect(screen.getByText("0 members")).toBeInTheDocument();
   });
 
+  it("creates a document library for the current site", async () => {
+    const libraries = [libraryDto()];
+    let requestBody: unknown;
+    mockSiteRequests({ libraries });
+    server.use(
+      http.post(`${base}/sites/s1/libraries`, async ({ request }) => {
+        requestBody = await request.json();
+        libraries.push(
+          libraryDto({ id: "l2", name: "Contracts", description: "Contract documents" }),
+        );
+        return HttpResponse.json("l2", { status: 201 });
+      }),
+    );
+
+    const user = userEvent.setup();
+    renderSiteHome();
+    await screen.findByRole("heading", { name: "Site One" });
+
+    await user.click(screen.getByRole("button", { name: "New library" }));
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    await user.type(screen.getByLabelText("Name"), " Contracts ");
+    await user.type(screen.getByLabelText("Description"), "Contract documents");
+    await user.click(screen.getByRole("button", { name: "Create library" }));
+
+    await waitFor(() =>
+      expect(requestBody).toEqual({
+        name: "Contracts",
+        description: "Contract documents",
+        enableVersioning: true,
+        enableMinorVersions: false,
+        requireCheckout: false,
+        minorVersionsRetained: null,
+      }),
+    );
+    expect(mockedToast.success).toHaveBeenCalledWith("Library created");
+    expect(await screen.findByRole("link", { name: "Contracts" })).toHaveAttribute(
+      "href",
+      "/sites/site-one/libraries/l2",
+    );
+  });
+
   it("follows the current site from Site Home", async () => {
     mockSiteRequests();
     let requestBody: unknown;

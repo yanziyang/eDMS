@@ -1,17 +1,19 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowUpRight, Building2, Folder, HardDrive, LoaderCircle, Settings, ShieldCheck, Undo2, UserPlus, Users, X } from "lucide-react";
+import { ArrowUpRight, Building2, Folder, FolderPlus, HardDrive, LoaderCircle, Settings, ShieldCheck, Undo2, UserPlus, Users, X } from "lucide-react";
 import { toast } from "sonner";
 import { Link, useParams } from "react-router-dom";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -24,7 +26,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { listUsers } from "@/features/admin/api";
-import { listLibraries } from "@/features/documents/api";
+import { createLibrary, listLibraries } from "@/features/documents/api";
 import { FavoriteToggle } from "@/features/favorites/components/FavoriteToggle";
 import { FollowToggle } from "@/features/notifications/components/FollowToggle";
 import { listGroups } from "@/features/groups/api";
@@ -42,6 +44,7 @@ import type { PermissionLevel, PermissionsStateDto, PrincipalType } from "@/type
 export function SiteHome() {
   const { siteSlug } = useParams();
   const [accessOpen, setAccessOpen] = useState(false);
+  const [createLibraryOpen, setCreateLibraryOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
 
   const sites = useQuery({
@@ -129,7 +132,15 @@ export function SiteHome() {
           title="Document libraries"
           description="Libraries keep documents, version history, and metadata organized."
           className="mb-3"
-          action={<Badge variant="outline">{libraries.data?.length ?? 0} libraries</Badge>}
+          action={
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge variant="outline">{libraries.data?.length ?? 0} libraries</Badge>
+              <Button size="sm" onClick={() => setCreateLibraryOpen(true)}>
+                <FolderPlus data-icon="inline-start" />
+                New library
+              </Button>
+            </div>
+          }
         />
         {libraries.isLoading && <div className="text-sm text-muted-foreground">Loading…</div>}
         {libraries.isError && <div className="text-sm text-destructive">Failed to load libraries.</div>}
@@ -214,12 +225,151 @@ export function SiteHome() {
         open={accessOpen}
         onOpenChange={setAccessOpen}
       />
+      <CreateLibraryDialog
+        siteId={displaySite.id}
+        siteName={displaySite.name}
+        open={createLibraryOpen}
+        onOpenChange={setCreateLibraryOpen}
+      />
       <SiteSettingsDialog
         site={displaySite}
         open={settingsOpen}
         onOpenChange={setSettingsOpen}
       />
     </div>
+  );
+}
+
+interface CreateLibraryDialogProps {
+  siteId: string;
+  siteName: string;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}
+
+function CreateLibraryDialog({ siteId, siteName, open, onOpenChange }: CreateLibraryDialogProps) {
+  const queryClient = useQueryClient();
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+  const [enableVersioning, setEnableVersioning] = useState(true);
+  const [enableMinorVersions, setEnableMinorVersions] = useState(false);
+  const [requireCheckout, setRequireCheckout] = useState(false);
+  const [minorVersionsRetained, setMinorVersionsRetained] = useState("");
+
+  useEffect(() => {
+    if (open) {
+      setName("");
+      setDescription("");
+      setEnableVersioning(true);
+      setEnableMinorVersions(false);
+      setRequireCheckout(false);
+      setMinorVersionsRetained("");
+    }
+  }, [open]);
+
+  const retentionInput = minorVersionsRetained.trim();
+  const retention = retentionInput === "" ? null : Number(retentionInput);
+  const invalidRetention = retention !== null && (!Number.isInteger(retention) || retention < 1);
+
+  const create = useMutation({
+    mutationFn: () =>
+      createLibrary(siteId, {
+        name: name.trim(),
+        description: description.trim() || null,
+        enableVersioning,
+        enableMinorVersions,
+        requireCheckout,
+        minorVersionsRetained: retention,
+      }),
+    onSuccess: () => {
+      toast.success("Library created");
+      queryClient.invalidateQueries({ queryKey: queryKeys.libraries.list(siteId) });
+      onOpenChange(false);
+    },
+    onError: () => toast.error("Failed to create library"),
+  });
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>New library</DialogTitle>
+          <DialogDescription>
+            Create a document library in &quot;{siteName}&quot; and choose its versioning settings.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="create-library-name">Name</Label>
+            <Input
+              id="create-library-name"
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+              autoFocus
+            />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="create-library-description">Description</Label>
+            <Textarea
+              id="create-library-description"
+              rows={3}
+              value={description}
+              onChange={(event) => setDescription(event.target.value)}
+              placeholder="What belongs in this library?"
+            />
+          </div>
+          <div className="flex flex-col gap-3 rounded-lg border p-3">
+            <p className="text-sm font-medium">Library settings</p>
+            <label className="flex items-center gap-2 text-sm">
+              <Checkbox
+                checked={enableVersioning}
+                onCheckedChange={(value) => setEnableVersioning(value === true)}
+              />
+              Enable versioning
+            </label>
+            <label className="flex items-center gap-2 text-sm">
+              <Checkbox
+                checked={enableMinorVersions}
+                onCheckedChange={(value) => setEnableMinorVersions(value === true)}
+              />
+              Enable minor versions
+            </label>
+            <label className="flex items-center gap-2 text-sm">
+              <Checkbox
+                checked={requireCheckout}
+                onCheckedChange={(value) => setRequireCheckout(value === true)}
+              />
+              Require check-out before editing
+            </label>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="create-library-retention">Retained minor versions</Label>
+              <Input
+                id="create-library-retention"
+                type="number"
+                min={1}
+                step={1}
+                value={minorVersionsRetained}
+                onChange={(event) => setMinorVersionsRetained(event.target.value)}
+                placeholder="Blank for unlimited"
+                aria-invalid={invalidRetention}
+              />
+            </div>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
+          <Button
+            onClick={() => create.mutate()}
+            disabled={create.isPending || name.trim() === "" || invalidRetention}
+          >
+            {create.isPending && <LoaderCircle data-icon="inline-start" className="animate-spin" />}
+            Create library
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
