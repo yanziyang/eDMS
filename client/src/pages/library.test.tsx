@@ -1836,6 +1836,165 @@ describe("LibraryBrowser", () => {
     await waitFor(() => expect(mockedToast.error).toHaveBeenCalledWith("Failed to delete item"));
   });
 
+  it("executes document and folder actions from the context menu", async () => {
+    mockNav();
+    const items: unknown[] = [item({ permissionLevel: "Contribute" })];
+    const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
+    Object.defineProperty(URL, "createObjectURL", {
+      value: vi.fn(() => "blob:context-menu"),
+      configurable: true,
+      writable: true,
+    });
+    Object.defineProperty(URL, "revokeObjectURL", {
+      value: vi.fn(),
+      configurable: true,
+      writable: true,
+    });
+    server.use(
+      http.get(`${base}/libraries/l1/items`, () => HttpResponse.json(items)),
+      http.get(`${base}/me/favorites`, () => HttpResponse.json([])),
+      http.get(`${base}/me/notifications/subscriptions`, () => HttpResponse.json([])),
+      http.get(`${base}/documents/d1`, () =>
+        HttpResponse.json({
+          id: "d1",
+          libraryId: "l1",
+          folderId: null,
+          name: "contract.pdf",
+          title: null,
+          description: null,
+          contentType: "application/pdf",
+          sizeBytes: 2048,
+          checkedOutBy: null,
+          checkedOutAt: null,
+          createdAt: "2026-03-01T10:00:00Z",
+          modifiedAt: "2026-03-01T10:00:00Z",
+          versionLabel: "1.0",
+        }),
+      ),
+      http.get(`${base}/documents/d1/metadata`, () =>
+        HttpResponse.json({ contentTypeId: null, contentTypeName: null, columns: [] }),
+      ),
+      http.get(`${base}/documents/d1/download`, () =>
+        new HttpResponse("pdf", { headers: { "Content-Type": "application/pdf" } }),
+      ),
+      http.post(`${base}/documents/d1/checkout`, () => new HttpResponse(null, { status: 204 })),
+      http.post(`${base}/Document/objects/d1/follow`, () =>
+        HttpResponse.json({ id: "sub1", objectType: "Document", objectId: "d1", objectName: "contract.pdf", frequency: "Immediate", createdAt: "2026-08-01T00:00:00Z" }),
+      ),
+      http.post(`${base}/Document/objects/d1/favorite`, () => new HttpResponse(null, { status: 204 })),
+      http.delete(`${base}/documents/d1`, () => {
+        items.length = 0;
+        return new HttpResponse(null, { status: 204 });
+      }),
+    );
+
+    const user = userEvent.setup();
+    renderLibrary();
+    await screen.findByText("contract.pdf");
+    const row = () => screen.getByRole("row", { name: /contract\.pdf/ });
+    const choose = async (label: string) => {
+      fireEvent.contextMenu(row());
+      await user.click(screen.getByRole("menuitem", { name: label }));
+    };
+    const closeDetails = async () => {
+      const sheet = screen.getByRole("dialog", { name: "contract.pdf" });
+      await user.click(within(sheet).getByRole("button", { name: "Close" }));
+      await waitFor(() => expect(screen.queryByText("File type")).not.toBeInTheDocument());
+    };
+
+    await choose("Open");
+    expect(await screen.findByText("File type")).toBeInTheDocument();
+    await closeDetails();
+    await choose("Rename");
+    expect(await screen.findByText("File type")).toBeInTheDocument();
+    await closeDetails();
+    await choose("Share");
+    expect(await screen.findByRole("heading", { name: 'Share "contract.pdf"' })).toBeInTheDocument();
+    await user.keyboard("{Escape}");
+    await waitFor(() => expect(screen.queryByRole("heading", { name: 'Share "contract.pdf"' })).not.toBeInTheDocument());
+    await closeDetails();
+    await choose("Move / Copy");
+    expect(await screen.findByText('Move or copy "contract.pdf"')).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+    await choose("Check out");
+    await waitFor(() => expect(mockedToast.success).toHaveBeenCalledWith("Checked out"));
+    await choose("Download");
+    await waitFor(() => expect(clickSpy).toHaveBeenCalled());
+    await choose("Follow");
+    await waitFor(() => expect(mockedToast.success).toHaveBeenCalledWith("Following document"));
+    await choose("Favorite");
+    await waitFor(() => expect(mockedToast.success).toHaveBeenCalledWith("Added to favorites"));
+    await choose("Delete");
+    expect(await screen.findByText("This folder is empty")).toBeInTheDocument();
+  }, 15000);
+
+  it("opens folder context actions and supports checked-in state changes", async () => {
+    mockNav();
+    const items: unknown[] = [
+      item({ kind: "folder", id: "i3", name: "Archive", documentId: null, folderId: "f3", permissionLevel: "Contribute" }),
+    ];
+    server.use(
+      http.get(`${base}/libraries/l1/items`, () => HttpResponse.json(items)),
+      http.get(`${base}/folders/f3/items`, () => HttpResponse.json([])),
+      http.put(`${base}/folders/f3`, () => new HttpResponse(null, { status: 204 })),
+    );
+
+    const user = userEvent.setup();
+    renderLibrary();
+    await screen.findByText("Archive");
+    const row = () => screen.getByRole("row", { name: /Archive/ });
+
+    fireEvent.contextMenu(row());
+    await user.click(screen.getByRole("menuitem", { name: "Rename" }));
+    expect(await screen.findByRole("heading", { name: "Rename folder" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+
+    fireEvent.contextMenu(row());
+    await user.click(screen.getByRole("menuitem", { name: "Open" }));
+    expect(await screen.findByText("This folder is empty")).toBeInTheDocument();
+  });
+
+  it("checks in a document from the context menu", async () => {
+    mockNav();
+    server.use(
+      http.get(`${base}/libraries/l1/items`, () => HttpResponse.json([item({ permissionLevel: "Contribute", checkedOutBy: "u1" })])),
+      http.post(`${base}/documents/d1/checkin`, () => new HttpResponse(null, { status: 204 })),
+    );
+
+    const user = userEvent.setup();
+    renderLibrary();
+    const row = await screen.findByRole("row", { name: /contract\.pdf/ });
+    fireEvent.contextMenu(row);
+    await user.click(screen.getByRole("menuitem", { name: "Check in" }));
+    await waitFor(() => expect(mockedToast.success).toHaveBeenCalledWith("Checked in"));
+  });
+
+  it("routes unfollow and unfavorite context actions", async () => {
+    mockNav();
+    server.use(
+      http.get(`${base}/libraries/l1/items`, () => HttpResponse.json([item({ permissionLevel: "Contribute" })])),
+      http.get(`${base}/me/favorites`, () => HttpResponse.json([
+        { objectId: "d1", objectType: "Document", name: "contract.pdf", location: "Policies", siteSlug: "site-one", libraryId: "l1", folderId: null },
+      ])),
+      http.get(`${base}/me/notifications/subscriptions`, () => HttpResponse.json([
+        { id: "sub1", objectType: "Document", objectId: "d1", objectName: "contract.pdf", frequency: "Immediate", createdAt: "2026-08-01T00:00:00Z" },
+      ])),
+      http.delete(`${base}/Document/objects/d1/follow`, () => new HttpResponse(null, { status: 204 })),
+      http.delete(`${base}/Document/objects/d1/favorite`, () => new HttpResponse(null, { status: 204 })),
+    );
+
+    const user = userEvent.setup();
+    renderLibrary();
+    await screen.findByText("contract.pdf");
+    const row = screen.getByRole("row", { name: /contract\.pdf/ });
+    fireEvent.contextMenu(row);
+    await user.click(screen.getByRole("menuitem", { name: "Unfollow" }));
+    await waitFor(() => expect(mockedToast.success).toHaveBeenCalledWith("Unfollowed document"));
+    fireEvent.contextMenu(row);
+    await user.click(screen.getByRole("menuitem", { name: "Unfavorite" }));
+    await waitFor(() => expect(mockedToast.success).toHaveBeenCalledWith("Removed from favorites"));
+  });
+
   it("opens the document details sheet when a document row is clicked", async () => {
     mockNav();
     server.use(
