@@ -1,4 +1,4 @@
-# eDMS — Implementation Plan (Phase 3: Federation & Phase 4: Daily-Use Enhancements)
+# eDMS — Implementation Plan (Phase 3: Federation, Phase 4: Daily-Use Enhancements & Prototype Parity)
 
 | | |
 |---|---|
@@ -16,6 +16,7 @@ This document now plans **two independent phases**:
 
 - **Phase 3 — Federation** (M20–M23): FR-AUTH-09/10/11, SAML2/OIDC/SSO-enforcement. This was the whole of this document when it was first written on 2026-08-17, and its content (§7) is unchanged from that version.
 - **Phase 4 — SharePoint-parity daily-use enhancements** (M24–M31): added the same day, after a follow-up request to compare eDMS against SharePoint Online's document-library feature set and fold in what's genuinely valuable for everyday use. §4 is the full comparison and scope reasoning; §8 is the resulting milestone detail. M30 (right-click/long-press context menus) was added slightly later the same day, from a direct follow-up question rather than the comparison pass itself — see §4.5's note.
+- **M32 — HTML prototype parity & visual polish**: a cross-cutting frontend pass requested after comparing the production React client with `prototype(html)/`. It brings the existing behaviors into the prototype's stronger information hierarchy, navigation shell, page framing, cards, tables, empty states, and responsive rhythm. It is presentation scope over already-approved surfaces, not a new backend feature phase; the prototype remains a UX reference and its HTML/CSS/JS is not copied into `client/`.
 
 **These two phases don't depend on each other.** Nothing in Phase 4 touches authentication, and nothing in Phase 3 touches the document/library surfaces Phase 4 extends — both branch directly from "Phase 1+2 done" (§6's dependency graph shows this). Work them in either order, or in parallel across two sessions. If your organization doesn't need SSO yet, there's no reason to wait on Phase 3 before picking up Phase 4's more immediately visible wins, or vice versa.
 
@@ -186,6 +187,7 @@ graph TD
     M28 --> M31
     M29 --> M31
     M30 --> M31
+    M31 --> M32[M32 HTML Prototype Parity]
 ```
 
 Phase 3 (M20→M23) and Phase 4 (M24–M30→M31) are two separate trees, both rooted at M19. Within Phase 4, M24–M30 have no hard dependency on each other and may be worked in any order or in parallel, same "fan out, converge on hardening" shape V1.1 used for M12–M18→M19 and this document already used for M20's descendants. (M30's task text notes one *soft*, deferrable dependency on M25 for a single menu item — see M30.1 — that's a content detail, not a graph edge, and doesn't block M30 from starting before M25 finishes.)
@@ -204,6 +206,7 @@ Phase 3 (M20→M23) and Phase 4 (M24–M30→M31) are two separate trees, both r
 | [M29](#m29--bulk-metadata-edit) | Bulk metadata edit (FR-DOC-13) | Selecting 10 documents and editing Tags once applies to all 10, with a clear per-item result if one fails | Done |
 | [M30](#m30--right-click--long-press-context-menus) | Context menus (FR-UI-12) | Right-clicking a document or folder — or long-pressing it on touch — opens a menu of everything you're allowed to do with it, without opening it first | Done |
 | [M31](#m31--phase-4-hardening--sign-off) | Phase 4 sign-off | FS Phase 4 checklist (§4.5's seven FRs) satisfied; same hardening bar as M23, re-run for Phase 4's additions | Done |
+| [M32](#m32--html-prototype-parity--visual-polish) | HTML prototype parity | The React client presents the same clear shell, page hierarchy, card/table rhythm, navigation, and responsive polish as the stronger HTML reference while retaining production APIs and behavior | In Progress |
 
 ## 7. Detailed Milestones — Phase 3 (FS §15)
 
@@ -330,6 +333,20 @@ FR-UI-12 (§4.5) — added the same day as the rest of Phase 4, but from a direc
 | Done | M31.4 | FE | Responsive/mobile re-verification on the same new UI. | M24 (all)–M30 (all) | S | FS §7 NFR |
 | Done | M31.5 | BE | Perf sanity check (numbers written down, not just "passed", matching M11.2's precedent) on the two new query patterns most likely to scale badly: M26's Recent view (a per-user audit-log scan) and M28's Library/Site Follow fan-out (a hierarchy walk on every followed-object change) — realistic data volumes, not empty-table timings. | M26 (all), M28 (all) | S | TDS §14.1 |
 | Done | M31.6 | DOC | Update `AGENTS.md`/`README.md` prose (not pointers, already correct per §1) to reflect Phase 4 completion. If M23.7 (Phase 3's equivalent task) hasn't landed yet, touch only the Phase 4-related sentences and leave Phase 3's claims alone. Once **both** M23.7 and M31.6 have landed, whichever runs second should also confirm the combined statement reads as one coherent "Phase 3 and Phase 4 both done" paragraph rather than two disjoint edits stapled together — a small final consistency pass, not a new task. | M31.1–M31.5 | S | FS §15 |
+
+## 8.5. M32 — HTML Prototype Parity & Visual Polish
+
+This milestone is the result of a direct comparison between the production React client and the pages in `prototype(html)/` (Home, Site Home, Library, Favorites, Search, Recycle Bin, Profile, Login, and all Admin pages). The prototype is materially stronger in visual hierarchy even where the React client already has the underlying feature: it has a branded 264px navigation rail with grouped links and site shortcuts, a persistent search-oriented top bar, breadcrumbs and consistent page headers, stat cards and storage/activity summaries, richer Site/Library cards, framed tables and empty states, pill-style Admin navigation, and a coherent mobile collapse pattern. The React client currently uses a much flatter shell, minimal header, mostly raw bordered forms/tables, and page-specific spacing that varies from route to route. Auth pages are already close because they use the shared auth shell; the work below focuses on the authenticated application surfaces.
+
+The parity rule is behavioral preservation: keep the production API, authorization, and existing interactions authoritative; improve layout, hierarchy, affordances, semantic tokens, and responsive behavior. Do not copy the prototype's DOM-templating JavaScript or CSS into `client/`, and do not add prototype-only seeded/mock actions to production screens.
+
+| Status | ID | Track | Task | Depends on | Size | Refs |
+|---|---|---|---|---|---|---|
+| Done | M32.1 | DOC | **Gap audit and visual target.** Compare the React routes and the corresponding `prototype(html)` pages, record the shell/header/page-frame/card/table/empty-state/responsive gaps above, and define the implementation order. Confirm that the gap is presentation and information hierarchy rather than an authorization or API gap; keep prototype-only content and actions out of scope. | M31 | S | `prototype(html)/`, TDS §7.2, AGENTS.md §8 |
+| In Progress | M32.2 | FE | **Shared application frame.** Rework `AppShell` with the prototype's information architecture: branded grouped sidebar, accessible active states, site shortcuts when the current route has site context, persistent search entry point, notification/theme/account controls, breadcrumbs/page-frame primitives, and a responsive mobile drawer. Use existing shadcn components and semantic theme tokens; preserve all current routes and auth behavior. | M32.1 | M | FR-UI-01, FR-UI-07, TDS §7.2 |
+| Not Started | M32.3 | FE | **High-traffic workspace surfaces.** Bring Home, Site Home, and Library Browser to the prototype's hierarchy: welcome/page headers, stat and storage summaries where production data exists, richer Site and Library cards, site activity/permission framing, breadcrumb context, polished list/grid/toolbar/selection/empty states, and consistent file-type affordances. Do not invent data that the API does not provide. | M32.2 | L | FR-SITE-05, FR-UI-09, FR-UI-10, TDS §7.2 |
+| Not Started | M32.4 | FE | **Favorites, Search, Recycle Bin, Profile, and Admin surfaces.** Apply the same page-header, breadcrumb, pill-navigation, card/table, status-badge, dialog, and empty-state language to the remaining production routes, including the Admin Center's Users, Groups, Sites, Storage, Content Types, Audit Log, and Settings pages. Preserve the existing endpoint contracts and mutation behavior. | M32.2 | L | FR-UI-01, FR-UI-07, TDS §7.2 |
+| Not Started | M32.5 | Both | **Parity hardening and sign-off.** Verify desktop and mobile layouts against the reference pages, keyboard/focus behavior, semantic color contrast, overlay titles, and no horizontal overflow at supported widths. Add/adjust frontend tests for shared navigation and changed page states, then run the client quality gates and record the result in the commit. | M32.3, M32.4 | M | FS §7 NFR, TDS §12.2 |
 
 ## 9. Sequencing Risks
 
