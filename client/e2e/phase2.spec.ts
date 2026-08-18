@@ -171,7 +171,7 @@ test.describe.serial("Phase 2 acceptance flows", () => {
       .getByRole("button", { name: fileName, exact: true })
       .click();
     await session.page.getByRole("tab", { name: "Preview" }).click();
-    await expect(session.page.getByTitle("Preview")).toBeVisible();
+    await expect(session.page.locator('iframe[title="Preview"]')).toBeVisible();
 
     await session.page.getByRole("button", { name: "Share", exact: true }).click();
     const dialog = session.page.locator('[data-slot="dialog-content"]');
