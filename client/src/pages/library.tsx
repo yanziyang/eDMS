@@ -1631,8 +1631,14 @@ function UploadDialog({
       }}
     >
       <DialogContent
-        onDragOver={(event) => event.preventDefault()}
-        onDrop={(event) => event.preventDefault()}
+        onDragOver={(event) => {
+          event.preventDefault();
+          event.dataTransfer.dropEffect = "copy";
+        }}
+        onDrop={(event) => {
+          event.preventDefault();
+          enqueueFiles(Array.from(event.dataTransfer.files));
+        }}
       >
         <DialogHeader>
           <DialogTitle>Upload files</DialogTitle>
@@ -1664,14 +1670,6 @@ function UploadDialog({
               <Label
                 htmlFor="upload-files"
                 className="flex cursor-pointer flex-col items-center gap-2 rounded-lg border border-dashed p-8 text-center"
-                onDragOver={(event) => {
-                  event.preventDefault();
-                  event.dataTransfer.dropEffect = "copy";
-                }}
-                onDrop={(event) => {
-                  event.preventDefault();
-                  enqueueFiles(Array.from(event.dataTransfer.files));
-                }}
               >
                 <Upload className="size-8 text-muted-foreground" />
                 <span className="text-sm">
