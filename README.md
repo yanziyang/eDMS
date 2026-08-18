@@ -45,6 +45,8 @@ This starts PostgreSQL, Mailhog, the LibreOffice preview converter, Apache Tika 
 
 The API migrates the database on startup in Development and forces a password reset on first login.
 
+Local Development also idempotently seeds an org-wide starter catalog of common content types — Document, Contract, Invoice, Policy, Meeting Notes, and Project Record — with optional metadata columns. Existing content types and administrator edits are preserved.
+
 ### Bare metal
 
 Requirements: .NET 10 SDK, Node.js 20+. **No database install needed** — local Development defaults to SQLite (`edms-dev.db` is created in `server/src/eDMS.Api/`, gitignored).

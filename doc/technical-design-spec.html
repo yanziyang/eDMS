@@ -678,7 +678,7 @@ Database__Provider=Postgres dotnet ef migrations add &lt;Name&gt; -p server/src/
       <p>Every model change requires a migration <strong>in all four sets</strong>; verify none is missed with <code>dotnet ef migrations has-pending-model-changes -p &lt;project&gt; -s server/src/eDMS.Api</code> per provider. Auto-apply on startup remains limited to Development/Testing; every other environment runs migrations as an explicit CI/CD step before the new API version deploys (§11.3) — never auto-migrate production from application startup.</p>
 
       <h3>6.5 Seed data</h3>
-      <p>First run against an empty database creates exactly one System Administrator from configuration (<code>Seed:AdminEmail</code>/<code>Seed:AdminTempPassword</code>, required env vars, no baked-in default), forced password reset on first login. No sample content is seeded outside local dev — <code>docker-compose.yml</code> (§11.2) seeds demonstration data matching <code>prototype(html)/assets/data.js</code>.</p>
+      <p>First run against an empty database creates exactly one System Administrator from configuration (<code>Seed:AdminEmail</code>/<code>Seed:AdminTempPassword</code>, required env vars, no baked-in default), forced password reset on first login. Local Development additionally seeds an idempotent org-wide starter catalog of common content types — Document, Contract, Invoice, Policy, Meeting Notes, and Project Record — with optional columns; existing types and columns are never overwritten. No sample content is seeded outside local dev — <code>docker-compose.yml</code> (§11.2) seeds demonstration data matching <code>prototype(html)/assets/data.js</code>.</p>
     </section>
 
     <!-- 7. FRONTEND -->

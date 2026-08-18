@@ -605,7 +605,7 @@ Every model change requires a migration **in all four sets** — verify nothing 
 
 ### 6.5 Seed data
 
-On first run against an empty database, a seed step (idempotent, checks `AspNetUsers` is empty before doing anything) creates exactly one System Administrator account from configuration (`Seed:AdminEmail`, `Seed:AdminTempPassword`, both required env vars with no baked-in default), with `IsSystemAdmin = true` and a forced-password-reset flag. No sample Sites, Libraries, or documents are seeded outside of local development (`docker-compose.yml`, §11.2, seeds the demonstration data that matches `prototype(html)/assets/data.js` so manual testing has realistic content without reusing production-shaped fixtures in prod).
+On first run against an empty database, a seed step (idempotent, checks `AspNetUsers` is empty before doing anything) creates exactly one System Administrator account from configuration (`Seed:AdminEmail`, `Seed:AdminTempPassword`, both required env vars with no baked-in default), with `IsSystemAdmin = true` and a forced-password-reset flag. Local Development additionally seeds an idempotent org-wide starter catalog of common content types — Document, Contract, Invoice, Policy, Meeting Notes, and Project Record — with optional columns; existing types and columns are never overwritten. No sample Sites, Libraries, or documents are seeded outside of local development (`docker-compose.yml`, §11.2, seeds the demonstration data that matches `prototype(html)/assets/data.js` so manual testing has realistic content without reusing production-shaped fixtures in prod).
 
 ## 7. Frontend Technical Design
 

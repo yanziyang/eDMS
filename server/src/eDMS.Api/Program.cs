@@ -207,6 +207,10 @@ public class Program
         }
 
         await SeedAdministratorAsync(app);
+        if (app.Environment.IsDevelopment())
+        {
+            await SeedDevelopmentDefaultsAsync(app);
+        }
 
         app.Run();
     }
@@ -215,6 +219,13 @@ public class Program
     {
         using var scope = app.Services.CreateScope();
         var seeder = scope.ServiceProvider.GetRequiredService<AdminSeeder>();
+        await seeder.SeedAsync();
+    }
+
+    private static async Task SeedDevelopmentDefaultsAsync(WebApplication app)
+    {
+        using var scope = app.Services.CreateScope();
+        var seeder = scope.ServiceProvider.GetRequiredService<DefaultContentTypeSeeder>();
         await seeder.SeedAsync();
     }
 }
