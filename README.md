@@ -6,7 +6,7 @@
 
 **Phase 2 (M0–M19) is complete.** The Phase 1 SharePoint-style core is joined by content types and required metadata, Office preview, resumable chunked uploads, notifications and alert preferences, authenticated organization-wide share links, PDF/Office content indexing, and persisted light/dark theme selection. Quality gates: backend and frontend builds/tests pass, validator coverage is enforced by the application test suite, axe scans are clean across the Phase 2 surfaces, responsive mobile/tablet flows are verified, and the Playwright suite covers the Phase 2 acceptance paths against the real API. See [doc/ImplementationPlan V1.1.md](doc/ImplementationPlan%20V1.1.md) (superseded, historical) for the completed milestone record.
 
-**Phase 3 (SAML2/OIDC federation) is complete.** M20–M23 delivered signed OIDC and SAML flows, just-in-time provisioning, one-time handoff exchange, SSO enforcement, and the dedicated security/accessibility/responsive hardening passes. See [doc/ImplementationPlan V1.2.md](doc/ImplementationPlan%20V1.2.md) for the milestone record. [doc/ImplementationPlan V1.0.md](doc/ImplementationPlan%20V1.0.md) is the archived original Phase 1 plan.
+**Phase 3 (SAML2/OIDC federation) and Phase 4 (M24–M31) are complete.** M20–M23 delivered signed OIDC and SAML flows, just-in-time provisioning, one-time handoff exchange, SSO enforcement, and the dedicated security/accessibility/responsive hardening passes. M24–M31 delivered the Phase 4 feature set plus accessibility, responsive, performance, and documentation sign-off. See [doc/ImplementationPlan V1.2.md](doc/ImplementationPlan%20V1.2.md) for the completed milestone record. [doc/ImplementationPlan V1.0.md](doc/ImplementationPlan%20V1.0.md) is the archived original Phase 1 plan.
 
 ## Tech stack
 
@@ -94,15 +94,15 @@ cd client && npx playwright test
 cd client && E2E_DATABASE_PROVIDER=Sqlite npx playwright test   # PowerShell: $env:E2E_DATABASE_PROVIDER='Sqlite'; npx playwright test
 ```
 
-The Playwright suite resets the E2E database (a dedicated `edms_e2e` Postgres database, or a fresh `e2e.db` SQLite file), seeds a System Administrator, and covers 33 scenarios: login, browse, upload, download, check-out/in, move/copy, share, permission-filtered search, document details (rename/versions/restore), recycle-bin restore, admin pages, accessibility (axe), and responsive layouts.
+The Playwright suite resets the E2E database (a dedicated `edms_e2e` Postgres database, or a fresh `e2e.db` SQLite file), seeds a System Administrator, and covers the Phase 1–4 acceptance paths: login, browse, upload, download, check-out/in, move/copy, share, permission-filtered search, document details (rename/versions/restore), recycle-bin restore, admin pages, Favorites, Recent, saved Views, Follow controls, bulk metadata editing, context-menu permissions, accessibility (axe), and responsive layouts.
 
 ## Documentation
 
 - [Functional spec](doc/functional-spec.md) - requirements, data model, API surface, roadmap
 - [Technical design spec](doc/technical-design-spec.md) - architecture, schema DDL, class design, deployment
-- [Implementation plan](doc/ImplementationPlan%20V1.2.md) - sequenced tasks with live status ([V1.1](doc/ImplementationPlan%20V1.1.md), [V1.0](doc/ImplementationPlan%20V1.0.md) superseded/archived)
+- [Implementation plan](doc/ImplementationPlan%20V1.2.md) - completed Phase 3/4 milestone record ([V1.1](doc/ImplementationPlan%20V1.1.md), [V1.0](doc/ImplementationPlan%20V1.0.md) superseded/archived)
 - [AGENTS.md](AGENTS.md) - guidance for coding agents working in this repository
 
 ## Out of scope
 
-Real-time co-authoring, desktop sync, mobile apps, workflow/approval engine, e-signature, retention/legal hold, anonymous or external sharing, and multi-tenant SaaS concerns are explicitly out of scope. See the functional spec for the full list and the Phase 2/3 backlog.
+Real-time co-authoring, desktop sync, mobile apps, workflow/approval engine, e-signature, retention/legal hold, anonymous or external sharing, and multi-tenant SaaS concerns are explicitly out of scope. See the functional spec for the full list and future roadmap decisions.

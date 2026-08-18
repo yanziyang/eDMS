@@ -6,20 +6,20 @@ Instructions for AI coding agents (OpenCode, Claude Code, Cursor, or any other a
 
 **eDMS** is an internal enterprise document management system — SharePoint Online's key functions (sites, libraries, folders, documents, versioning, check-out/check-in, permissions, search, recycle bin, audit trail), for internal use only, no anonymous/external sharing. Full context: [`doc/functional-spec.md`](doc/functional-spec.md) §1–§2.
 
-**Repository state — read before doing anything else:** the production `server/` (.NET 10) and `client/` (React/Vite) now exist. **Phase 2 (M0–M19) is done** — the Phase 1 core plus content types and required metadata, Office preview, chunked uploads, notifications/alerts, authenticated organization-wide share links, PDF/Office content indexing, dark theme, Phase 2 E2E/accessibility/responsive coverage, and deployment wiring are complete and covered by the quality gates. **Phase 3 (SAML2/OIDC federation, FR-AUTH-09/10/11) is complete** — M20–M23 delivered the two federated login paths, JIT provisioning, one-time handoff exchange, SSO enforcement, and their hardening/sign-off coverage. The next task is the first `Not Started` item in **`doc/ImplementationPlan V1.2.md`**. `doc/ImplementationPlan V1.1.md` (Phase 1 close-out + Phase 2, all `Done`) and `doc/ImplementationPlan V1.0.md` (original Phase 1 plan) are both superseded — historical reference only, do not work from either.
+**Repository state — read before doing anything else:** the production `server/` (.NET 10) and `client/` (React/Vite) now exist. **Phase 2 (M0–M19) is done** — the Phase 1 core plus content types and required metadata, Office preview, chunked uploads, notifications/alerts, authenticated organization-wide share links, PDF/Office content indexing, dark theme, Phase 2 E2E/accessibility/responsive coverage, and deployment wiring are complete and covered by the quality gates. **Phase 3 (SAML2/OIDC federation, FR-AUTH-09/10/11) and Phase 4 (M24–M31) are complete** — M20–M23 delivered the two federated login paths, JIT provisioning, one-time handoff exchange, SSO enforcement, and their hardening/sign-off coverage; M24–M31 delivered the Phase 4 feature set plus accessibility, responsive, performance, and documentation sign-off. Every milestone in **`doc/ImplementationPlan V1.2.md`** is now `Done`; new work needs an explicitly scoped task and any required spec decision. `doc/ImplementationPlan V1.1.md` (Phase 1 close-out + Phase 2, all `Done`) and `doc/ImplementationPlan V1.0.md` (original Phase 1 plan) are both superseded — historical reference only, do not work from either.
 
 | Path | What it is | Status |
 |---|---|---|
 | `doc/functional-spec.md` / `.html` | Requirements, data model, API surface, roadmap | Source of truth — done |
 | `doc/technical-design-spec.md` / `.html` | Architecture, schema DDL, class-level design, deployment | Source of truth — done |
-| `doc/ImplementationPlan V1.2.md` | **Active** sequenced, dependency-ordered task list — Phase 3 federation (M20–M23) and Phase 4 (M24–M31), with a live Status column | **Read this to find your next task** |
+| `doc/ImplementationPlan V1.2.md` | **Completed** sequenced, dependency-ordered task list — Phase 3 federation (M20–M23) and Phase 4 (M24–M31), with the final Status column | **Read this for the completed milestone record before starting newly scoped work** |
 | `doc/ImplementationPlan V1.1.md` | Superseded Phase 1 close-out + Phase 2 (M10–M19) plan, all milestones `Done` at handoff | Historical reference only — superseded |
 | `doc/ImplementationPlan V1.0.md` | Archived Phase 1 (M0–M9) plan, frozen at handoff | Historical reference only — superseded |
 | `prototype(html)/` | Clickable UX/IA reference (vanilla HTML/CSS/JS mimicking shadcn) | Reference only — **see §8, do not port its code** |
-| `server/` | .NET solution (Domain/Application/Infrastructure + one migrations project per database provider, Api, tests) | Done through Phase 2; Postgres in prod, SQLite dev default (ADR-8) |
-| `client/` | React/Vite app (TanStack Query throughout) | Done through Phase 2; full UI incl. Phase 2 surfaces, details sheet, share dialog, admin center |
+| `server/` | .NET solution (Domain/Application/Infrastructure + one migrations project per database provider, Api, tests) | Done through Phase 4; Postgres in prod, SQLite dev default (ADR-8) |
+| `client/` | React/Vite app (TanStack Query throughout) | Done through Phase 4; full UI incl. Phase 4 surfaces, details sheet, share dialog, admin center |
 
-**Your very next action, every session:** open `doc/ImplementationPlan V1.2.md`, find the first task whose Status isn't `Done` and whose dependencies are, and do that.
+**Before starting new work, every session:** open `doc/ImplementationPlan V1.2.md` to confirm the completed milestone record and verify that the proposed task is within the approved roadmap; do not invent a next milestone when every listed task is `Done`.
 
 ## 2. Progressive Disclosure — Where to Look
 
@@ -27,7 +27,7 @@ Don't load the full specs into context speculatively. Look up the row that match
 
 | Before you... | Read |
 |---|---|
-| Pick your next task | **`doc/ImplementationPlan V1.2.md`** — find the first `Not Started` task whose dependencies are `Done` |
+| Pick a new scoped task | **`doc/ImplementationPlan V1.2.md`** — confirm the existing milestones are `Done` and obtain an explicit scope decision for work beyond them |
 | Touch scope, add/remove a feature | FS §2 (Goals/Non-Goals), the relevant `FR-*` group in FS §6 |
 | Design or migrate the data model | FS §8 (logical model), **TDS §6** (physical DDL, indexes) |
 | Implement any authorization check | FS §9 (algorithm), **TDS §5.3, §5.6, §6.3** (implementation + the recursive CTE) |
@@ -37,7 +37,7 @@ Don't load the full specs into context speculatively. Look up the row that match
 | Implement upload, versioning, or storage | FS §13, **TDS §5.4** |
 | Touch CI/CD, Docker, or environments | **TDS §11** |
 | Write any test | **TDS §12** |
-| Unsure if something is MVP or later | FS §15 (Phase 1/2/3 roadmap) — **default to Phase 1 unless told otherwise** |
+| Unsure if something is MVP or later | FS §15 (Phase 1/2/3/4 roadmap) — **default to the currently approved scope unless told otherwise** |
 | A decision seems missing | FS §16 (Assumptions) and TDS §2.4 (ADR log) — it may already be answered there |
 
 `FR-XXXX-##` (e.g. `FR-VER-05`) and `ADR-#` are the stable IDs used across both specs and should be referenced in commits/PRs/comments — see §7.
@@ -149,7 +149,7 @@ These are the things most likely to be silently violated by an agent working sec
 6. **File content-type is sniffed server-side from magic bytes.** Never trust the client's `Content-Type` header (TDS §5.4, §10.2).
 7. **Every command/query has a validator.** Don't skip it because "the frontend already checks this" (TDS §5.2 pipeline behaviors).
 8. **No anonymous or external sharing, ever.** Every principal is an internal `User` or `Group` (FS §2.2). This is a scope boundary, not an oversight — don't add a public-link feature without an explicit spec change.
-9. **Don't build ahead of the roadmap.** Check FS §15 before implementing something. Phase 3 federation is complete; continue with the next `Not Started` milestone in `doc/ImplementationPlan V1.2.md` and do not build beyond the sequenced scope. Anything beyond FS's currently-defined phases (retention, legal hold, workflow/approval, etc.) still requires a new spec decision first (see V1.2 §8).
+9. **Don't build ahead of the roadmap.** Check FS §15 before implementing something. Phase 3 federation and Phase 4 are complete; do not add an unlisted milestone or build beyond the sequenced scope. Anything beyond FS's currently-defined phases (retention, legal hold, workflow/approval, etc.) still requires a new spec decision first (see V1.2 §8).
 
 ## 8. The `prototype(html)/` Folder
 
