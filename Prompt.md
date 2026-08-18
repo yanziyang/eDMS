@@ -208,3 +208,8 @@ README.md
 Prompt:
 
 Can make README.md looks more professional like other open source product? For example, have banner image for eDMS.
+
+--------------------------------------------------------
+Prompt:
+
+I suggest re-draw Architecture diagram as professional looking diagram.

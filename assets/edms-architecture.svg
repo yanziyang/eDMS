@@ -1,0 +1,149 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" role="img" aria-labelledby="diagram-title diagram-description">
+  <title id="diagram-title">eDMS layered architecture</title>
+  <desc id="diagram-description">A layered architecture diagram showing the browser and React client flowing through ASP.NET Core controllers, application use cases and behaviors, infrastructure services, databases, document storage, preview and indexing services, and local or federated identity.</desc>
+
+  <defs>
+    <linearGradient id="background" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#071a33"/>
+      <stop offset="0.58" stop-color="#0c2c4d"/>
+      <stop offset="1" stop-color="#102d57"/>
+    </linearGradient>
+    <linearGradient id="card" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#153f68"/>
+      <stop offset="1" stop-color="#102e52"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#27c6d8"/>
+      <stop offset="1" stop-color="#4c8dff"/>
+    </linearGradient>
+    <pattern id="grid" width="48" height="48" patternUnits="userSpaceOnUse">
+      <path d="M48 0H0V48" fill="none" stroke="#8ed9ff" stroke-opacity=".06"/>
+    </pattern>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="150%">
+      <feDropShadow dx="0" dy="12" stdDeviation="14" flood-color="#020a18" flood-opacity=".35"/>
+    </filter>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="strokeWidth">
+      <path d="M0 0L12 6L0 12Z" fill="#5ee7f2"/>
+    </marker>
+    <marker id="arrow-dashed" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="strokeWidth">
+      <path d="M0 0L12 6L0 12Z" fill="#b49bff"/>
+    </marker>
+  </defs>
+
+  <rect width="1600" height="900" rx="28" fill="url(#background)"/>
+  <rect x="24" y="24" width="1552" height="852" rx="22" fill="url(#grid)"/>
+
+  <text x="80" y="76" fill="#f3f9ff" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="34" font-weight="750">eDMS architecture</text>
+  <text x="80" y="111" fill="#a9c9e7" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="18">A layered .NET + React document management platform</text>
+
+  <rect x="80" y="139" width="1440" height="50" rx="25" fill="#123b60" stroke="#2c7698" stroke-opacity=".75"/>
+  <circle cx="111" cy="164" r="8" fill="#5ee7f2"/>
+  <text x="135" y="171" fill="#e9f8ff" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="16" font-weight="650">Cross-cutting guardrails</text>
+  <text x="365" y="171" fill="#b9d8ee" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="16">validation  ·  authorization  ·  immutable audit  ·  telemetry  ·  cancellation</text>
+
+  <!-- Flow connectors are drawn before the cards so they remain visually subordinate. -->
+  <path d="M370 435H430" fill="none" stroke="#5ee7f2" stroke-width="4" marker-end="url(#arrow)"/>
+  <path d="M565 435V475" fill="none" stroke="#5ee7f2" stroke-width="4" marker-end="url(#arrow)"/>
+  <path d="M770 580H850" fill="none" stroke="#5ee7f2" stroke-width="4" marker-end="url(#arrow)"/>
+  <path d="M1170 465H1240" fill="none" stroke="#5ee7f2" stroke-width="4" marker-end="url(#arrow)"/>
+  <path d="M770 650C940 765 1110 785 1320 705" fill="none" stroke="#b49bff" stroke-width="3" stroke-dasharray="10 10" marker-end="url(#arrow-dashed)"/>
+
+  <text x="382" y="418" fill="#8ccfe8" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="14">HTTPS / API</text>
+  <text x="584" y="458" fill="#8ccfe8" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="14">request</text>
+  <text x="785" y="562" fill="#8ccfe8" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="14">use cases</text>
+  <text x="1182" y="447" fill="#8ccfe8" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="14">data + integrations</text>
+  <text x="1015" y="768" fill="#c9baff" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="14">identity federation</text>
+
+  <!-- Experience -->
+  <g filter="url(#shadow)">
+    <rect x="80" y="250" width="290" height="370" rx="18" fill="url(#card)" stroke="#4c8dff" stroke-opacity=".75"/>
+    <rect x="80" y="250" width="290" height="8" rx="4" fill="#4c8dff"/>
+    <text x="108" y="299" fill="#8ed9ff" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="13" font-weight="700" letter-spacing="1.8">EXPERIENCE</text>
+    <text x="108" y="339" fill="#ffffff" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="26" font-weight="700">Web client</text>
+    <text x="108" y="375" fill="#b9d8ee" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="16">React + Vite + TypeScript</text>
+
+    <rect x="108" y="414" width="234" height="55" rx="12" fill="#0b2747" stroke="#2c6b91"/>
+    <circle cx="134" cy="441" r="10" fill="#5ee7f2"/>
+    <text x="158" y="447" fill="#edfaff" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="650">React Router</text>
+
+    <rect x="108" y="481" width="234" height="55" rx="12" fill="#0b2747" stroke="#2c6b91"/>
+    <circle cx="134" cy="508" r="10" fill="#4c8dff"/>
+    <text x="158" y="514" fill="#edfaff" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="650">TanStack Query</text>
+
+    <rect x="108" y="548" width="234" height="44" rx="12" fill="#0b2747" stroke="#2c6b91"/>
+    <text x="128" y="576" fill="#b9d8ee" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="14">Authenticated UI + state</text>
+  </g>
+
+  <!-- API and application -->
+  <g filter="url(#shadow)">
+    <rect x="430" y="250" width="270" height="185" rx="18" fill="url(#card)" stroke="#27c6d8" stroke-opacity=".85"/>
+    <rect x="430" y="250" width="270" height="8" rx="4" fill="#27c6d8"/>
+    <text x="458" y="299" fill="#8ef3f4" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="13" font-weight="700" letter-spacing="1.8">API EDGE</text>
+    <text x="458" y="339" fill="#ffffff" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="24" font-weight="700">ASP.NET Core</text>
+    <text x="458" y="376" fill="#b9d8ee" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="16">Controllers + OpenAPI</text>
+    <text x="458" y="410" fill="#b9d8ee" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15">authentication boundary</text>
+
+    <rect x="430" y="475" width="340" height="220" rx="18" fill="url(#card)" stroke="#27c6d8" stroke-opacity=".85"/>
+    <rect x="430" y="475" width="340" height="8" rx="4" fill="url(#accent)"/>
+    <text x="458" y="524" fill="#8ef3f4" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="13" font-weight="700" letter-spacing="1.8">APPLICATION</text>
+    <text x="458" y="564" fill="#ffffff" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="24" font-weight="700">Use cases + CQRS</text>
+    <text x="458" y="600" fill="#b9d8ee" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="16">commands, queries, handlers</text>
+    <rect x="458" y="622" width="284" height="43" rx="10" fill="#0b2747" stroke="#2c6b91"/>
+    <text x="478" y="650" fill="#dffaff" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="14">validation · permissions · audit</text>
+  </g>
+
+  <!-- Infrastructure -->
+  <g filter="url(#shadow)">
+    <rect x="850" y="250" width="320" height="430" rx="18" fill="url(#card)" stroke="#4c8dff" stroke-opacity=".75"/>
+    <rect x="850" y="250" width="320" height="8" rx="4" fill="#4c8dff"/>
+    <text x="878" y="299" fill="#8ed9ff" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="13" font-weight="700" letter-spacing="1.8">INFRASTRUCTURE</text>
+    <text x="878" y="339" fill="#ffffff" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="26" font-weight="700">Adapters + services</text>
+    <text x="878" y="375" fill="#b9d8ee" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="16">EF Core, storage, search</text>
+
+    <rect x="878" y="414" width="264" height="55" rx="12" fill="#0b2747" stroke="#2c6b91"/>
+    <circle cx="904" cy="441" r="10" fill="#5ee7f2"/>
+    <text x="928" y="447" fill="#edfaff" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="650">Provider switching</text>
+
+    <rect x="878" y="481" width="264" height="55" rx="12" fill="#0b2747" stroke="#2c6b91"/>
+    <circle cx="904" cy="508" r="10" fill="#4c8dff"/>
+    <text x="928" y="514" fill="#edfaff" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="650">Document storage</text>
+
+    <rect x="878" y="548" width="264" height="55" rx="12" fill="#0b2747" stroke="#2c6b91"/>
+    <circle cx="904" cy="575" r="10" fill="#b49bff"/>
+    <text x="928" y="581" fill="#edfaff" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="15" font-weight="650">Search + integrations</text>
+
+    <rect x="878" y="615" width="264" height="36" rx="10" fill="#0b2747" stroke="#2c6b91"/>
+    <text x="898" y="639" fill="#b9d8ee" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="13">outbox · mail · logging</text>
+  </g>
+
+  <!-- Data and external services -->
+  <g filter="url(#shadow)">
+    <rect x="1240" y="250" width="280" height="430" rx="18" fill="url(#card)" stroke="#27c6d8" stroke-opacity=".85"/>
+    <rect x="1240" y="250" width="280" height="8" rx="4" fill="#27c6d8"/>
+    <text x="1268" y="299" fill="#8ef3f4" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="13" font-weight="700" letter-spacing="1.8">PLATFORM</text>
+    <text x="1268" y="339" fill="#ffffff" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="25" font-weight="700">Data + services</text>
+    <text x="1268" y="375" fill="#b9d8ee" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="16">deployment targets</text>
+
+    <rect x="1268" y="414" width="224" height="55" rx="12" fill="#0b2747" stroke="#2c6b91"/>
+    <text x="1288" y="438" fill="#dffaff" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="14" font-weight="650">Databases</text>
+    <text x="1288" y="457" fill="#9fc7e4" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12">Postgres · SQL · MySQL · SQLite</text>
+
+    <rect x="1268" y="481" width="224" height="55" rx="12" fill="#0b2747" stroke="#2c6b91"/>
+    <text x="1288" y="505" fill="#dffaff" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="14" font-weight="650">Preview + indexing</text>
+    <text x="1288" y="524" fill="#9fc7e4" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12">LibreOffice · Apache Tika</text>
+
+    <rect x="1268" y="548" width="224" height="55" rx="12" fill="#0b2747" stroke="#2c6b91"/>
+    <text x="1288" y="572" fill="#dffaff" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="14" font-weight="650">Identity</text>
+    <text x="1288" y="591" fill="#9fc7e4" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12">Local · SAML2 · OIDC</text>
+
+    <rect x="1268" y="615" width="224" height="36" rx="10" fill="#0b2747" stroke="#2c6b91"/>
+    <text x="1288" y="639" fill="#b9d8ee" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="13">Mailhog in development</text>
+  </g>
+
+  <rect x="80" y="818" width="1440" height="1" fill="#6ca6c8" fill-opacity=".35"/>
+  <circle cx="96" cy="850" r="5" fill="#5ee7f2"/>
+  <text x="112" y="856" fill="#b9d8ee" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="14">solid arrow  request / data flow</text>
+  <circle cx="390" cy="850" r="5" fill="#b49bff"/>
+  <text x="406" y="856" fill="#b9d8ee" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="14">dashed arrow  external identity integration</text>
+  <text x="1520" y="856" text-anchor="end" fill="#83a9c7" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="14">eDMS · internal enterprise platform</text>
+</svg>

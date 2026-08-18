@@ -57,17 +57,11 @@ eDMS brings the document-control capabilities teams expect from a SharePoint-sty
 
 ## Architecture
 
-```mermaid
-flowchart LR
-    U[Browser] --> C[React / Vite client]
-    C --> A[ASP.NET Core controllers]
-    A --> APP[Application use cases and behaviors]
-    APP --> INF[Infrastructure and EF Core]
-    INF --> DB[(PostgreSQL / SQL Server / MySQL / SQLite)]
-    INF --> FS[(Document storage)]
-    INF --> EXT[LibreOffice preview + Apache Tika indexing]
-    APP --> IDP[Local auth / SAML2 / OIDC]
-```
+<p align="center">
+  <img src="assets/edms-architecture.svg" alt="eDMS layered architecture: browser and React client, ASP.NET Core API, application use cases, infrastructure adapters, data services, document storage, indexing, and local or federated identity" width="100%">
+</p>
+
+The diagram separates the request path from infrastructure integrations and keeps the security and governance behaviors visible across the application boundary.
 
 The solution is deliberately layered:
 
