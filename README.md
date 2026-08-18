@@ -1,110 +1,218 @@
-# eDMS
+<p align="center">
+  <img src="assets/edms-readme-banner.png" alt="eDMS document management, search, metadata, and security illustration" width="100%">
+</p>
 
-**eDMS** is an internal enterprise document management system implementing the key functions of SharePoint Online: sites, libraries, folders, documents, versioning, check-out/check-in, granular permissions, full-text search, recycle bin, and an immutable audit trail. It is for internal use only; there is no anonymous or external sharing.
+<h1 align="center">eDMS</h1>
 
-## Status
+<p align="center">
+  <strong>Secure, SharePoint-style document management for internal teams.</strong><br>
+  Sites, libraries, folders, document control, permissions, search, and auditability in a modern .NET and React stack.
+</p>
 
-**Phase 2 (M0–M19) is complete.** The Phase 1 SharePoint-style core is joined by content types and required metadata, Office preview, resumable chunked uploads, notifications and alert preferences, authenticated organization-wide share links, PDF/Office content indexing, and persisted light/dark theme selection. Quality gates: backend and frontend builds/tests pass, validator coverage is enforced by the application test suite, axe scans are clean across the Phase 2 surfaces, responsive mobile/tablet flows are verified, and the Playwright suite covers the Phase 2 acceptance paths against the real API. See [doc/ImplementationPlan V1.1.md](doc/ImplementationPlan%20V1.1.md) (superseded, historical) for the completed milestone record.
+<p align="center">
+  <a href="doc/functional-spec.md">Functional specification</a> ·
+  <a href="doc/technical-design-spec.md">Technical design</a> ·
+  <a href="doc/ImplementationPlan%20V1.2.md">Implementation plan</a> ·
+  <a href="doc/cqrs-dispatcher-evaluation.html">MediatR alternatives evaluation</a>
+</p>
 
-**Phase 3 (SAML2/OIDC federation) and Phase 4 (M24–M31) are complete.** M20–M23 delivered signed OIDC and SAML flows, just-in-time provisioning, one-time handoff exchange, SSO enforcement, and the dedicated security/accessibility/responsive hardening passes. M24–M31 delivered the Phase 4 feature set plus accessibility, responsive, performance, and documentation sign-off. See [doc/ImplementationPlan V1.2.md](doc/ImplementationPlan%20V1.2.md) for the completed milestone record. [doc/ImplementationPlan V1.0.md](doc/ImplementationPlan%20V1.0.md) is the archived original Phase 1 plan.
+<p align="center">
+  <img src="https://img.shields.io/badge/status-Phase%204%20complete-087443?style=flat-square" alt="Phase 4 complete">
+  <img src="https://img.shields.io/badge/.NET-10-512BD4?style=flat-square&logo=dotnet&logoColor=white" alt=".NET 10">
+  <img src="https://img.shields.io/badge/React-TypeScript-149ECA?style=flat-square&logo=react&logoColor=white" alt="React and TypeScript">
+  <img src="https://img.shields.io/badge/database-PostgreSQL%20%7C%20SQL%20Server%20%7C%20MySQL%20%7C%20SQLite-336791?style=flat-square" alt="PostgreSQL, SQL Server, MySQL, and SQLite">
+</p>
 
-## Tech stack
+> eDMS is an internal enterprise document management system. It intentionally supports authenticated organization-wide collaboration and excludes anonymous or external sharing.
 
-| Layer | Choice |
+## Why eDMS?
+
+eDMS brings the document-control capabilities teams expect from a SharePoint-style library into a focused, self-hosted application:
+
+- **Control:** versioning, check-out/check-in, restore, recycle bin, and immutable audit history.
+- **Governance:** granular site, library, folder, document, and group permissions enforced on the server.
+- **Findability:** required metadata, content types, full-text indexing for PDF/Office files, and permission-aware search.
+- **Operational fit:** local authentication or SAML2/OIDC federation, provider-switchable databases, and Docker-based development.
+
+## Current status
+
+| Area | Status |
+|---|---|
+| Delivery | Phase 1 through Phase 4 complete: M0–M31 |
+| Authentication | Local database auth plus SAML2/OIDC federation, JIT provisioning, and SSO enforcement |
+| Document experience | Sites, libraries, folders, upload, preview, versioning, check-out/check-in, move/copy, sharing, and restore |
+| Governance | Required metadata, content types, permission filtering, immutable audit trail, notifications, and alerts |
+| Quality | Backend/frontend tests, coverage gates, Playwright acceptance coverage, accessibility checks, responsive checks, and performance sign-off |
+
+## Capabilities
+
+| Capability group | Included |
+|---|---|
+| Document control | Version history, check-out/check-in, restore, recycle bin, upload/download, move/copy, and Office preview |
+| Content and search | Content types, required metadata, PDF/Office text indexing, permission-aware search, Favorites, Recent, and saved Views |
+| Permissions | Sites, libraries, folders, documents, groups, inheritance, break inheritance, and server-authoritative authorization |
+| Collaboration | Authenticated organization-wide share links, notifications, alert preferences, and bulk metadata editing |
+| Federation | SAML2 and OIDC login paths, one-time handoff exchange, JIT provisioning, and SSO enforcement |
+| Operations | PostgreSQL, SQL Server, MySQL, or SQLite; Docker Compose; Mailhog; LibreOffice preview; and Apache Tika extraction |
+
+## Architecture
+
+```mermaid
+flowchart LR
+    U[Browser] --> C[React / Vite client]
+    C --> A[ASP.NET Core controllers]
+    A --> APP[Application use cases and behaviors]
+    APP --> INF[Infrastructure and EF Core]
+    INF --> DB[(PostgreSQL / SQL Server / MySQL / SQLite)]
+    INF --> FS[(Document storage)]
+    INF --> EXT[LibreOffice preview + Apache Tika indexing]
+    APP --> IDP[Local auth / SAML2 / OIDC]
+```
+
+The solution is deliberately layered:
+
+```text
+server/
+├── src/eDMS.Domain/                 # entities and domain rules
+├── src/eDMS.Application/            # use cases, contracts, validators, behaviors
+├── src/eDMS.Infrastructure/         # EF Core, storage, auth, search, integrations
+├── src/eDMS.Infrastructure.Migrations.*
+└── src/eDMS.Api/                    # ASP.NET Core controllers and composition root
+
+client/
+└── src/                             # React routes, features, components, stores, and API clients
+```
+
+## Technology stack
+
+| Layer | Technology |
 |---|---|
 | Frontend | React, Vite, strict TypeScript, React Router, shadcn/ui, Tailwind CSS 4, TanStack Query |
-| Backend | .NET 10, ASP.NET Core Web API (controllers), MediatR, FluentValidation, Mapster, Serilog |
-| Data access | Entity Framework Core with provider packages for PostgreSQL, SQL Server, MySQL, and SQLite; `EFCore.NamingConventions` |
-| Database | Switched via `Database:Provider` — PostgreSQL (production), SQL Server, MySQL, SQLite (local dev default) |
-| Auth | Local database auth plus completed SAML2/OIDC federation (FR-AUTH-09/10/11) |
+| Backend | .NET 10, ASP.NET Core Web API controllers, Entity Framework Core |
+| Application | MediatR, FluentValidation, Mapster, Serilog |
+| Database | PostgreSQL in production; SQL Server, MySQL, and SQLite provider support |
+| Authentication | Local database authentication plus SAML2/OIDC federation |
+| Document services | LibreOffice preview conversion and Apache Tika text extraction |
+| Local orchestration | Docker Compose, Mailhog, health checks, and bounded service resources |
 
-## Repository layout
+## Quick start
 
-| Path | What it is |
-|---|---|
-| `doc/` | [Functional spec](doc/functional-spec.md), [technical design spec](doc/technical-design-spec.md), [implementation plan](doc/ImplementationPlan%20V1.2.md) |
-| `prototype(html)/` | Clickable vanilla HTML/CSS/JS prototype (reference only) |
-| `Prototype(React)/` | Clickable React prototype using the real stack |
-| `server/` | .NET solution (Domain, Application, Infrastructure, one migrations project per database provider, Api, tests) |
-| `client/` | React/Vite app (auth, sites, libraries, documents, search) |
-| `.github/workflows/` | CI pipeline |
-| `docker-compose.yml` | Local Postgres + Mailhog + LibreOffice preview + Apache Tika extraction + API + web stack |
+### Docker Compose
 
-## Getting started
-
-### Docker Compose (one command)
+The fastest way to run the complete local stack is:
 
 ```bash
 docker compose up -d
 ```
 
-This starts PostgreSQL, Mailhog, the LibreOffice preview converter, Apache Tika text extractor, the API (http://localhost:5080), and the web app (http://localhost:5173). The Compose stack runs the API against PostgreSQL (`Database__Provider: Postgres`); the converter and extractor have bounded resources and health checks, and the API waits for them before starting. A System Administrator is seeded from the Compose environment:
+The stack starts PostgreSQL, Mailhog, the LibreOffice preview converter, Apache Tika, the API, and the web app.
 
-- Email: `admin@edms.local`
-- Password: `ChangeMe123!`
+- Web app: `http://localhost:5173`
+- API: `http://localhost:5080`
+- Development administrator: `admin@edms.local`
+- Temporary password: `ChangeMe123!`
 
-The API migrates the database on startup in Development and forces a password reset on first login.
+The seeded credentials are for local development only. Change them immediately in any environment that is not disposable.
 
-Local Development also idempotently seeds an org-wide starter catalog of common content types — Document, Contract, Invoice, Policy, Meeting Notes, and Project Record — with optional metadata columns. Existing content types and administrator edits are preserved.
+### Bare-metal development
 
-### Bare metal
+Requirements: .NET 10 SDK and Node.js 20+. No database installation is required for local development; SQLite is the default.
 
-Requirements: .NET 10 SDK, Node.js 20+. **No database install needed** — local Development defaults to SQLite (`edms-dev.db` is created in `server/src/eDMS.Api/`, gitignored).
-
-1. Optionally set seed credentials and JWT keys as environment variables (see [.env.example](.env.example)).
-2. Run the API (migrates and seeds on startup):
+1. Copy `.env.example` and provide development-only values as needed.
+2. Start the API:
 
    ```bash
    cd server
    dotnet run --project src/eDMS.Api
    ```
 
-3. Run the web app in another terminal:
+3. In another terminal, install and start the client:
 
    ```bash
    cd client
    npm install
+   ```
+
+   Bash:
+
+   ```bash
    export VITE_API_BASE_URL=http://localhost:5188/api/v1
    npm run dev
    ```
 
-4. Open the Vite URL (default http://localhost:5173) and sign in with the seeded administrator.
+   PowerShell:
 
-`dotnet run` serves the API on port 5188, so point `VITE_API_BASE_URL` at it (the Compose path above uses 5080). To use another database, set `Database__Provider` (`Postgres`, `SqlServer`, `MySql`, or `Sqlite`) and `ConnectionStrings__Default` for it. The API also reads `Seed__AdminEmail`, `Seed__AdminTempPassword`, `Jwt__PrivateKey`, `Jwt__PublicKey`, and `Smtp__*` from environment variables. No real secrets are committed.
+   ```powershell
+   $env:VITE_API_BASE_URL = 'http://localhost:5188/api/v1'
+   npm run dev
+   ```
 
-## Testing
+4. Open the Vite URL and sign in with the seeded development administrator.
+
+Set `Database__Provider` to `Postgres`, `SqlServer`, `MySql`, or `Sqlite` and provide the matching `ConnectionStrings__Default` value when using another provider. Keep JWT keys, SMTP settings, and seed credentials outside source control.
+
+## Quality checks
+
+Run the checks relevant to the area you change before opening a pull request:
 
 ```bash
-# Backend unit + integration tests
+# Backend
+dotnet build server/eDMS.sln
 dotnet test server/eDMS.sln
-
-# Backend coverage gate (fails below 90% real-code line coverage)
 dotnet test server/eDMS.sln --collect:"XPlat Code Coverage" --settings server/coverlet.runsettings
 
-# Frontend unit tests (Vitest)
-cd client && npm test
+# Frontend
+cd client
+npm run build
+npm test
+npm run test:coverage
+npm run lint
 
-# Frontend coverage gate (fails below 90% lines/statements/functions/branches)
-cd client && npm run test:coverage
-
-# Production build + typecheck
-cd client && npm run build
-
-# End-to-end tests (Playwright, headless Edge, real API)
-# Defaults to PostgreSQL; set E2E_DATABASE_PROVIDER=Sqlite to run with no database server.
-cd client && npx playwright test
-cd client && E2E_DATABASE_PROVIDER=Sqlite npx playwright test   # PowerShell: $env:E2E_DATABASE_PROVIDER='Sqlite'; npx playwright test
+# End-to-end acceptance coverage
+npx playwright test
 ```
 
-The Playwright suite resets the E2E database (a dedicated `edms_e2e` Postgres database, or a fresh `e2e.db` SQLite file), seeds a System Administrator, and covers the Phase 1–4 acceptance paths: login, browse, upload, download, check-out/in, move/copy, share, permission-filtered search, document details (rename/versions/restore), recycle-bin restore, admin pages, Favorites, Recent, saved Views, Follow controls, bulk metadata editing, context-menu permissions, accessibility (axe), and responsive layouts.
+The Playwright suite covers authentication, browsing, document lifecycle, permissions, search, sharing, admin surfaces, accessibility, and responsive layouts against the real API.
+
+## Repository map
+
+| Path | Purpose |
+|---|---|
+| [`doc/`](doc/) | Product requirements, technical design, implementation plans, reviews, and decision reports |
+| [`prototype(html)/`](prototype%28html%29/) | Clickable vanilla HTML/CSS/JS UX reference; not production frontend code |
+| [`Prototype(React)/`](Prototype%28React%29/) | React prototype using the application stack |
+| [`server/`](server/) | .NET solution, migrations, and backend tests |
+| [`client/`](client/) | React/Vite application and frontend tests |
+| [`.github/workflows/`](.github/workflows/) | Continuous integration and delivery workflows |
+| [`docker-compose.yml`](docker-compose.yml) | Complete local development stack |
 
 ## Documentation
 
-- [Functional spec](doc/functional-spec.md) - requirements, data model, API surface, roadmap
-- [Technical design spec](doc/technical-design-spec.md) - architecture, schema DDL, class design, deployment
-- [Implementation plan](doc/ImplementationPlan%20V1.2.md) - completed Phase 3/4 milestone record ([V1.1](doc/ImplementationPlan%20V1.1.md), [V1.0](doc/ImplementationPlan%20V1.0.md) superseded/archived)
-- [AGENTS.md](AGENTS.md) - guidance for coding agents working in this repository
+- [Functional specification](doc/functional-spec.md) — requirements, data model, API surface, and roadmap.
+- [Technical design specification](doc/technical-design-spec.md) — architecture, schema DDL, class design, and deployment.
+- [Implementation Plan V1.2](doc/ImplementationPlan%20V1.2.md) — completed Phase 3 and Phase 4 milestone record.
+- [MediatR alternatives evaluation](doc/cqrs-dispatcher-evaluation.html) — comparative evaluation of mediator, dispatcher, and message-bus options.
+- [Agent working guide](AGENTS.md) — repository conventions and non-negotiable engineering rules.
+
+## Security and scope principles
+
+- Authorization is server-authoritative; UI visibility is never the security boundary.
+- The audit log is immutable and must not be updated or deleted.
+- Access tokens remain in memory; refresh tokens are hashed and delivered through secure cookies.
+- File types are sniffed server-side from magic bytes rather than trusting client headers.
+- Migrations are explicit deployment steps outside local development.
+- Anonymous and external sharing are intentionally out of scope.
+
+## Contributing
+
+Changes should remain aligned with the functional and technical specifications. New or changed use cases should include validation, authorization coverage where applicable, and tests at the appropriate layer. Use Conventional Commits and include the relevant `FR-*` or `ADR-*` reference for architectural or requirement changes.
+
+Before submitting a change, verify the dependency direction, run the relevant backend and frontend quality gates, and keep secrets out of commits. See [AGENTS.md](AGENTS.md) for the complete contribution workflow.
 
 ## Out of scope
 
-Real-time co-authoring, desktop sync, mobile apps, workflow/approval engine, e-signature, retention/legal hold, anonymous or external sharing, and multi-tenant SaaS concerns are explicitly out of scope. See the functional spec for the full list and future roadmap decisions.
+Real-time co-authoring, desktop sync, mobile apps, workflow/approval engines, e-signatures, retention/legal hold/eDiscovery, anonymous or external sharing, wiki/lists/news/Teams integration, and multi-tenant SaaS concerns are not part of the current product scope.
+
+## Usage note
+
+eDMS is developed for internal enterprise use. Review the repository’s organizational distribution and security policies before deploying it outside the intended environment.

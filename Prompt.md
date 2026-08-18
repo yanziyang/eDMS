@@ -200,3 +200,11 @@ MediatR went commercial on July 2, 2025. If you have been running CQRS in ASP.NE
 Quick verdict. You do not need MediatR for CQRS. You also do not need to ship a 30-line reflection toy that ends up slower than MediatR. The right answer in .NET 10 is a FrozenDictionary<Type, RequestHandlerWrapper> dispatcher that builds typed wrappers once at startup and looks them up in O(1) at dispatch time. I benchmarked four approaches in this article and the FrozenDictionary version is 4.4x faster than MediatR 12.4.1, allocates 8.3x less memory per call, and works with Native AOT. The full runnable code, including BenchmarkDotNet results, lives in the GitHub repo.
 
 https://github.com/codewithmukesh/dotnet-webapi-zero-to-hero-course/tree/main/modules/03-advanced-api-patterns/cqrs-without-mediatr
+
+========================================================
+--------------------------------------------------------
+README.md
+--------------------------------------------------------
+Prompt:
+
+Can make README.md looks more professional like other open source product? For example, have banner image for eDMS.
