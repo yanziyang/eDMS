@@ -23,16 +23,49 @@ public sealed class RecycleBinService(
 
         var documents = await db.Documents.IgnoreQueryFilters()
             .Where(document => document.IsDeleted && libraryIds.Contains(document.LibraryId))
-            .Select(document => new RecycleBinItemDto(document.Id, "document", document.Name, document.DeletedAt, document.DeletedBy, siteId))
+            .Select(document => new RecycleBinRow(document.Id, "document", document.Name, document.DeletedAt, document.DeletedBy, siteId))
             .ToListAsync(cancellationToken);
 
         var folders = await db.Folders.IgnoreQueryFilters()
             .Where(folder => folder.IsDeleted && libraryIds.Contains(folder.LibraryId))
-            .Select(folder => new RecycleBinItemDto(folder.Id, "folder", folder.Name, folder.DeletedAt, folder.DeletedBy, siteId))
+            .Select(folder => new RecycleBinRow(folder.Id, "folder", folder.Name, folder.DeletedAt, folder.DeletedBy, siteId))
             .ToListAsync(cancellationToken);
 
-        return documents.Concat(folders).OrderByDescending(item => item.DeletedAt).ToList();
+        var rows = documents.Concat(folders).ToList();
+        var deletedByIds = rows
+            .Where(item => item.DeletedBy.HasValue)
+            .Select(item => item.DeletedBy!.Value)
+            .Distinct()
+            .ToList();
+        var displayNames = deletedByIds.Count == 0
+            ? new Dictionary<Guid, string>()
+            : await db.Users.AsNoTracking()
+                .Where(user => deletedByIds.Contains(user.Id))
+                .Select(user => new { user.Id, user.DisplayName })
+                .ToDictionaryAsync(user => user.Id, user => user.DisplayName, cancellationToken);
+
+        return rows
+            .Select(item => new RecycleBinItemDto(
+                item.Id,
+                item.Kind,
+                item.Name,
+                item.DeletedAt,
+                item.DeletedBy,
+                item.DeletedBy is { } userId && displayNames.TryGetValue(userId, out var displayName)
+                    ? displayName
+                    : null,
+                item.SiteId))
+            .OrderByDescending(item => item.DeletedAt)
+            .ToList();
     }
+
+    private sealed record RecycleBinRow(
+        Guid Id,
+        string Kind,
+        string Name,
+        DateTimeOffset? DeletedAt,
+        Guid? DeletedBy,
+        Guid SiteId);
 
     public async Task RestoreAsync(ObjectType objectType, Guid itemId, CancellationToken cancellationToken = default)
     {

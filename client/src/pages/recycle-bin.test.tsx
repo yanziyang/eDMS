@@ -34,7 +34,8 @@ function recycleItem(overrides: Record<string, unknown> = {}) {
     kind: "document",
     name: "old-contract.pdf",
     deletedAt: "2026-08-10T10:00:00Z",
-    deletedBy: "Alice",
+    deletedBy: "u-alice",
+    deletedByDisplayName: "Alice",
     siteId: "s1",
     ...overrides,
   };
@@ -80,7 +81,13 @@ describe("RecycleBin", () => {
       http.get(`${base}/sites/s1/recycle-bin`, () =>
         HttpResponse.json([
           recycleItem(),
-          recycleItem({ id: "r2", kind: "folder", name: "Old folder", deletedBy: "Bob" }),
+          recycleItem({
+            id: "r2",
+            kind: "folder",
+            name: "Old folder",
+            deletedBy: "u-bob",
+            deletedByDisplayName: "Bob",
+          }),
         ]),
       ),
     );
@@ -98,6 +105,7 @@ describe("RecycleBin", () => {
     expect(screen.getByText("document")).toBeInTheDocument();
     expect(screen.getByText("folder")).toBeInTheDocument();
     expect(screen.getByText("Alice")).toBeInTheDocument();
+    expect(screen.getByTitle("User ID: u-alice")).toHaveTextContent("Alice");
     expect(screen.getByText("2 items · deleted items are kept for 90 days before being permanently purged.")).toBeInTheDocument();
   });
 

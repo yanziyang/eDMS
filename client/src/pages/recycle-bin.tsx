@@ -203,7 +203,12 @@ export function RecycleBin() {
                       {item.kind}
                     </Badge>
                   </td>
-                  <td className="px-4 py-2 text-muted-foreground">{item.deletedBy}</td>
+                  <td
+                    className="px-4 py-2 text-muted-foreground"
+                    title={item.deletedBy ? `User ID: ${item.deletedBy}` : undefined}
+                  >
+                    {item.deletedByDisplayName ?? item.deletedBy ?? "Unknown user"}
+                  </td>
                   <td className="px-4 py-2 text-muted-foreground">
                     {new Date(item.deletedAt).toLocaleString()}
                   </td>

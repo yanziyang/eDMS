@@ -215,7 +215,8 @@ export interface RecycleBinItemDto {
   kind: "document" | "folder";
   name: string;
   deletedAt: string;
-  deletedBy: string;
+  deletedBy: string | null;
+  deletedByDisplayName: string | null;
   siteId: string;
 }
 

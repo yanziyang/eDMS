@@ -123,6 +123,7 @@ public sealed class AdminAndRecycleBinApiTests : IClassFixture<ApiFactory>
         var items = await binResponse.Content.ReadFromJsonAsync<List<RecycleBinItemDto>>();
         Assert.Contains(items!, item => item.Id == documentId && item.Kind == "document");
         Assert.Contains(items!, item => item.Id == folderId && item.Kind == "folder");
+        Assert.All(items!, item => Assert.False(string.IsNullOrWhiteSpace(item.DeletedByDisplayName)));
 
         var restoreDocument = await client.PostAsync(
             $"/api/v1/recycle-bin/{documentId}/restore?objectType=Document", null);

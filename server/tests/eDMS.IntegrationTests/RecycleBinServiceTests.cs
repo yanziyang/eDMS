@@ -30,6 +30,14 @@ public sealed class RecycleBinServiceTests : IDisposable
         library.SetCreator(_currentUser.UserId!.Value);
         _db.Sites.Add(site);
         _db.Libraries.Add(library);
+        _db.Users.Add(new ApplicationUser
+        {
+            Id = _currentUser.UserId!.Value,
+            UserName = "test-user@edms.test",
+            Email = "test-user@edms.test",
+            DisplayName = "Test User",
+            CreatedAt = DateTimeOffset.UtcNow,
+        });
         _db.SaveChanges();
 
         _siteId = site.Id;
@@ -56,6 +64,8 @@ public sealed class RecycleBinServiceTests : IDisposable
         Assert.Equal(2, items.Count);
         Assert.Equal("folder", items[0].Kind);
         Assert.Equal("document", items[1].Kind);
+        Assert.All(items, item => Assert.Equal("Test User", item.DeletedByDisplayName));
+        Assert.All(items, item => Assert.Equal(_currentUser.UserId, item.DeletedBy));
     }
 
     [Fact]

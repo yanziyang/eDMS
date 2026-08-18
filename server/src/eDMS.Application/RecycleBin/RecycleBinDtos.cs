@@ -6,4 +6,5 @@ public sealed record RecycleBinItemDto(
     string Name,
     DateTimeOffset? DeletedAt,
     Guid? DeletedBy,
+    string? DeletedByDisplayName,
     Guid SiteId);
