@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { ChevronRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -108,9 +108,15 @@ export function EmptyState({
 export function Surface({
   children,
   className,
+  style,
 }: {
   children: ReactNode;
   className?: string;
+  style?: CSSProperties;
 }) {
-  return <section className={cn("rounded-xl border bg-card shadow-sm", className)}>{children}</section>;
+  return (
+    <section style={style} className={cn("rounded-xl border bg-card shadow-sm", className)}>
+      {children}
+    </section>
+  );
 }

@@ -1,9 +1,11 @@
 import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { http, HttpResponse } from "msw";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { server } from "@/test/server";
+import type { ItemContextAction } from "@/components/common/ItemContextMenu";
 import { LibraryFolderTree } from "./LibraryFolderTree";
 
 const base = "http://localhost:5080/api/v1";
@@ -21,7 +23,11 @@ function folder(id: string, name: string) {
   };
 }
 
-function renderTree(onSelectFolder = vi.fn(), selectedFolderId: string | null = null) {
+function renderTree(
+  onSelectFolder = vi.fn(),
+  selectedFolderId: string | null = null,
+  onAction?: (item: unknown, action: ItemContextAction) => void,
+) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
@@ -34,6 +40,7 @@ function renderTree(onSelectFolder = vi.fn(), selectedFolderId: string | null = 
           libraryId="l1"
           selectedFolderId={selectedFolderId}
           onSelectFolder={onSelectFolder}
+          onAction={onAction}
         />
       </QueryClientProvider>,
     ),
@@ -169,5 +176,87 @@ describe("LibraryFolderTree", () => {
     renderTree();
 
     expect(await screen.findByRole("alert")).toHaveTextContent("Failed to load folders.");
+  });
+
+  it("indents nested folders progressively by depth", async () => {
+    server.use(
+      http.get(`${base}/libraries/l1/items`, () =>
+        HttpResponse.json([folder("f1", "Contracts")]),
+      ),
+      http.get(`${base}/folders/f1/items`, () =>
+        HttpResponse.json([folder("f2", "Archive")]),
+      ),
+      http.get(`${base}/folders/f2/items`, () =>
+        HttpResponse.json([folder("f3", "Deep")]),
+      ),
+    );
+
+    const user = userEvent.setup();
+    renderTree();
+
+    await user.click(await screen.findByRole("button", { name: "Expand Contracts" }));
+    await user.click(await screen.findByRole("button", { name: "Expand Archive" }));
+    await screen.findByRole("button", { name: "Open folder Deep" });
+
+    const rowOf = (item: HTMLElement) => item.firstElementChild as HTMLElement;
+    const treeitemAtLevel = (level: number) =>
+      screen
+        .getAllByRole("treeitem")
+        .find((el) => el.getAttribute("aria-level") === String(level))!;
+    expect(rowOf(treeitemAtLevel(2)).style.marginLeft).toBe("14px");
+    expect(rowOf(treeitemAtLevel(3)).style.marginLeft).toBe("28px");
+    expect(rowOf(treeitemAtLevel(4)).style.marginLeft).toBe("42px");
+  });
+
+  it("opens a context menu on right-click with the allowed folder actions", async () => {
+    server.use(
+      http.get(`${base}/libraries/l1/items`, () =>
+        HttpResponse.json([{ ...folder("f1", "Contracts"), permissionLevel: "Contribute" }]),
+      ),
+    );
+
+    const user = userEvent.setup();
+    const onAction = vi.fn();
+    renderTree(vi.fn(), null, onAction);
+
+    fireEvent.contextMenu(await screen.findByRole("button", { name: "Open folder Contracts" }));
+
+    for (const label of ["Open", "Rename", "Delete", "Follow", "Favorite"]) {
+      expect(await screen.findByRole("menuitem", { name: label })).toBeInTheDocument();
+    }
+    await user.click(screen.getByRole("menuitem", { name: "Rename" }));
+    expect(onAction).toHaveBeenCalledWith(expect.objectContaining({ name: "Contracts" }), "rename");
+  });
+
+  it("limits the folder context menu to read actions at Read permission", async () => {
+    server.use(
+      http.get(`${base}/libraries/l1/items`, () =>
+        HttpResponse.json([folder("f1", "Contracts")]),
+      ),
+    );
+
+    const user = userEvent.setup();
+    renderTree(vi.fn(), null, vi.fn());
+
+    fireEvent.contextMenu(await screen.findByRole("button", { name: "Open folder Contracts" }));
+
+    expect(await screen.findByRole("menuitem", { name: "Open" })).toBeInTheDocument();
+    expect(screen.queryByRole("menuitem", { name: "Rename" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("menuitem", { name: "Delete" })).not.toBeInTheDocument();
+    await user.keyboard("{Escape}");
+  });
+
+  it("renders no context menu when no action handler is provided", async () => {
+    server.use(
+      http.get(`${base}/libraries/l1/items`, () =>
+        HttpResponse.json([folder("f1", "Contracts")]),
+      ),
+    );
+
+    renderTree();
+
+    fireEvent.contextMenu(await screen.findByRole("button", { name: "Open folder Contracts" }));
+
+    expect(screen.queryByRole("menuitem")).not.toBeInTheDocument();
   });
 });

@@ -2,6 +2,10 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { ChevronDown, ChevronRight, Folder, FolderOpen, LoaderCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  ItemContextMenu,
+  type ItemContextAction,
+} from "@/components/common/ItemContextMenu";
 import { listFolderItems, listItems } from "@/features/documents/api";
 import { queryKeys } from "@/lib/queryKeys";
 import { cn } from "@/lib/utils";
@@ -11,12 +15,18 @@ interface LibraryFolderTreeProps {
   libraryId: string;
   selectedFolderId: string | null;
   onSelectFolder: (folderId: string | null, folderName: string) => void;
+  onAction?: (item: ItemDto, action: ItemContextAction) => void;
+  isFavorite?: (item: ItemDto) => boolean;
+  isFollowed?: (item: ItemDto) => boolean;
 }
 
 export function LibraryFolderTree({
   libraryId,
   selectedFolderId,
   onSelectFolder,
+  onAction,
+  isFavorite,
+  isFollowed,
 }: LibraryFolderTreeProps) {
   const rootItems = useQuery({
     queryKey: queryKeys.documents.libraryItems(libraryId),
@@ -61,6 +71,9 @@ export function LibraryFolderTree({
           level={1}
           selectedFolderId={selectedFolderId}
           onSelectFolder={onSelectFolder}
+          onAction={onAction}
+          isFavorite={isFavorite}
+          isFollowed={isFollowed}
         />
       ))}
     </div>
@@ -72,11 +85,17 @@ function FolderTreeNode({
   level,
   selectedFolderId,
   onSelectFolder,
+  onAction,
+  isFavorite,
+  isFollowed,
 }: {
   folder: ItemDto;
   level: number;
   selectedFolderId: string | null;
   onSelectFolder: (folderId: string | null, folderName: string) => void;
+  onAction?: (item: ItemDto, action: ItemContextAction) => void;
+  isFavorite?: (item: ItemDto) => boolean;
+  isFollowed?: (item: ItemDto) => boolean;
 }) {
   const folderId = folder.folderId ?? folder.id;
   const [expanded, setExpanded] = useState(false);
@@ -100,6 +119,36 @@ function FolderTreeNode({
     }
   };
 
+  const row = (
+    <div
+      className={cn("flex min-w-0 items-center gap-1", level > 0 && "border-l pl-2")}
+      style={level > 0 ? { marginLeft: level * 14 } : undefined}
+      tabIndex={onAction ? 0 : undefined}
+    >
+      <Button
+        variant="ghost"
+        size="icon-xs"
+        aria-label={`${expanded ? "Collapse" : "Expand"} ${folder.name}`}
+        aria-expanded={expanded}
+        onClick={() => setExpanded((current) => !current)}
+      >
+        {expanded ? <ChevronDown data-icon="inline-start" /> : <ChevronRight data-icon="inline-start" />}
+      </Button>
+      <Button
+        variant={isSelected ? "secondary" : "ghost"}
+        size="sm"
+        className="min-w-0 flex-1 justify-start gap-2 px-2"
+        aria-label={`Open folder ${folder.name}`}
+        aria-current={isSelected ? "page" : undefined}
+        onClick={() => onSelectFolder(folderId, folder.name)}
+        onKeyDown={handleKeyDown}
+      >
+        {expanded ? <FolderOpen data-icon="inline-start" /> : <Folder data-icon="inline-start" />}
+        <span className="truncate">{folder.name}</span>
+      </Button>
+    </div>
+  );
+
   return (
     <div
       role="treeitem"
@@ -107,29 +156,20 @@ function FolderTreeNode({
       aria-selected={isSelected}
       className="flex min-w-0 flex-col gap-1"
     >
-      <div className={cn("flex min-w-0 items-center gap-1", level > 0 && "ml-3 border-l pl-2")}>
-        <Button
-          variant="ghost"
-          size="icon-xs"
-          aria-label={`${expanded ? "Collapse" : "Expand"} ${folder.name}`}
-          aria-expanded={expanded}
-          onClick={() => setExpanded((current) => !current)}
+      {onAction ? (
+        <ItemContextMenu
+          item={folder}
+          permissionLevel={folder.permissionLevel ?? "Read"}
+          checkedOutByMe={false}
+          isFavorite={isFavorite?.(folder) ?? false}
+          isFollowed={isFollowed?.(folder) ?? false}
+          onAction={(action) => onAction(folder, action)}
         >
-          {expanded ? <ChevronDown data-icon="inline-start" /> : <ChevronRight data-icon="inline-start" />}
-        </Button>
-        <Button
-          variant={isSelected ? "secondary" : "ghost"}
-          size="sm"
-          className="min-w-0 flex-1 justify-start gap-2 px-2"
-          aria-label={`Open folder ${folder.name}`}
-          aria-current={isSelected ? "page" : undefined}
-          onClick={() => onSelectFolder(folderId, folder.name)}
-          onKeyDown={handleKeyDown}
-        >
-          {expanded ? <FolderOpen data-icon="inline-start" /> : <Folder data-icon="inline-start" />}
-          <span className="truncate">{folder.name}</span>
-        </Button>
-      </div>
+          {row}
+        </ItemContextMenu>
+      ) : (
+        row
+      )}
 
       {expanded && (
         <div role="group" className="flex min-w-0 flex-col gap-1">
@@ -154,6 +194,9 @@ function FolderTreeNode({
               level={level + 1}
               selectedFolderId={selectedFolderId}
               onSelectFolder={onSelectFolder}
+              onAction={onAction}
+              isFavorite={isFavorite}
+              isFollowed={isFollowed}
             />
           ))}
         </div>

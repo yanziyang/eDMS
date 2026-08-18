@@ -281,6 +281,7 @@ describe("LibraryBrowser", () => {
     vi.clearAllMocks();
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
+    window.localStorage.removeItem("edms-folder-tree-width");
   });
 
   it("lists documents and folders with metadata", async () => {
@@ -1273,6 +1274,67 @@ describe("LibraryBrowser", () => {
     expect(await screen.findByRole("button", { name: "Open folder Subfolder" })).toBeInTheDocument();
   });
 
+  it("resizes the folder tree by dragging its separator", async () => {
+    mockNav();
+    server.use(
+      http.get(`${base}/libraries/l1/items`, () => HttpResponse.json([])),
+    );
+
+    renderLibrary();
+
+    const separator = await screen.findByRole("separator", { name: "Resize folder tree" });
+    expect(separator).toHaveAttribute("aria-valuenow", "240");
+
+    fireEvent.pointerDown(separator, { pointerId: 1, clientX: 300 });
+    fireEvent.pointerMove(separator, { pointerId: 1, clientX: 350 });
+    fireEvent.pointerUp(separator, { pointerId: 1 });
+
+    expect(separator).toHaveAttribute("aria-valuenow", "290");
+  });
+
+  it("clamps the folder tree width to its bounds while dragging", async () => {
+    mockNav();
+    server.use(
+      http.get(`${base}/libraries/l1/items`, () => HttpResponse.json([])),
+    );
+
+    renderLibrary();
+
+    const separator = await screen.findByRole("separator", { name: "Resize folder tree" });
+
+    fireEvent.pointerDown(separator, { pointerId: 1, clientX: 300 });
+    fireEvent.pointerMove(separator, { pointerId: 1, clientX: 3000 });
+    fireEvent.pointerUp(separator, { pointerId: 1 });
+
+    expect(separator).toHaveAttribute("aria-valuenow", "480");
+
+    fireEvent.pointerDown(separator, { pointerId: 1, clientX: 300 });
+    fireEvent.pointerMove(separator, { pointerId: 1, clientX: -3000 });
+    fireEvent.pointerUp(separator, { pointerId: 1 });
+
+    expect(separator).toHaveAttribute("aria-valuenow", "180");
+  });
+
+  it("resizes the folder tree with the keyboard and persists the width", async () => {
+    mockNav();
+    server.use(
+      http.get(`${base}/libraries/l1/items`, () => HttpResponse.json([])),
+    );
+
+    const user = userEvent.setup();
+    renderLibrary();
+
+    const separator = await screen.findByRole("separator", { name: "Resize folder tree" });
+    separator.focus();
+    await user.keyboard("{ArrowRight}");
+    expect(separator).toHaveAttribute("aria-valuenow", "280");
+    expect(window.localStorage.getItem("edms-folder-tree-width")).toBe("280");
+
+    await user.keyboard("{ArrowLeft}");
+    expect(separator).toHaveAttribute("aria-valuenow", "240");
+    expect(window.localStorage.getItem("edms-folder-tree-width")).toBe("240");
+  });
+
   it("clears the folder selection from the tree's All documents button", async () => {
     mockNav();
     server.use(
@@ -1366,6 +1428,68 @@ describe("LibraryBrowser", () => {
     await waitFor(() =>
       expect(screen.queryByText("Library settings")).not.toBeInTheDocument(),
     );
+  });
+
+  it("deletes a folder from the tree's context menu", async () => {
+    mockNav();
+    const items: unknown[] = [
+      item({
+        kind: "folder",
+        id: "i3",
+        name: "Archived",
+        documentId: null,
+        folderId: "f3",
+        permissionLevel: "Contribute",
+      }),
+    ];
+    server.use(
+      http.get(`${base}/libraries/l1/items`, () => HttpResponse.json(items)),
+      http.delete(`${base}/folders/f3`, () => {
+        items.length = 0;
+        return new HttpResponse(null, { status: 204 });
+      }),
+    );
+
+    const user = userEvent.setup();
+    renderLibrary();
+
+    fireEvent.contextMenu(
+      await screen.findByRole("button", { name: "Open folder Archived" }),
+    );
+    await user.click(await screen.findByRole("menuitem", { name: "Delete" }));
+
+    await waitFor(() => expect(mockedToast.success).toHaveBeenCalledWith("Item deleted"));
+    await waitFor(() =>
+      expect(screen.queryByRole("button", { name: "Open folder Archived" })).not.toBeInTheDocument(),
+    );
+  });
+
+  it("opens the rename dialog from the tree's context menu", async () => {
+    mockNav();
+    server.use(
+      http.get(`${base}/libraries/l1/items`, () =>
+        HttpResponse.json([
+          item({
+            kind: "folder",
+            id: "i3",
+            name: "Archived",
+            documentId: null,
+            folderId: "f3",
+            permissionLevel: "Contribute",
+          }),
+        ]),
+      ),
+    );
+
+    const user = userEvent.setup();
+    renderLibrary();
+
+    fireEvent.contextMenu(
+      await screen.findByRole("button", { name: "Open folder Archived" }),
+    );
+    await user.click(await screen.findByRole("menuitem", { name: "Rename" }));
+
+    expect(await screen.findByRole("heading", { name: "Rename folder" })).toBeInTheDocument();
   });
 
   it("opens the details sheet from a grid card", async () => {

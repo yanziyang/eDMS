@@ -116,6 +116,12 @@ import type {
 type SortKey = "name" | "size" | "modifiedAt";
 type ViewMode = "list" | "grid";
 
+const MIN_TREE_WIDTH = 180;
+const DEFAULT_TREE_WIDTH = 240;
+const MAX_TREE_WIDTH = 480;
+const TREE_WIDTH_STEP = 40;
+const TREE_WIDTH_STORAGE_KEY = "edms-folder-tree-width";
+
 export function LibraryBrowser() {
   const { siteSlug, libraryId } = useParams();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -146,8 +152,19 @@ export function LibraryBrowser() {
   const [renameItem, setRenameItem] = useState<ItemDto | null>(null);
   const [folderTreeOpen, setFolderTreeOpen] = useState(false);
   const [folderTreeCollapsed, setFolderTreeCollapsed] = useState(false);
-  const [folderTreeWidth, setFolderTreeWidth] = useState<"compact" | "wide">("compact");
+  const [folderTreeWidth, setFolderTreeWidth] = useState<number>(() => {
+    if (typeof window === "undefined") return DEFAULT_TREE_WIDTH;
+    const saved = Number(window.localStorage.getItem(TREE_WIDTH_STORAGE_KEY));
+    return Number.isFinite(saved) && saved >= MIN_TREE_WIDTH && saved <= MAX_TREE_WIDTH
+      ? saved
+      : DEFAULT_TREE_WIDTH;
+  });
+  const resizeStartRef = useRef<{ x: number; width: number } | null>(null);
   const defaultViewAppliedLibraryRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    window.localStorage.setItem(TREE_WIDTH_STORAGE_KEY, String(folderTreeWidth));
+  }, [folderTreeWidth]);
 
   useEffect(() => {
     setFolderId(requestedFolderId);
@@ -238,6 +255,12 @@ export function LibraryBrowser() {
     ? queryKeys.folders.items(folderId)
     : queryKeys.documents.libraryItems(libraryId ?? "unknown");
   const invalidateItems = () => queryClient.invalidateQueries({ queryKey: itemsKey });
+  const refreshFolderTreeQueries = () => {
+    queryClient.invalidateQueries({ queryKey: queryKeys.folders.all });
+    queryClient.invalidateQueries({
+      queryKey: queryKeys.documents.libraryItems(libraryId ?? "unknown"),
+    });
+  };
 
   const items = useMemo(() => {
     const normalizedFilter = filterText.trim().toLocaleLowerCase();
@@ -319,6 +342,7 @@ export function LibraryBrowser() {
     onSuccess: () => {
       toast.success("Item deleted");
       invalidateItems();
+      refreshFolderTreeQueries();
     },
     onError: () => toast.error("Failed to delete item"),
   });
@@ -330,6 +354,7 @@ export function LibraryBrowser() {
       toast.success("Folder renamed");
       setRenameItem(null);
       invalidateItems();
+      refreshFolderTreeQueries();
     },
     onError: () => toast.error("Failed to rename folder"),
   });
@@ -580,11 +605,37 @@ export function LibraryBrowser() {
 
   const siteName = site?.name ?? siteSlug ?? "Site";
   const libraryName = library?.name ?? "Documents";
-  const folderTreeWidthClass = folderTreeCollapsed
-    ? "lg:w-12"
-    : folderTreeWidth === "wide"
-      ? "lg:w-80"
-      : "lg:w-60";
+  const folderTreeWidthClass = folderTreeCollapsed ? "lg:w-12" : undefined;
+
+  const beginTreeResize = (event: React.PointerEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    resizeStartRef.current = { x: event.clientX, width: folderTreeWidth };
+    try {
+      event.currentTarget.setPointerCapture(event.pointerId);
+    } catch {
+      // pointer capture is unavailable in some environments (e.g. jsdom tests)
+    }
+  };
+
+  const resizeTree = (event: React.PointerEvent<HTMLDivElement>) => {
+    const start = resizeStartRef.current;
+    if (!start) return;
+    const next = start.width + (event.clientX - start.x);
+    setFolderTreeWidth(Math.min(MAX_TREE_WIDTH, Math.max(MIN_TREE_WIDTH, next)));
+  };
+
+  const endTreeResize = () => {
+    resizeStartRef.current = null;
+  };
+
+  const handleTreeResizeKey = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (event.key !== "ArrowRight" && event.key !== "ArrowLeft") return;
+    event.preventDefault();
+    const delta = event.key === "ArrowRight" ? TREE_WIDTH_STEP : -TREE_WIDTH_STEP;
+    setFolderTreeWidth((current) =>
+      Math.min(MAX_TREE_WIDTH, Math.max(MIN_TREE_WIDTH, current + delta)),
+    );
+  };
 
   return (
     <div className="flex flex-col gap-6">
@@ -760,10 +811,13 @@ export function LibraryBrowser() {
       </Surface>
 
       <div className="flex min-w-0 flex-col gap-4 lg:flex-row lg:items-start">
-        <Surface className={cn(
-          "hidden max-h-[calc(100dvh-8rem)] shrink-0 overflow-hidden lg:sticky lg:top-24 lg:flex lg:flex-col",
-          folderTreeWidthClass,
-        )}>
+        <Surface
+          className={cn(
+            "hidden max-h-[calc(100dvh-8rem)] shrink-0 overflow-hidden lg:sticky lg:top-24 lg:flex lg:flex-col",
+            folderTreeWidthClass,
+          )}
+          style={folderTreeCollapsed ? undefined : { width: folderTreeWidth }}
+        >
           {folderTreeCollapsed ? (
             <div className="flex justify-center p-2">
               <Button
@@ -788,8 +842,10 @@ export function LibraryBrowser() {
                     variant="ghost"
                     size="icon-xs"
                     aria-label="Narrow folder tree"
-                    disabled={folderTreeWidth === "compact"}
-                    onClick={() => setFolderTreeWidth("compact")}
+                    disabled={folderTreeWidth <= MIN_TREE_WIDTH}
+                    onClick={() =>
+                      setFolderTreeWidth((current) => Math.max(MIN_TREE_WIDTH, current - TREE_WIDTH_STEP))
+                    }
                   >
                     <Minus data-icon="inline-start" />
                   </Button>
@@ -797,8 +853,10 @@ export function LibraryBrowser() {
                     variant="ghost"
                     size="icon-xs"
                     aria-label="Widen folder tree"
-                    disabled={folderTreeWidth === "wide"}
-                    onClick={() => setFolderTreeWidth("wide")}
+                    disabled={folderTreeWidth >= MAX_TREE_WIDTH}
+                    onClick={() =>
+                      setFolderTreeWidth((current) => Math.min(MAX_TREE_WIDTH, current + TREE_WIDTH_STEP))
+                    }
                   >
                     <Plus data-icon="inline-start" />
                   </Button>
@@ -819,12 +877,35 @@ export function LibraryBrowser() {
                     libraryId={libraryId}
                     selectedFolderId={folderId}
                     onSelectFolder={navigateToFolder}
+                    onAction={handleContextAction}
+                    isFavorite={isFavorite}
+                    isFollowed={isFollowed}
                   />
                 )}
               </div>
             </>
           )}
         </Surface>
+
+        {!folderTreeCollapsed && (
+          <div
+            role="separator"
+            aria-orientation="vertical"
+            aria-label="Resize folder tree"
+            aria-valuemin={MIN_TREE_WIDTH}
+            aria-valuemax={MAX_TREE_WIDTH}
+            aria-valuenow={folderTreeWidth}
+            tabIndex={0}
+            className="hidden w-2 shrink-0 cursor-col-resize touch-none select-none items-center justify-center self-stretch rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring lg:flex"
+            onPointerDown={beginTreeResize}
+            onPointerMove={resizeTree}
+            onPointerUp={endTreeResize}
+            onPointerCancel={endTreeResize}
+            onKeyDown={handleTreeResizeKey}
+          >
+            <span className="h-12 w-1 rounded-full bg-border hover:bg-muted-foreground/40" />
+          </div>
+        )}
 
         <div className="flex min-w-0 flex-1 flex-col gap-4">
           {itemsQuery.isLoading && <div className="text-sm text-muted-foreground">Loading…</div>}
@@ -1065,6 +1146,12 @@ export function LibraryBrowser() {
                   navigateToFolder(nextFolderId, nextFolderName);
                   setFolderTreeOpen(false);
                 }}
+                onAction={(item, action) => {
+                  handleContextAction(item, action);
+                  if (action === "open") setFolderTreeOpen(false);
+                }}
+                isFavorite={isFavorite}
+                isFollowed={isFollowed}
               />
             </div>
           </SheetContent>

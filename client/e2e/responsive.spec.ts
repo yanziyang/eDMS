@@ -153,6 +153,20 @@ test.describe.serial("responsive key flow", () => {
         await rootFolder.click();
         await expect(session.page).toHaveURL(new RegExp(`[?&]folderId=${folderId}`));
         await expectNoHorizontalScroll(session.page, `${viewport.name} folder tree`);
+
+        const resizeHandle = session.page.getByRole("separator", { name: "Resize folder tree" });
+        await expect(resizeHandle).toBeVisible();
+        const before = await resizeHandle.getAttribute("aria-valuenow");
+        await resizeHandle.focus();
+        await session.page.keyboard.press("ArrowRight");
+        await expect(resizeHandle).toHaveAttribute("aria-valuenow", String(Number(before) + 40));
+        await expectNoHorizontalScroll(session.page, `${viewport.name} resized folder tree`);
+
+        await rootFolder.click({ button: "right" });
+        await expect(
+          session.page.getByRole("menuitem", { name: "Rename" }),
+        ).toBeVisible();
+        await session.page.keyboard.press("Escape");
       } else {
         await session.page.getByRole("button", { name: "Folders", exact: true }).click();
         const folderSheet = session.page.getByRole("dialog", { name: "Folders" });
