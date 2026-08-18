@@ -185,3 +185,18 @@ d3026dfebd355813824804aa242f9cbc3998bbb6
 
 Remove the commits from history but preserve the current final code by rewriting them into replacement commit(s).
 
+
+========================================================
+--------------------------------------------------------
+Replacement MediatR
+--------------------------------------------------------
+Prompt:
+
+Build Your Own CQRS Dispatcher in .NET 10 (No MediatR)
+https://codewithmukesh.com/blog/cqrs-without-mediatr/
+
+MediatR went commercial on July 2, 2025. If you have been running CQRS in ASP.NET Core for the last few years, your dispatcher just turned into a budget line item. In this article, I will build a custom CQRS dispatcher in .NET 10 that replaces MediatR with about 100 lines of code, supports the same pipeline behavior pattern, returns ValueTask<T> for fewer allocations, and benchmarks 4.4x faster than MediatR 12.4.1 on real BenchmarkDotNet runs. Let’s get into it.
+
+Quick verdict. You do not need MediatR for CQRS. You also do not need to ship a 30-line reflection toy that ends up slower than MediatR. The right answer in .NET 10 is a FrozenDictionary<Type, RequestHandlerWrapper> dispatcher that builds typed wrappers once at startup and looks them up in O(1) at dispatch time. I benchmarked four approaches in this article and the FrozenDictionary version is 4.4x faster than MediatR 12.4.1, allocates 8.3x less memory per call, and works with Native AOT. The full runnable code, including BenchmarkDotNet results, lives in the GitHub repo.
+
+https://github.com/codewithmukesh/dotnet-webapi-zero-to-hero-course/tree/main/modules/03-advanced-api-patterns/cqrs-without-mediatr
