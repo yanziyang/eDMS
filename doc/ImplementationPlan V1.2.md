@@ -194,16 +194,16 @@ Phase 3 (M20→M23) and Phase 4 (M24–M30→M31) are two separate trees, both r
 |---|---|---|---|
 | [M20](#m20--sso-foundation--oidc-federation) | Shared federation plumbing + OIDC (FR-AUTH-10) | A user clicks "Sign in with SSO", authenticates against a real OIDC IdP, and lands in eDMS signed in — new account JIT-provisioned, zero site access until granted | Done |
 | [M21](#m21--saml2-federation) | SAML2 (FR-AUTH-09) | Same experience via SAML2, reusing M20's shared exchange/callback UI | Done |
-| [M22](#m22--sso-enforcement--admin-controls) | SSO enforcement (FR-AUTH-11) | Admin turns on "Require SSO for all logins"; non-exempt users' password logins are rejected with a clear message; a break-glass account still works | Not Started |
-| [M23](#m23--phase-3-hardening--sign-off) | Phase 3 sign-off | FS Phase 3 checklist satisfied; hardening bar M11/M19 proved, re-run for federation, plus a dedicated auth security pass | Not Started |
-| [M24](#m24--storage-quota-enforcement) | Quota enforcement (FR-SITE-07) | Uploading to a Site already at its configured quota is rejected with a clear error; other Sites are unaffected | Not Started |
-| [M25](#m25--favorites) | Favorites (FR-UI-11) | A user favorites a Document from its details sheet and a Site from its card; both appear in a dedicated Favorites list | Not Started |
-| [M26](#m26--recent--cross-site-activity-view) | Recent view (FR-UI-09) | Home shows the documents a user most recently touched across every Site they can access, each one clickable | Not Started |
-| [M27](#m27--saved-library-views) | Saved Views (FR-UI-10) | A user filters/sorts/groups a library, saves it as a named View, and switches back to it later in one click; a Library Owner sets one as the default others see | Not Started |
-| [M28](#m28--follow-library--site) | Follow Library/Site (FR-NOTIF-06) | Following a Library delivers the same alerts as following one of its documents would, for any change anywhere inside it | Not Started |
-| [M29](#m29--bulk-metadata-edit) | Bulk metadata edit (FR-DOC-13) | Selecting 10 documents and editing Tags once applies to all 10, with a clear per-item result if one fails | Not Started |
-| [M30](#m30--right-click--long-press-context-menus) | Context menus (FR-UI-12) | Right-clicking a document or folder — or long-pressing it on touch — opens a menu of everything you're allowed to do with it, without opening it first | Not Started |
-| [M31](#m31--phase-4-hardening--sign-off) | Phase 4 sign-off | FS Phase 4 checklist (§4.5's seven FRs) satisfied; same hardening bar as M23, re-run for Phase 4's additions | Not Started |
+| [M22](#m22--sso-enforcement--admin-controls) | SSO enforcement (FR-AUTH-11) | Admin turns on "Require SSO for all logins"; non-exempt users' password logins are rejected with a clear message; a break-glass account still works | Done |
+| [M23](#m23--phase-3-hardening--sign-off) | Phase 3 sign-off | FS Phase 3 checklist satisfied; hardening bar M11/M19 proved, re-run for federation, plus a dedicated auth security pass | Done |
+| [M24](#m24--storage-quota-enforcement) | Quota enforcement (FR-SITE-07) | Uploading to a Site already at its configured quota is rejected with a clear error; other Sites are unaffected | Done |
+| [M25](#m25--favorites) | Favorites (FR-UI-11) | A user favorites a Document from its details sheet and a Site from its card; both appear in a dedicated Favorites list | Done |
+| [M26](#m26--recent--cross-site-activity-view) | Recent view (FR-UI-09) | Home shows the documents a user most recently touched across every Site they can access, each one clickable | Done |
+| [M27](#m27--saved-library-views) | Saved Views (FR-UI-10) | A user filters/sorts/groups a library, saves it as a named View, and switches back to it later in one click; a Library Owner sets one as the default others see | Done |
+| [M28](#m28--follow-library--site) | Follow Library/Site (FR-NOTIF-06) | Following a Library delivers the same alerts as following one of its documents would, for any change anywhere inside it | Done |
+| [M29](#m29--bulk-metadata-edit) | Bulk metadata edit (FR-DOC-13) | Selecting 10 documents and editing Tags once applies to all 10, with a clear per-item result if one fails | Done |
+| [M30](#m30--right-click--long-press-context-menus) | Context menus (FR-UI-12) | Right-clicking a document or folder — or long-pressing it on touch — opens a menu of everything you're allowed to do with it, without opening it first | Done |
+| [M31](#m31--phase-4-hardening--sign-off) | Phase 4 sign-off | FS Phase 4 checklist (§4.5's seven FRs) satisfied; same hardening bar as M23, re-run for Phase 4's additions | Done |
 
 ## 7. Detailed Milestones — Phase 3 (FS §15)
 
