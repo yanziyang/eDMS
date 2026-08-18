@@ -158,7 +158,7 @@ export function AppShell() {
         </div>
         <div className={cn("border-t py-3 text-[11px] text-muted-foreground", navCollapsed ? "px-2 text-center" : "px-5")}>
           <span className={navCollapsed ? "sr-only" : undefined}>
-          Internal workspace · v0.2
+          Internal workspace · v0.3
           </span>
         </div>
       </aside>
