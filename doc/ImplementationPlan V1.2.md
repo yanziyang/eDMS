@@ -17,6 +17,7 @@ This document now plans **two independent phases**:
 - **Phase 3 — Federation** (M20–M23): FR-AUTH-09/10/11, SAML2/OIDC/SSO-enforcement. This was the whole of this document when it was first written on 2026-08-17, and its content (§7) is unchanged from that version.
 - **Phase 4 — SharePoint-parity daily-use enhancements** (M24–M31): added the same day, after a follow-up request to compare eDMS against SharePoint Online's document-library feature set and fold in what's genuinely valuable for everyday use. §4 is the full comparison and scope reasoning; §8 is the resulting milestone detail. M30 (right-click/long-press context menus) was added slightly later the same day, from a direct follow-up question rather than the comparison pass itself — see §4.5's note.
 - **M32 — HTML prototype parity & visual polish**: a cross-cutting frontend pass requested after comparing the production React client with `prototype(html)/`. It brings the existing behaviors into the prototype's stronger information hierarchy, navigation shell, page framing, cards, tables, empty states, and responsive rhythm. It is presentation scope over already-approved surfaces, not a new backend feature phase; the prototype remains a UX reference and its HTML/CSS/JS is not copied into `client/`.
+- **M34 — Collapsible navigation & library folder tree**: improve workspace navigation by making the global navigation rail collapsible and adding a library-specific folder tree beside the document list. Desktop uses the hierarchy `App navigation | Folder tree | Document list`; mobile collapses these into drawers/sheets. This is a newly scoped UX enhancement over existing routes and folder APIs, with no new permission or data-model behavior.
 - **M33 — Site Home library creation**: expose the existing authorized library-creation endpoint from Site Home so a Site Contributor can add multiple document libraries without leaving the site workspace. This is a small UX completion of the existing Sites/Libraries behavior, not a new backend capability.
 
 **These two phases don't depend on each other.** Nothing in Phase 4 touches authentication, and nothing in Phase 3 touches the document/library surfaces Phase 4 extends — both branch directly from "Phase 1+2 done" (§6's dependency graph shows this). Work them in either order, or in parallel across two sessions. If your organization doesn't need SSO yet, there's no reason to wait on Phase 3 before picking up Phase 4's more immediately visible wins, or vice versa.
@@ -189,6 +190,7 @@ graph TD
     M29 --> M31
     M30 --> M31
     M31 --> M32[M32 HTML Prototype Parity]
+    M32 --> M34[M34 Collapsible Navigation and Folder Tree]
     M32 --> M33[M33 Site Home Library Creation]
 ```
 
@@ -209,6 +211,7 @@ Phase 3 (M20→M23) and Phase 4 (M24–M30→M31) are two separate trees, both r
 | [M30](#m30--right-click--long-press-context-menus) | Context menus (FR-UI-12) | Right-clicking a document or folder — or long-pressing it on touch — opens a menu of everything you're allowed to do with it, without opening it first | Done |
 | [M31](#m31--phase-4-hardening--sign-off) | Phase 4 sign-off | FS Phase 4 checklist (§4.5's seven FRs) satisfied; same hardening bar as M23, re-run for Phase 4's additions | Done |
 | [M32](#m32--html-prototype-parity--visual-polish) | HTML prototype parity | The React client presents the same clear shell, page hierarchy, card/table rhythm, navigation, and responsive polish as the stronger HTML reference while retaining production APIs and behavior | Done |
+| [M34](#m34--collapsible-navigation--library-folder-tree) | Collapsible navigation and folder tree | On desktop, users can collapse global navigation and browse a library's folders beside its document list; on mobile, both remain usable through accessible drawers/sheets | Not Started |
 | [M33](#m33--site-home-library-creation) | Site Home library creation | A user with Site Contribute access can open New library on Site Home, configure the library, and see it immediately in the site's library list | Done |
 
 ## 7. Detailed Milestones — Phase 3 (FS §15)
@@ -359,6 +362,16 @@ The backend already supports creating more than one document library per Site th
 |---|---|---|---|---|---|---|
 | Done | M33.1 | FE | Add a New library action and accessible dialog to Site Home's Document libraries section. Capture name, description, versioning, minor-version, checkout, and retention settings; submit through the existing create-library endpoint; invalidate the site's library query on success and surface a clear error on failure. | M32.3 | M | FR-SITE-03, TDS §7.2 |
 | Done | M33.2 | Both | Add a frontend regression test for the create-library request payload and the newly created library appearing in the current Site's list. Run the client quality gates. | M33.1 | S | TDS §12.2 |
+
+### M34 — Collapsible Navigation & Library Folder Tree
+
+This newly scoped UX milestone responds to a direct UI review. Keep global navigation and library navigation visually distinct: the global rail controls the application, while the folder tree controls the current library. Preserve the existing API contracts, authorization behavior, document toolbar, and list/grid modes; the tree is a navigation aid, not a second permission boundary.
+
+| Status | ID | Track | Task | Depends on | Size | Refs |
+|---|---|---|---|---|---|---|
+| Not Started | M34.1 | FE | Make the global `AppShell` navigation expanded by default on desktop and collapsible to an icon rail with a clear expand/collapse control. Persist the user's preference, retain accessible active labels/tooltips and keyboard focus behavior, and use a drawer on mobile without changing route or auth behavior. | M32.2 | M | FR-UI-01, FR-UI-07, TDS §7.2 |
+| Not Started | M34.2 | FE | Add a collapsible/resizable library folder tree beside the document list. Use the existing folder queries and routes, keep the selected folder reflected in navigation state/URL, preserve list/grid/toolbar interactions, and provide loading, empty, error, keyboard, and mobile drawer/sheet states without horizontal overflow. | M32.3 | L | FR-DOC-01, FR-UI-07, TDS §7.2 |
+| Not Started | M34.3 | Both | Add frontend coverage for global-nav collapse, folder selection/tree visibility, keyboard and responsive states, and no-regression list/grid behavior. Verify desktop/mobile layout, focus management, semantic contrast, and run the client quality gates. | M34.1, M34.2 | M | FS §7 NFR, TDS §12.2 |
 
 ## 9. Sequencing Risks
 

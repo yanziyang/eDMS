@@ -111,6 +111,12 @@ Prompt:
 
 Compare with SharePoint online, what are important features good to have or important for daily use? Update implementation plan version 1.2 accordingly.
 
+-------------------------------------------------------
+Prompt:
+
+check current implementation against the HTML prototype in 'prototype(html)' folder. The HTML prototype looks much better. 
+Evaluate the gap, update the implementation plan and proceed to implement.
+
 =======================================================
 -------------------------------------------------------
 Implementation 
@@ -171,6 +177,12 @@ I will go away for several hours. You just continue yesterday's work and proceed
 Prompt:
 
 Please fix the GitHub error.
+
+--------------------------------------------------------
+Prompt:
+
+Tag current version as 0.2 and add some description of added features implemented for this version from previous version 0.1.
+
 
 ========================================================
 --------------------------------------------------------
