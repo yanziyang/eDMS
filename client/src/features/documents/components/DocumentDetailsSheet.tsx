@@ -433,7 +433,7 @@ function MetadataSection({ documentId }: { documentId: string }) {
         )}
       </div>
       {metadata.data.contentTypeName && (
-        <div className="mt-0.5 text-xs text-muted-foreground">{metadata.data.contentTypeName}</div>
+        <div className="mt-0.5 text-xs text-foreground/70">{metadata.data.contentTypeName}</div>
       )}
       {!editing ? (
         <dl className="mt-2 grid grid-cols-2 gap-2 text-sm">
