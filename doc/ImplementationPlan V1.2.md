@@ -369,7 +369,7 @@ This newly scoped UX milestone responds to a direct UI review. Keep global navig
 
 | Status | ID | Track | Task | Depends on | Size | Refs |
 |---|---|---|---|---|---|---|
-| Not Started | M34.1 | FE | Make the global `AppShell` navigation expanded by default on desktop and collapsible to an icon rail with a clear expand/collapse control. Persist the user's preference, retain accessible active labels/tooltips and keyboard focus behavior, and use a drawer on mobile without changing route or auth behavior. | M32.2 | M | FR-UI-01, FR-UI-07, TDS §7.2 |
+| Done | M34.1 | FE | Make the global `AppShell` navigation expanded by default on desktop and collapsible to an icon rail with a clear expand/collapse control. Persist the user's preference, retain accessible active labels/tooltips and keyboard focus behavior, and use a drawer on mobile without changing route or auth behavior. | M32.2 | M | FR-UI-01, FR-UI-07, TDS §7.2 |
 | Not Started | M34.2 | FE | Add a collapsible/resizable library folder tree beside the document list. Use the existing folder queries and routes, keep the selected folder reflected in navigation state/URL, preserve list/grid/toolbar interactions, and provide loading, empty, error, keyboard, and mobile drawer/sheet states without horizontal overflow. | M32.3 | L | FR-DOC-01, FR-UI-07, TDS §7.2 |
 | Not Started | M34.3 | Both | Add frontend coverage for global-nav collapse, folder selection/tree visibility, keyboard and responsive states, and no-regression list/grid behavior. Verify desktop/mobile layout, focus management, semantic contrast, and run the client quality gates. | M34.1, M34.2 | M | FS §7 NFR, TDS §12.2 |
 

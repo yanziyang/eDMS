@@ -1,9 +1,9 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { http, HttpResponse } from "msw";
 import { ThemeProvider } from "next-themes";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { AppShell } from "./AppShell";
 import { useAuth } from "@/features/auth/auth-context";
@@ -14,6 +14,10 @@ vi.mock("@/features/auth/auth-context", () => ({
 }));
 
 const mockedUseAuth = vi.mocked(useAuth);
+
+afterEach(() => {
+  window.localStorage.removeItem("edms-nav-collapsed");
+});
 
 function adminUser(overrides: Partial<{ isSystemAdmin: boolean }> = {}) {
   return {
@@ -196,6 +200,34 @@ describe("AppShell", () => {
 
     await waitFor(() =>
       expect(document.querySelector(".fixed.inset-0")).not.toBeInTheDocument(),
+    );
+  });
+
+  it("collapses desktop navigation and persists the preference", async () => {
+    mockedUseAuth.mockReturnValue({
+      user: adminUser(),
+      status: "authenticated",
+      login: vi.fn(),
+      completeSso: vi.fn(),
+      logout: vi.fn(),
+    });
+
+    const user = userEvent.setup();
+    renderShell();
+
+    await user.click(screen.getByRole("button", { name: "Collapse navigation" }));
+
+    expect(screen.getByRole("button", { name: "Expand navigation" })).toHaveAttribute(
+      "aria-expanded",
+      "false",
+    );
+    expect(screen.getByLabelText("Application navigation")).toHaveAttribute(
+      "data-collapsed",
+      "true",
+    );
+    expect(window.localStorage.getItem("edms-nav-collapsed")).toBe("true");
+    expect(within(screen.getByRole("link", { name: "Search" })).getByText("Search")).toHaveClass(
+      "sr-only",
     );
   });
 

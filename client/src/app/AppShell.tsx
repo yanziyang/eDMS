@@ -4,12 +4,15 @@ import {
   LogOut,
   Menu,
   Moon,
+  PanelLeftClose,
+  PanelLeftOpen,
   Palette,
   Recycle,
   Search,
   Settings,
   Star,
   Sun,
+  type LucideIcon,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -36,6 +39,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 const visualThemes = [
   { id: "default", label: "Default", description: "Light · Indigo accent" },
@@ -52,6 +61,10 @@ export function AppShell() {
   const location = useLocation();
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [navCollapsed, setNavCollapsed] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return window.localStorage.getItem("edms-nav-collapsed") === "true";
+  });
   const [visualTheme, setVisualTheme] = useState<VisualTheme>(() => {
     if (typeof window === "undefined") return "default";
     const saved = window.localStorage.getItem("edms-theme");
@@ -69,6 +82,10 @@ export function AppShell() {
     setTheme(visualTheme === "midnight" ? "dark" : "light");
     window.localStorage.setItem("edms-theme", visualTheme);
   }, [setTheme, visualTheme]);
+
+  useEffect(() => {
+    window.localStorage.setItem("edms-nav-collapsed", String(navCollapsed));
+  }, [navCollapsed]);
 
   if (status === "loading") {
     return (
@@ -92,62 +109,6 @@ export function AppShell() {
   const membershipSlugs = new Set(user.siteMemberships.map((membership) => membership.siteSlug));
   const shortcutSites = (sites.data ?? []).filter((site) => membershipSlugs.has(site.urlSlug)).slice(0, 5);
 
-  const nav = (
-    <div className="flex flex-col gap-1">
-      <div className="px-2 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground/70">
-        Workspace
-      </div>
-      <NavLink to="/" end className={navClass} onClick={() => setMobileOpen(false)}>
-        <Building2 data-icon="inline-start" />
-        My Sites
-      </NavLink>
-      <NavLink to="/search" className={navClass} onClick={() => setMobileOpen(false)}>
-        <Search data-icon="inline-start" />
-        Search
-      </NavLink>
-      <NavLink to="/favorites" className={navClass} onClick={() => setMobileOpen(false)}>
-        <Star data-icon="inline-start" />
-        Favorites
-      </NavLink>
-      <NavLink to={recycleBinPath} className={navClass} onClick={() => setMobileOpen(false)}>
-        <Recycle data-icon="inline-start" />
-        Recycle Bin
-      </NavLink>
-
-      {shortcutSites.length > 0 && (
-        <>
-          <div className="mt-4 px-2 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground/70">
-            Sites
-          </div>
-          {shortcutSites.map((site) => (
-            <NavLink
-              key={site.id}
-              to={`/sites/${site.urlSlug}`}
-              className={navClass}
-              onClick={() => setMobileOpen(false)}
-            >
-              <span className="size-2 shrink-0 rounded-full bg-primary/70" aria-hidden="true" />
-              <span className="truncate">{site.name}</span>
-            </NavLink>
-          ))}
-        </>
-      )}
-
-      {user.isSystemAdmin && (
-        <>
-          <Separator className="my-3" />
-          <div className="px-2 pb-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground/70">
-            Administration
-          </div>
-          <NavLink to="/admin" className={navClass} onClick={() => setMobileOpen(false)}>
-            <Settings data-icon="inline-start" />
-            Admin Center
-          </NavLink>
-        </>
-      )}
-    </div>
-  );
-
   const applyVisualTheme = (theme: VisualTheme) => {
     setVisualTheme(theme);
     document.documentElement.setAttribute("data-theme", theme);
@@ -155,19 +116,50 @@ export function AppShell() {
 
   return (
     <div className="flex min-h-dvh bg-muted/30">
-      <aside className="hidden w-64 shrink-0 flex-col border-r bg-sidebar md:flex">
-        <div className="flex items-center gap-2.5 border-b px-5 py-4">
+      <aside
+        aria-label="Application navigation"
+        data-collapsed={navCollapsed}
+        className={cn(
+          "hidden shrink-0 flex-col border-r bg-sidebar transition-[width] duration-200 md:flex",
+          navCollapsed ? "w-20" : "w-64",
+        )}
+      >
+        <div className={cn(
+          "flex border-b py-4",
+          navCollapsed ? "flex-col items-center gap-2 px-2" : "items-center gap-2.5 px-5",
+        )}>
           <div className="flex size-9 items-center justify-center rounded-[10px] bg-gradient-to-br from-primary to-primary/65 text-sm font-bold text-primary-foreground shadow-sm">
             DM
           </div>
-          <div className="min-w-0">
+          <div className={cn("min-w-0", navCollapsed && "sr-only")}>
             <div className="font-semibold leading-tight">eDMS</div>
             <div className="truncate text-[11px] text-muted-foreground">Enterprise documents</div>
           </div>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            className={cn(!navCollapsed && "ml-auto")}
+            aria-label={navCollapsed ? "Expand navigation" : "Collapse navigation"}
+            aria-expanded={!navCollapsed}
+            title={navCollapsed ? "Expand navigation" : "Collapse navigation"}
+            onClick={() => setNavCollapsed((collapsed) => !collapsed)}
+          >
+            {navCollapsed ? <PanelLeftOpen data-icon="inline-start" /> : <PanelLeftClose data-icon="inline-start" />}
+          </Button>
         </div>
-        <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-6">{nav}</div>
-        <div className="border-t px-5 py-3 text-[11px] text-muted-foreground">
+        <div className={cn("min-h-0 flex-1 overflow-y-auto pb-6", navCollapsed ? "px-2" : "px-3")}>
+          <WorkspaceNavigation
+            collapsed={navCollapsed}
+            recycleBinPath={recycleBinPath}
+            shortcutSites={shortcutSites}
+            isSystemAdmin={user.isSystemAdmin}
+            onNavigate={() => setMobileOpen(false)}
+          />
+        </div>
+        <div className={cn("border-t py-3 text-[11px] text-muted-foreground", navCollapsed ? "px-2 text-center" : "px-5")}>
+          <span className={navCollapsed ? "sr-only" : undefined}>
           Internal workspace · v0.2
+          </span>
         </div>
       </aside>
 
@@ -186,7 +178,15 @@ export function AppShell() {
                 ×
               </Button>
             </div>
-            <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-6">{nav}</div>
+            <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-6">
+              <WorkspaceNavigation
+                collapsed={false}
+                recycleBinPath={recycleBinPath}
+                shortcutSites={shortcutSites}
+                isSystemAdmin={user.isSystemAdmin}
+                onNavigate={() => setMobileOpen(false)}
+              />
+            </div>
           </aside>
         </div>
       )}
@@ -271,6 +271,171 @@ export function AppShell() {
         </main>
       </div>
     </div>
+  );
+}
+
+interface WorkspaceNavigationProps {
+  collapsed: boolean;
+  recycleBinPath: string;
+  shortcutSites: Array<{ id: string; name: string; urlSlug: string }>;
+  isSystemAdmin: boolean;
+  onNavigate: () => void;
+}
+
+function WorkspaceNavigation({
+  collapsed,
+  recycleBinPath,
+  shortcutSites,
+  isSystemAdmin,
+  onNavigate,
+}: WorkspaceNavigationProps) {
+  return (
+    <TooltipProvider>
+      <nav aria-label="Workspace navigation" className="flex flex-col gap-1">
+        <div className={cn(
+          "px-2 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground/70",
+          collapsed && "px-0 text-center",
+        )}>
+          <span className={collapsed ? "sr-only" : undefined}>Workspace</span>
+        </div>
+        <WorkspaceNavLink
+          to="/"
+          end
+          label="My Sites"
+          icon={Building2}
+          collapsed={collapsed}
+          onNavigate={onNavigate}
+        />
+        <WorkspaceNavLink
+          to="/search"
+          label="Search"
+          icon={Search}
+          collapsed={collapsed}
+          onNavigate={onNavigate}
+        />
+        <WorkspaceNavLink
+          to="/favorites"
+          label="Favorites"
+          icon={Star}
+          collapsed={collapsed}
+          onNavigate={onNavigate}
+        />
+        <WorkspaceNavLink
+          to={recycleBinPath}
+          label="Recycle Bin"
+          icon={Recycle}
+          collapsed={collapsed}
+          onNavigate={onNavigate}
+        />
+
+        {shortcutSites.length > 0 && (
+          <>
+            <div className={cn(
+              "mt-4 px-2 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground/70",
+              collapsed && "px-0 text-center",
+            )}>
+              <span className={collapsed ? "sr-only" : undefined}>Sites</span>
+            </div>
+            {shortcutSites.map((site) => (
+              <WorkspaceSiteLink
+                key={site.id}
+                site={site}
+                collapsed={collapsed}
+                onNavigate={onNavigate}
+              />
+            ))}
+          </>
+        )}
+
+        {isSystemAdmin && (
+          <>
+            <Separator className="my-3" />
+            <div className={cn(
+              "px-2 pb-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground/70",
+              collapsed && "px-0 text-center",
+            )}>
+              <span className={collapsed ? "sr-only" : undefined}>Administration</span>
+            </div>
+            <WorkspaceNavLink
+              to="/admin"
+              label="Admin Center"
+              icon={Settings}
+              collapsed={collapsed}
+              onNavigate={onNavigate}
+            />
+          </>
+        )}
+      </nav>
+    </TooltipProvider>
+  );
+}
+
+function WorkspaceNavLink({
+  to,
+  label,
+  icon: Icon,
+  collapsed,
+  onNavigate,
+  end = false,
+}: {
+  to: string;
+  label: string;
+  icon: LucideIcon;
+  collapsed: boolean;
+  onNavigate: () => void;
+  end?: boolean;
+}) {
+  const link = (
+    <NavLink
+      to={to}
+      end={end}
+      aria-label={label}
+      className={({ isActive }) => navClass({ isActive }, collapsed)}
+      onClick={onNavigate}
+    >
+      <Icon aria-hidden="true" data-icon="inline-start" />
+      <span className={cn("truncate", collapsed && "sr-only")}>{label}</span>
+    </NavLink>
+  );
+
+  if (!collapsed) return link;
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>{link}</TooltipTrigger>
+      <TooltipContent side="right" sideOffset={8}>{label}</TooltipContent>
+    </Tooltip>
+  );
+}
+
+function WorkspaceSiteLink({
+  site,
+  collapsed,
+  onNavigate,
+}: {
+  site: { name: string; urlSlug: string };
+  collapsed: boolean;
+  onNavigate: () => void;
+}) {
+  const link = (
+    <NavLink
+      to={`/sites/${site.urlSlug}`}
+      aria-label={site.name}
+      className={({ isActive }) => navClass({ isActive }, collapsed)}
+      onClick={onNavigate}
+    >
+      <span className="size-2 shrink-0 rounded-full bg-primary/70" aria-hidden="true" />
+      <span className={cn("truncate", collapsed && "sr-only")}>{site.name}</span>
+    </NavLink>
+  );
+
+  if (!collapsed) return link;
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>{link}</TooltipTrigger>
+      <TooltipContent side="right" sideOffset={8}>{site.name}</TooltipContent>
+    </Tooltip>
   );
 }
 
@@ -382,9 +547,10 @@ function pageContext(pathname: string): string {
   return "My Sites";
 }
 
-function navClass({ isActive }: { isActive: boolean }) {
+function navClass({ isActive }: { isActive: boolean }, collapsed = false) {
   return cn(
     "flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-sidebar-accent/70 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+    collapsed && "justify-center px-2",
     isActive && "bg-accent text-accent-foreground shadow-sm",
   );
 }
